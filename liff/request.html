@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ส่งใบลา — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">ส่งใบลา</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-registered" class="hidden">
+      <div class="alert warning">คุณยังไม่ได้ลงทะเบียน หรือยังไม่ได้รับอนุมัติจาก HR</div>
+      <a class="btn primary block" href="./myid.html">ดูสถานะของฉัน</a>
+    </div>
+
+    <div id="content" class="hidden">
+      <!-- Stepper -->
+      <div class="stepper">
+        <div class="step active" id="stepper-1"><div class="dot">1</div>เงื่อนไข</div>
+        <div class="step" id="stepper-2"><div class="dot">2</div>กรอกข้อมูล</div>
+        <div class="step" id="stepper-3"><div class="dot">3</div>ส่ง</div>
+      </div>
+
+      <!-- ============ Step 1: เงื่อนไข + โควตา ============ -->
+      <section id="step1">
+        <h2 class="section-title">โควตาคงเหลือปีนี้</h2>
+        <div class="quota-grid" id="quota-grid"></div>
+
+        <h2 class="section-title">เงื่อนไขการลา</h2>
+        <div id="rules-list"></div>
+
+        <button class="btn primary block mt-2" id="btn-to-step2">เริ่มเขียนใบลา</button>
+      </section>
+
+      <!-- ============ Step 2: ฟอร์ม ============ -->
+      <section id="step2" class="hidden">
+        <div id="alert-msg" class="hidden"></div>
+
+        <div class="form-group">
+          <label>ประเภทการลา <span class="required">*</span></label>
+          <select id="leave_type">
+            <option value="">— เลือก —</option>
+            <option value="sick">ลาป่วย</option>
+            <option value="personal">ลากิจ</option>
+            <option value="vacation">ลาพักร้อน</option>
+          </select>
+          <div class="hint" id="quota-hint"></div>
+        </div>
+
+        <div class="form-group">
+          <label>วันที่เริ่มลา <span class="required">*</span></label>
+          <input type="date" id="date_from">
+        </div>
+
+        <div class="form-group">
+          <label>วันที่สิ้นสุด <span class="required">*</span></label>
+          <input type="date" id="date_to">
+          <div class="hint" id="days-hint"></div>
+        </div>
+
+        <div class="form-group">
+          <label>เหตุผล <span class="required">*</span></label>
+          <textarea id="reason" maxlength="200" placeholder="เช่น ปวดหัวรุนแรงต้องพักผ่อน"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>แนบไฟล์ (รูปภาพ)</label>
+          <input type="file" id="attachment" accept="image/*">
+          <div class="hint">เช่น ใบรับรองแพทย์ บัตรคิวคลินิก — ถ่ายไว้แล้วก็แนบจากแกลเลอรีได้</div>
+          <div id="attachment-preview-box" class="hidden attachment-preview">
+            <img id="attachment-img" alt="preview">
+            <button type="button" class="remove" id="btn-remove-attachment">✕</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn ghost" id="btn-back-step2">ย้อนกลับ</button>
+          <button class="btn primary" id="btn-to-step3">ถัดไป</button>
+        </div>
+      </section>
+
+      <!-- ============ Step 3: GPS + ส่ง ============ -->
+      <section id="step3" class="hidden">
+        <h2 class="section-title">ยืนยันตำแหน่ง</h2>
+        <p class="subtle">ระบบจะบันทึก GPS ตอนกดส่งเพื่อยืนยันว่าคุณเป็นผู้กดเอง — ไม่ติดตามตำแหน่งของคุณตลอดเวลา</p>
+
+        <div id="gps-status" class="gps-status loading">📍 รอการตรวจสอบ GPS...</div>
+
+        <h2 class="section-title mt-2">สรุปก่อนส่ง</h2>
+        <div class="card" id="summary"></div>
+
+        <div id="alert-msg-3" class="hidden"></div>
+
+        <div class="btn-row">
+          <button class="btn ghost" id="btn-back-step3">ย้อนกลับ</button>
+          <button class="btn primary" id="btn-submit-leave">📨 ส่งใบลา</button>
+        </div>
+      </section>
+
+      <!-- ============ Done ============ -->
+      <section id="step-done" class="hidden text-center">
+        <div class="alert success mt-2">ส่งใบลาสำเร็จ</div>
+        <p class="subtle" id="done-msg"></p>
+        <a class="btn primary block mt-2" href="./my-requests.html">ดูใบลาของฉัน</a>
+        <button class="btn secondary block mt-1" id="btn-another">ส่งใบลาอีกใบ</button>
+      </section>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+let CONDITIONS = null;  // { quota, rules }
+let GPS = null;         // { lat, lng, accuracy }
+let ATTACHMENT = null;  // { base64, filename }
+
+(async function () {
+  try { await window.auth.init(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">' + err.message + '</div>';
+    return;
+  }
+
+  const status = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+
+  if (!status.ok || status.status !== 'active') {
+    document.getElementById('not-registered').classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('content').classList.remove('hidden');
+
+  const cond = await window.api.post('getApprovalConditions', { lineUserId: window.state.lineUserId });
+  if (!cond.ok) {
+    window.utils.showAlert('#alert-msg', 'โหลดเงื่อนไขไม่สำเร็จ: ' + cond.error, 'error');
+    return;
+  }
+  CONDITIONS = cond;
+  renderConditions(cond);
+})();
+
+function renderConditions(cond) {
+  // quota grid
+  const types = [
+    ['sick', 'ลาป่วย'],
+    ['personal', 'ลากิจ'],
+    ['vacation', 'ลาพักร้อน'],
+  ];
+  const grid = document.getElementById('quota-grid');
+  grid.innerHTML = types.map(([k, label]) => {
+    const q = cond.quota[k] || { total: 0, used: 0, available: 0 };
+    return '<div class="quota-item">' +
+      '<div class="label">' + label + '</div>' +
+      '<div class="value">' + q.available + '</div>' +
+      '<div class="sub">เหลือ / ' + q.total + ' วัน</div>' +
+    '</div>';
+  }).join('');
+
+  // rules
+  const rulesList = document.getElementById('rules-list');
+  if (!cond.rules.length) {
+    rulesList.innerHTML = '<p class="subtle">ยังไม่ได้กำหนดเงื่อนไข</p>';
+  } else {
+    rulesList.innerHTML = cond.rules.map(r => {
+      const label = ({ sick: 'ลาป่วย', personal: 'ลากิจ', vacation: 'ลาพักร้อน', all: 'ทุกประเภท' })[r.leave_type] || r.leave_type;
+      const parts = [];
+      if (Number(r.advance_notice_days) > 0) parts.push('แจ้งล่วงหน้า ' + r.advance_notice_days + ' วัน');
+      if (Number(r.max_consecutive_days) > 0) parts.push('ลาติดกันได้ไม่เกิน ' + r.max_consecutive_days + ' วัน');
+      if (Number(r.doc_required_above_days) > 0) parts.push('ลาเกิน ' + r.doc_required_above_days + ' วัน ต้องแนบเอกสาร');
+      return '<div class="card muted">' +
+        '<div><strong>' + label + '</strong></div>' +
+        (parts.length ? '<div class="subtle mt-1">' + parts.join(' · ') + '</div>' : '') +
+        (r.note ? '<div class="mt-1">' + window.utils.escapeHtml(r.note) + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+}
+
+// === step navigation ===
+function showStep(n) {
+  ['step1', 'step2', 'step3', 'step-done'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById(n === 0 ? 'step-done' : 'step' + n).classList.remove('hidden');
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('stepper-' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+}
+
+document.getElementById('btn-to-step2').onclick = () => showStep(2);
+document.getElementById('btn-back-step2').onclick = () => showStep(1);
+
+document.getElementById('leave_type').addEventListener('change', updateQuotaHint);
+document.getElementById('date_from').addEventListener('change', updateDateHints);
+document.getElementById('date_to').addEventListener('change', updateDateHints);
+
+function updateQuotaHint() {
+  const lt = document.getElementById('leave_type').value;
+  if (!lt || !CONDITIONS) {
+    document.getElementById('quota-hint').textContent = '';
+    return;
+  }
+  const q = CONDITIONS.quota[lt];
+  document.getElementById('quota-hint').textContent = 'คงเหลือ ' + q.available + ' วัน (จากทั้งหมด ' + q.total + ' วัน)';
+}
+
+function updateDateHints() {
+  const f = document.getElementById('date_from').value;
+  const t = document.getElementById('date_to').value;
+  if (!f || !t) {
+    document.getElementById('days-hint').textContent = '';
+    return;
+  }
+  const all = window.utils.countDaysBetween(f, t);
+  const wd = window.utils.countWeekdaysBetween(f, t);
+  document.getElementById('days-hint').textContent = 'รวม ' + all + ' วัน (ไม่นับ ส-อา: ' + wd + ' วัน)';
+}
+
+document.getElementById('attachment').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) {
+    ATTACHMENT = null;
+    document.getElementById('attachment-preview-box').classList.add('hidden');
+    return;
+  }
+  try {
+    const r = await window.utils.fileToResizedBase64(file);
+    ATTACHMENT = r;
+    document.getElementById('attachment-img').src = r.base64;
+    document.getElementById('attachment-preview-box').classList.remove('hidden');
+  } catch (err) {
+    window.utils.showToast('ไฟล์ไม่ถูกต้อง: ' + err.message);
+  }
+});
+
+document.getElementById('btn-remove-attachment').onclick = () => {
+  ATTACHMENT = null;
+  document.getElementById('attachment').value = '';
+  document.getElementById('attachment-preview-box').classList.add('hidden');
+};
+
+document.getElementById('btn-to-step3').onclick = () => {
+  // basic validate
+  const lt = document.getElementById('leave_type').value;
+  const f = document.getElementById('date_from').value;
+  const t = document.getElementById('date_to').value;
+  const reason = document.getElementById('reason').value.trim();
+
+  window.utils.clearAlert('#alert-msg');
+  if (!lt) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกประเภทการลา', 'error');
+  if (!f || !t) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกวันที่', 'error');
+  if (new Date(t) < new Date(f)) return window.utils.showAlert('#alert-msg', 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม', 'error');
+  if (reason.length < 3) return window.utils.showAlert('#alert-msg', 'กรุณาระบุเหตุผลอย่างน้อย 3 ตัวอักษร', 'error');
+
+  // check quota client-side
+  const days = window.utils.countWeekdaysBetween(f, t);
+  const q = CONDITIONS.quota[lt];
+  if (days > q.available) {
+    return window.utils.showAlert('#alert-msg', 'โควตาคงเหลือ ' + q.available + ' วัน ลาได้ไม่เกินนี้', 'error');
+  }
+
+  // check retroactive
+  const today = new Date(); today.setHours(0,0,0,0);
+  const startDate = new Date(f + 'T00:00:00');
+  if (startDate < today && lt !== 'sick') {
+    return window.utils.showAlert('#alert-msg', 'ลาย้อนหลังทำได้เฉพาะลาป่วยเท่านั้น', 'error');
+  }
+
+  renderSummary();
+  showStep(3);
+  requestGps();
+};
+
+document.getElementById('btn-back-step3').onclick = () => showStep(2);
+document.getElementById('btn-another').onclick = () => window.location.reload();
+
+function renderSummary() {
+  const lt = document.getElementById('leave_type').value;
+  const ltLabel = window.LEAVE_TYPE_LABELS[lt] || lt;
+  const f = document.getElementById('date_from').value;
+  const t = document.getElementById('date_to').value;
+  const days = window.utils.countWeekdaysBetween(f, t);
+  const reason = document.getElementById('reason').value.trim();
+  const html = [
+    '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + ltLabel + '</span></div>',
+    '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(f) + ' - ' + window.utils.formatThaiDateShort(t) + '</span></div>',
+    '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + days + ' วัน</span></div>',
+    '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(reason) + '</span></div>',
+    '<div class="card-row"><span class="label">ไฟล์แนบ</span><span class="value">' + (ATTACHMENT ? 'มี' : 'ไม่มี') + '</span></div>',
+  ].join('');
+  document.getElementById('summary').innerHTML = html;
+}
+
+async function requestGps() {
+  const status = document.getElementById('gps-status');
+  status.className = 'gps-status loading';
+  status.textContent = '📍 กำลังขอตำแหน่ง GPS...';
+  try {
+    GPS = await window.utils.getGeolocation();
+    status.className = 'gps-status ok';
+    status.textContent = '✓ GPS พร้อมส่ง (ความแม่นยำ ~' + Math.round(GPS.accuracy) + ' ม.)';
+  } catch (err) {
+    GPS = null;
+    status.className = 'gps-status error';
+    let msg = 'ตำแหน่ง GPS ไม่พร้อม';
+    if (err.message === 'permission_denied') msg = 'กรุณาอนุญาตการเข้าถึง GPS เพื่อยืนยันการส่งใบลา';
+    else if (err.message === 'timeout') msg = 'GPS ไม่ตอบสนอง — ลองอีกครั้ง';
+    else if (err.message === 'unsupported') msg = 'อุปกรณ์ไม่รองรับ GPS';
+    status.innerHTML = '⚠️ ' + msg + ' <a href="#" id="btn-retry-gps" style="margin-left:8px">ลองอีกครั้ง</a>';
+    setTimeout(() => {
+      const btn = document.getElementById('btn-retry-gps');
+      if (btn) btn.onclick = (e) => { e.preventDefault(); requestGps(); };
+    }, 10);
+  }
+}
+
+document.getElementById('btn-submit-leave').addEventListener('click', async () => {
+  if (!GPS) {
+    return window.utils.showAlert('#alert-msg-3', 'กรุณาเปิด GPS ก่อนส่ง', 'error');
+  }
+  const btn = document.getElementById('btn-submit-leave');
+  btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+
+  const payload = {
+    lineUserId: window.state.lineUserId,
+    leave_type: document.getElementById('leave_type').value,
+    date_from: document.getElementById('date_from').value,
+    date_to: document.getElementById('date_to').value,
+    reason: document.getElementById('reason').value.trim(),
+    gps_lat: GPS.lat, gps_lng: GPS.lng, gps_accuracy: GPS.accuracy,
+  };
+  if (ATTACHMENT) {
+    payload.attachment_base64 = ATTACHMENT.base64;
+    payload.attachment_filename = ATTACHMENT.filename;
+  }
+
+  const r = await window.api.post('submitLeave', payload);
+  btn.disabled = false; btn.textContent = '📨 ส่งใบลา';
+
+  if (!r.ok) {
+    return window.utils.showAlert('#alert-msg-3', r.message || ('ผิดพลาด: ' + r.error), 'error');
+  }
+  document.getElementById('done-msg').textContent = 'เลขที่ใบลา: ' + r.leave_id + ' · ระบบส่งต่อให้ผู้อนุมัติแล้ว';
+  showStep(0);
+});
+</script>
+</body>
+</html>

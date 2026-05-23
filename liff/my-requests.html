@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ใบลาของฉัน — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">ใบลาของฉัน</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-registered" class="hidden">
+      <div class="alert warning">คุณยังไม่ได้ลงทะเบียน</div>
+      <a class="btn primary block" href="./myid.html">ดูสถานะของฉัน</a>
+    </div>
+
+    <div id="content" class="hidden">
+      <a class="btn primary block mb-2" href="./request.html">+ ส่งใบลาใหม่</a>
+      <div id="list"></div>
+    </div>
+
+    <!-- detail modal-ish (simple overlay) -->
+    <div id="detail-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;overflow-y:auto;padding:20px">
+      <div style="max-width:480px;margin:0 auto;background:white;border-radius:10px;padding:16px;position:relative">
+        <button id="btn-close-detail" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:24px;cursor:pointer">✕</button>
+        <h2 class="section-title">รายละเอียดใบลา</h2>
+        <div id="detail-body"></div>
+      </div>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+(async function () {
+  try { await window.auth.init(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">' + err.message + '</div>';
+    return;
+  }
+
+  const status = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+
+  if (!status.ok || status.status !== 'active') {
+    document.getElementById('not-registered').classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('content').classList.remove('hidden');
+  await loadList();
+})();
+
+async function loadList() {
+  const r = await window.api.post('getMyHistory', { lineUserId: window.state.lineUserId });
+  const list = document.getElementById('list');
+  if (!r.ok) {
+    list.innerHTML = '<div class="alert error">โหลดข้อมูลไม่สำเร็จ</div>';
+    return;
+  }
+  if (!r.requests.length) {
+    list.innerHTML = '<div class="empty"><div class="icon">📋</div>ยังไม่มีใบลา</div>';
+    return;
+  }
+  list.innerHTML = r.requests.map(req => {
+    const ltLabel = window.LEAVE_TYPE_LABELS[req.leave_type] || req.leave_type;
+    const fStr = window.utils.formatThaiDateShort(req.date_from);
+    const tStr = window.utils.formatThaiDateShort(req.date_to);
+    const dateStr = fStr === tStr ? fStr : (fStr + ' - ' + tStr);
+    return '<div class="list-row" onclick="showDetail(\'' + req.leave_id + '\')">' +
+      '<div class="info">' +
+        '<div class="name">' + ltLabel + ' · ' + req.days + ' วัน</div>' +
+        '<div class="meta">' + dateStr + '</div>' +
+      '</div>' +
+      '<span class="badge ' + req.final_status + '">' + window.STATUS_LABELS[req.final_status] + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+async function showDetail(leaveId) {
+  const r = await window.api.post('getOneRequest', { lineUserId: window.state.lineUserId, leave_id: leaveId });
+  if (!r.ok) {
+    window.utils.showToast('โหลดไม่สำเร็จ: ' + r.error);
+    return;
+  }
+  const l = r.leave;
+  const body = document.getElementById('detail-body');
+
+  const stages = [
+    { n: 1, label: 'หัวหน้างาน', status: l.stage1_status, at: l.stage1_at, note: l.stage1_note },
+    { n: 2, label: 'ฝ่ายบุคคล (HR)', status: l.stage2_status, at: l.stage2_at, note: l.stage2_note },
+    { n: 3, label: 'เจ้าของ', status: l.stage3_status, at: l.stage3_at, note: l.stage3_note },
+  ];
+
+  body.innerHTML =
+    '<div class="card">' +
+      '<div class="card-row"><span class="label">เลขที่</span><span class="value">' + l.leave_id + '</span></div>' +
+      '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[l.leave_type] || l.leave_type) + (l.is_retroactive ? ' (ย้อนหลัง)' : '') + '</span></div>' +
+      '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(l.date_from) + ' - ' + window.utils.formatThaiDateShort(l.date_to) + '</span></div>' +
+      '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + l.days + ' วัน</span></div>' +
+      '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(l.reason || '-') + '</span></div>' +
+      '<div class="card-row"><span class="label">สถานะ</span><span class="badge ' + l.final_status + '">' + window.STATUS_LABELS[l.final_status] + '</span></div>' +
+    '</div>' +
+    (l.attachment_url ? '<div class="mt-2 text-center"><a href="' + l.attachment_url + '" target="_blank" class="btn ghost sm">📎 ดูไฟล์แนบ</a></div>' : '') +
+    '<h2 class="section-title">ลำดับการอนุมัติ</h2>' +
+    '<div class="timeline">' +
+      stages.map(s => {
+        const cls = s.status === 'approved' ? 'approved' : s.status === 'rejected' ? 'rejected' : s.status === 'skipped' ? 'skipped' : 'pending';
+        const statusLabel = s.status === 'skipped' ? 'ข้าม' : window.STATUS_LABELS[s.status];
+        return '<div class="timeline-item ' + cls + '">' +
+          '<div class="stage">ชั้น ' + s.n + ' · ' + s.label + ' · <span class="badge ' + s.status + '">' + statusLabel + '</span></div>' +
+          (s.at ? '<div class="meta">' + window.utils.formatThaiDateTime(s.at) + '</div>' : '') +
+          (s.note ? '<div class="meta">หมายเหตุ: ' + window.utils.escapeHtml(s.note) + '</div>' : '') +
+        '</div>';
+      }).join('') +
+    '</div>';
+
+  document.getElementById('detail-overlay').classList.remove('hidden');
+}
+
+document.getElementById('btn-close-detail').onclick = () => {
+  document.getElementById('detail-overlay').classList.add('hidden');
+};
+</script>
+</body>
+</html>

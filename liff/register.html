@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ลงทะเบียน — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">ลงทะเบียนเข้าใช้ระบบ</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <!-- Already registered -->
+    <div id="state-pending" class="hidden">
+      <div class="alert info">รอ HR อนุมัติคำขอลงทะเบียนของคุณอยู่</div>
+      <p class="subtle">เมื่อ HR อนุมัติ ระบบจะส่งข้อความแจ้งผ่าน LINE และคุณจะใช้งานระบบได้ทันที</p>
+    </div>
+
+    <div id="state-active" class="hidden">
+      <div class="alert success">คุณลงทะเบียนเรียบร้อยแล้ว</div>
+      <a class="btn primary block" href="./request.html">ไปส่งใบลา</a>
+    </div>
+
+    <div id="state-inactive" class="hidden">
+      <div class="alert error">บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อ HR</div>
+    </div>
+
+    <!-- Registration form -->
+    <div id="state-form" class="hidden">
+      <div class="card soft mb-2">
+        <p class="text-center" style="margin:0">กรอกข้อมูลเพื่อขอเข้าใช้ระบบลางาน<br><span class="subtle">HR จะตรวจสอบและอนุมัติ</span></p>
+      </div>
+
+      <div id="alert-msg" class="hidden"></div>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label>ชื่อ-นามสกุล <span class="required">*</span></label>
+          <input type="text" name="displayName" required maxlength="100" placeholder="เช่น สมชาย ใจดี">
+          <div class="hint">ใช้ชื่อจริงเพื่อให้ HR จดจำได้</div>
+        </div>
+
+        <div class="form-group">
+          <label>รหัสพนักงาน <span class="required">*</span></label>
+          <input type="text" name="emp_code" required maxlength="20" placeholder="เช่น VRD-001">
+        </div>
+
+        <div class="form-group">
+          <label>เบอร์โทรศัพท์ <span class="required">*</span></label>
+          <input type="tel" name="phone" required maxlength="15" placeholder="0812345678" pattern="[0-9\-\+\s]+">
+        </div>
+
+        <div class="form-group">
+          <label>อีเมล</label>
+          <input type="email" name="email" maxlength="100" placeholder="(ไม่จำเป็น)">
+        </div>
+
+        <div class="form-group">
+          <label>แผนก <span class="required">*</span></label>
+          <input type="text" name="department" required maxlength="50" placeholder="เช่น Marketing">
+        </div>
+
+        <div class="form-group">
+          <label>ตำแหน่ง <span class="required">*</span></label>
+          <input type="text" name="position" required maxlength="50" placeholder="เช่น Senior Marketer">
+        </div>
+
+        <button type="submit" class="btn primary block" id="btn-submit">ส่งคำขอลงทะเบียน</button>
+        <p class="subtle text-center mt-1">เมื่อกด HR จะได้รับแจ้งทันที</p>
+      </form>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+(async function () {
+  try { await window.auth.init(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">' + err.message + '</div>';
+    return;
+  }
+
+  const res = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+
+  if (res.ok && res.status === 'pending') {
+    document.getElementById('state-pending').classList.remove('hidden');
+    return;
+  }
+  if (res.ok && res.status === 'active') {
+    document.getElementById('state-active').classList.remove('hidden');
+    return;
+  }
+  if (res.ok && res.status === 'inactive') {
+    document.getElementById('state-inactive').classList.remove('hidden');
+    return;
+  }
+
+  // show form
+  document.getElementById('state-form').classList.remove('hidden');
+  const form = document.getElementById('register-form');
+  form.displayName.value = window.state.displayName || '';
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    window.utils.clearAlert('#alert-msg');
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'กำลังส่ง...';
+
+    const payload = {
+      lineUserId: window.state.lineUserId,
+      displayName: form.displayName.value.trim(),
+      emp_code: form.emp_code.value.trim(),
+      phone: form.phone.value.trim(),
+      email: form.email.value.trim(),
+      department: form.department.value.trim(),
+      position: form.position.value.trim(),
+    };
+
+    const r = await window.api.post('submitRegister', payload);
+    btn.disabled = false;
+    btn.textContent = 'ส่งคำขอลงทะเบียน';
+
+    if (!r.ok) {
+      window.utils.showAlert('#alert-msg', r.message || ('ผิดพลาด: ' + r.error), 'error');
+      return;
+    }
+
+    document.getElementById('state-form').classList.add('hidden');
+    document.getElementById('state-pending').classList.remove('hidden');
+    window.utils.showToast('ส่งคำขอแล้ว รอ HR อนุมัติ');
+  });
+})();
+</script>
+</body>
+</html>

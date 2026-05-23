@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>คู่มือ HR — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">คู่มือ HR / เจ้าของ</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="alert info">หน้านี้สำหรับ HR และเจ้าของระบบเท่านั้น</div>
+
+    <div class="accordion open">
+      <div class="accordion-header">เพิ่มพนักงานใหม่ (Onboard)</div>
+      <div class="accordion-body">
+        <p>มี 2 วิธี:</p>
+        <p><strong>วิธี A: พนักงาน register เอง (ขั้นตอนเริ่มต้น)</strong></p>
+        <ol class="steps">
+          <li>พนักงานเปิด LIFF → กด "ลงทะเบียน" → กรอกฟอร์ม</li>
+          <li>คุณ (HR) ได้ Flex card แจ้งใน LINE</li>
+          <li>กดปุ่ม "อนุมัติ" ใน flex หรือเปิด admin → แท็บ "พนักงาน" → กด ⚙️ → อนุมัติ</li>
+          <li>ระบบสร้าง LeaveQuota row ตาม default ให้อัตโนมัติ</li>
+        </ol>
+        <p><strong>วิธี B: HR เชิญ (สำหรับเคสที่อยาก pre-onboard)</strong></p>
+        <ol class="steps">
+          <li>แท็บ "พนักงาน" → "+ เพิ่มพนักงานใหม่"</li>
+          <li>กรอกข้อมูล → ระบบสร้าง pairing code 6 หลัก + ข้อความเชิญ</li>
+          <li>คัดลอกข้อความ ส่งให้พนักงานผ่าน LINE</li>
+          <li>พนักงานกรอกรหัสในหน้า register → HR กด approve อีกครั้ง</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">ผูกหัวหน้างาน ↔ ลูกน้อง</div>
+      <div class="accordion-body">
+        <ol class="steps">
+          <li>แท็บ "หัวหน้างาน" → "+ ผูกหัวหน้างาน"</li>
+          <li>เลือกลูกน้อง (พนักงานที่ยังไม่มีหัวหน้า)</li>
+          <li>เลือกหัวหน้างาน (ระบบจะ set is_supervisor=TRUE ให้อัตโนมัติ)</li>
+          <li>กด "ผูก"</li>
+        </ol>
+        <p class="subtle mt-1">เปลี่ยนหัวหน้าได้ตลอด — ระบบเก็บประวัติทั้งหมด</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">ตั้งโควตาวันลาต่อพนักงาน</div>
+      <div class="accordion-body">
+        <p><strong>Default ทั้งระบบ</strong> ตั้งใน แท็บ "Settings":</p>
+        <ul>
+          <li>default_sick_total — ลาป่วย (default 30 วัน/ปี)</li>
+          <li>default_personal_total — ลากิจ (default 6)</li>
+          <li>default_vacation_total — ลาพักร้อน (default 10)</li>
+        </ul>
+        <p><strong>Per user override</strong> — แท็บ "โควตา":</p>
+        <ol class="steps">
+          <li>เลือกพนักงาน</li>
+          <li>กรอกโควตาที่ต้องการ (ทั้ง 3 ประเภท)</li>
+          <li>กดบันทึก</li>
+        </ol>
+        <div class="alert warning mt-2">
+          HR เปลี่ยนได้ → ส่งให้เจ้าของอนุมัติก่อน apply<br>
+          เจ้าของเปลี่ยน → apply ทันที
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">แก้กฎเงื่อนไขการลา</div>
+      <div class="accordion-body">
+        <ol class="steps">
+          <li>แท็บ "กฎ" → "+ เพิ่มกฎใหม่" หรือกดแก้ rule เก่า</li>
+          <li>ตั้ง:
+            <ul>
+              <li>แจ้งล่วงหน้า (วัน) — sick = 0 (ฉุกเฉิน), ลากิจ/พักร้อน = 3-7</li>
+              <li>ลาติดกันได้สูงสุด (0 = ไม่จำกัด)</li>
+              <li>ต้องแนบเอกสารถ้าลาเกิน N วัน</li>
+              <li>หมายเหตุ (แสดงให้พนักงานดูในหน้าลา)</li>
+            </ul>
+          </li>
+          <li>กดบันทึก</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">อนุมัติใบลา</div>
+      <div class="accordion-body">
+        <ol class="steps">
+          <li>เมื่อมีใบลาเข้าระบบ → คุณได้ Flex card ใน LINE</li>
+          <li>กดปุ่ม "อนุมัติ" หรือ "ไม่อนุมัติ" ใน flex โดยตรง</li>
+          <li>หรือกดเมนู "อนุมัติ" ที่ rich menu → list ทุกใบที่รออยู่</li>
+        </ol>
+        <p class="subtle mt-1">
+          HR กดอนุมัติชั้น 2 — ระบบส่งต่อไปเจ้าของชั้น 3<br>
+          เจ้าของกดอนุมัติชั้น 3 — final approved + หักโควตาทันที
+        </p>
+      </div>
+    </div>
+
+    <div class="accordion owner-only-section">
+      <div class="accordion-header">อนุมัติการเปลี่ยนแปลงของ HR (Owner only)</div>
+      <div class="accordion-body">
+        <p>เมื่อ HR เสนอเปลี่ยน Settings / โควตา / กฎ → คุณต้องอนุมัติก่อน apply</p>
+        <ol class="steps">
+          <li>แท็บ "รออนุมัติ" (เห็นเฉพาะ OWNER)</li>
+          <li>ดูรายละเอียดที่ HR เสนอ</li>
+          <li>กด อนุมัติ / ปฏิเสธ</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">ดู Report</div>
+      <div class="accordion-body">
+        <ol class="steps">
+          <li>แท็บ "รายงาน"</li>
+          <li>filter ตามสถานะ (รออนุมัติ / อนุมัติแล้ว / ปฏิเสธ)</li>
+          <li>กด "ค้นหา"</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">พนักงานออก (Offboard)</div>
+      <div class="accordion-body">
+        <ol class="steps">
+          <li>แท็บ "พนักงาน" → กด ⚙️ ของพนักงานคนนั้น</li>
+          <li>กด "ระงับการใช้งาน"</li>
+          <li>ระบบ:
+            <ul>
+              <li>เปลี่ยน status = inactive</li>
+              <li>ถ้าเป็นหัวหน้างาน → ยกเลิก pair ของลูกน้องทั้งหมด (ต้อง pair ใหม่)</li>
+              <li>เก็บประวัติ + Audit_Log ครบ</li>
+            </ul>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header">ติดต่อ Support</div>
+      <div class="accordion-body">
+        <div class="help-contact subtle"></div>
+        <p class="subtle mt-1">หากระบบมีปัญหา ติดต่อผู้ดูแลระบบ</p>
+      </div>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script src="./js/manual.js"></script>
+</body>
+</html>

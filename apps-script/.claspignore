@@ -1,0 +1,4 @@
+# ห้าม push เข้า Apps Script
+**/**
+!*.gs
+!appsscript.json

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>อนุมัติใบลา — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">รายการรออนุมัติ</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-allowed" class="hidden">
+      <div class="alert warning">คุณไม่มีรายการที่ต้องอนุมัติ</div>
+      <p class="subtle">เฉพาะหัวหน้างาน / HR / เจ้าของ ที่จะเห็นรายการที่นี่</p>
+    </div>
+
+    <div id="content" class="hidden">
+      <div id="my-role" class="card soft mb-2"></div>
+      <div id="list"></div>
+    </div>
+
+    <!-- decision overlay -->
+    <div id="decision-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;overflow-y:auto;padding:20px">
+      <div style="max-width:480px;margin:0 auto;background:white;border-radius:10px;padding:16px;position:relative">
+        <button id="btn-close-decision" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:24px;cursor:pointer">✕</button>
+        <h2 class="section-title" id="decision-title">ตัดสินใจ</h2>
+        <div id="decision-body"></div>
+
+        <div class="form-group mt-2">
+          <label>หมายเหตุ (ไม่จำเป็น)</label>
+          <textarea id="decision-note" maxlength="200" placeholder="เช่น เห็นด้วย / ขอเอกสารเพิ่ม"></textarea>
+        </div>
+
+        <div id="decision-alert" class="hidden"></div>
+
+        <div class="btn-row">
+          <button class="btn danger" id="btn-reject">❌ ไม่อนุมัติ</button>
+          <button class="btn primary" id="btn-approve">✅ อนุมัติ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+let CURRENT_LEAVE = null;
+let CURRENT_STAGE = 0;
+
+(async function () {
+  try { await window.auth.init(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">' + err.message + '</div>';
+    return;
+  }
+
+  const status = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+
+  if (!status.ok || status.status !== 'active') {
+    document.getElementById('not-allowed').classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('content').classList.remove('hidden');
+  const u = status.user;
+  document.getElementById('my-role').innerHTML =
+    '<div><strong>' + window.utils.escapeHtml(u.display_name) + '</strong></div>' +
+    '<div class="subtle">บทบาท: <span class="badge ' + window.getRoleBadgeClass(u.role, u.is_supervisor) + '">' +
+    window.getRoleLabelTh(u.role, u.is_supervisor) + '</span></div>';
+
+  await loadList();
+})();
+
+async function loadList() {
+  const r = await window.api.post('getPendingForMe', { lineUserId: window.state.lineUserId });
+  const list = document.getElementById('list');
+  if (!r.ok) {
+    list.innerHTML = '<div class="alert error">โหลดรายการไม่สำเร็จ</div>';
+    return;
+  }
+  if (!r.pending.length) {
+    list.innerHTML = '<div class="empty"><div class="icon">✓</div>ไม่มีรายการรออนุมัติ</div>';
+    return;
+  }
+  list.innerHTML = '<h2 class="section-title">มี ' + r.pending.length + ' รายการรออนุมัติ</h2>' +
+    r.pending.map((p, i) => {
+      const stageLabel = ({ 1: 'ชั้น 1 (หัวหน้างาน)', 2: 'ชั้น 2 (HR)', 3: 'ชั้น 3 (เจ้าของ)' })[p.my_stage];
+      return '<div class="card mb-1">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<div><strong>' + window.utils.escapeHtml(p.requester_name || '-') + '</strong>' +
+          (p.requester_dept ? ' <span class="subtle">· ' + window.utils.escapeHtml(p.requester_dept) + '</span>' : '') +
+          '</div>' +
+          '<span class="badge pending">' + stageLabel + '</span>' +
+        '</div>' +
+        '<div class="card-row mt-1"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + (p.is_retroactive ? ' (ย้อนหลัง)' : '') + '</span></div>' +
+        '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + ' (' + p.days + ' วัน)</span></div>' +
+        '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>' +
+        (p.attachment_url ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="' + p.attachment_url + '">📎 ดูไฟล์แนบ</a></div>' : '') +
+        (p.gps_lat ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="https://www.google.com/maps?q=' + p.gps_lat + ',' + p.gps_lng + '">📍 ดูตำแหน่ง GPS</a></div>' : '') +
+        '<button class="btn primary block mt-2" onclick="openDecision(' + i + ')">ตัดสินใจ</button>' +
+      '</div>';
+    }).join('');
+
+  window._pending = r.pending;
+}
+
+function openDecision(idx) {
+  const p = window._pending[idx];
+  CURRENT_LEAVE = p;
+  CURRENT_STAGE = p.my_stage;
+  document.getElementById('decision-title').textContent = 'ตัดสินใจชั้น ' + p.my_stage + ': ' + (p.requester_name || '');
+  document.getElementById('decision-body').innerHTML =
+    '<div class="card-row"><span class="label">เลขที่</span><span class="value">' + p.leave_id + '</span></div>' +
+    '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + '</span></div>' +
+    '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + '</span></div>' +
+    '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + p.days + ' วัน</span></div>' +
+    '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>';
+  document.getElementById('decision-note').value = '';
+  window.utils.clearAlert('#decision-alert');
+  document.getElementById('decision-overlay').classList.remove('hidden');
+}
+
+document.getElementById('btn-close-decision').onclick = () => {
+  document.getElementById('decision-overlay').classList.add('hidden');
+};
+
+async function decide(decision) {
+  if (!CURRENT_LEAVE) return;
+  const btn1 = document.getElementById('btn-approve');
+  const btn2 = document.getElementById('btn-reject');
+  btn1.disabled = true; btn2.disabled = true;
+
+  const r = await window.api.post('approveLeave', {
+    lineUserId: window.state.lineUserId,
+    leave_id: CURRENT_LEAVE.leave_id,
+    stage: CURRENT_STAGE,
+    decision: decision,
+    note: document.getElementById('decision-note').value.trim(),
+  });
+
+  btn1.disabled = false; btn2.disabled = false;
+
+  if (!r.ok) {
+    window.utils.showAlert('#decision-alert', r.message || ('ผิดพลาด: ' + r.error), 'error');
+    return;
+  }
+  window.utils.showToast(decision === 'approve' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
+  document.getElementById('decision-overlay').classList.add('hidden');
+  await loadList();
+}
+
+document.getElementById('btn-approve').onclick = () => decide('approve');
+document.getElementById('btn-reject').onclick = () => decide('reject');
+</script>
+</body>
+</html>

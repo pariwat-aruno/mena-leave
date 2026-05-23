@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>User ID — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">บัญชีของคุณ</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="content" class="hidden">
+      <div class="card soft">
+        <div class="text-center mb-1"><strong id="display-name"></strong></div>
+        <p class="subtle text-center mb-2">นี่คือ LINE User ID ของคุณ</p>
+        <div class="id-display" id="user-id">-</div>
+        <button class="btn primary block" id="btn-copy">📋 คัดลอก User ID</button>
+      </div>
+
+      <div id="status-card" class="card mt-2"></div>
+
+      <div class="card mt-2">
+        <p class="subtle">
+          User ID เป็นตัวระบุตัวตนใน LINE — ใช้สำหรับ HR เพิ่มคุณเข้าระบบ
+          หากยังลงทะเบียนไม่สำเร็จ ส่ง ID นี้ให้ HR ผ่านแชทได้
+        </p>
+      </div>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+(async function () {
+  try {
+    await window.auth.init();
+  } catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">เปิดผ่าน LINE App เท่านั้น (' + err.message + ')</div>';
+    return;
+  }
+
+  document.getElementById('display-name').textContent = window.state.displayName || '';
+  document.getElementById('user-id').textContent = window.state.lineUserId;
+
+  document.getElementById('btn-copy').addEventListener('click', async () => {
+    const ok = await window.utils.copyToClipboard(window.state.lineUserId);
+    window.utils.showToast(ok ? 'คัดลอกแล้ว ส่งให้ HR ได้เลย' : 'คัดลอกไม่สำเร็จ ลองกดค้างที่ ID แล้วเลือก');
+  });
+
+  // เช็คสถานะ
+  const res = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  const card = document.getElementById('status-card');
+  if (res.ok && res.status === 'active') {
+    card.classList.add('soft');
+    const u = res.user;
+    card.innerHTML =
+      '<div class="card-row"><span class="label">สถานะ</span><span class="badge approved">ใช้งานอยู่</span></div>' +
+      '<div class="card-row"><span class="label">รหัสพนักงาน</span><span class="value">' + window.utils.escapeHtml(u.emp_code || '-') + '</span></div>' +
+      '<div class="card-row"><span class="label">บทบาท</span><span class="badge ' + window.getRoleBadgeClass(u.role, u.is_supervisor) + '">' + window.getRoleLabelTh(u.role, u.is_supervisor) + '</span></div>' +
+      '<div class="card-row"><span class="label">แผนก</span><span class="value">' + window.utils.escapeHtml(u.department || '-') + '</span></div>' +
+      '<a class="btn primary block mt-2" href="./request.html">ส่งใบลา</a>' +
+      '<a class="btn secondary block mt-1" href="./my-requests.html">ใบลาของฉัน</a>';
+  } else if (res.ok && res.status === 'pending') {
+    card.className = 'card';
+    card.innerHTML = '<div class="alert warning">ส่งคำขอลงทะเบียนแล้ว รอ HR อนุมัติ</div>' +
+      '<p class="subtle">เมื่อ HR อนุมัติ ระบบจะส่งข้อความแจ้งคุณผ่าน LINE</p>';
+  } else if (res.ok && res.status === 'inactive') {
+    card.className = 'card';
+    card.innerHTML = '<div class="alert error">บัญชีถูกระงับการใช้งาน กรุณาติดต่อ HR</div>';
+  } else {
+    card.className = 'card';
+    card.innerHTML = '<div class="alert info">คุณยังไม่ได้ลงทะเบียน</div>' +
+      '<a class="btn primary block" href="./register.html">ลงทะเบียน</a>';
+  }
+
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('content').classList.remove('hidden');
+})();
+</script>
+</body>
+</html>
