@@ -4,13 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>MENA COSMETICS — ระบบลางาน</title>
-  <meta http-equiv="refresh" content="0; url=./myid.html" />
   <link rel="stylesheet" href="./css/style.css" />
   <style>
     body { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
     .loader { text-align: center; padding: 32px; }
     .loader img { width: 80px; height: 80px; margin-bottom: 16px; }
   </style>
+  <script>
+    // preserve LIFF query state + hash เวลา redirect ไป myid.html
+    // (ห้าม drop search/hash ไม่งั้น LIFF SDK loop)
+    (function () {
+      var target = './myid.html' + window.location.search + window.location.hash;
+      window.location.replace(target);
+    })();
+  </script>
 </head>
 <body>
   <div class="loader">
@@ -18,9 +25,5 @@
     <div class="brand">MENA COSMETICS</div>
     <div style="margin-top:12px;color:#666">กำลังโหลด…</div>
   </div>
-  <script>
-    // fallback ถ้า meta refresh ไม่ทำงาน
-    setTimeout(function () { window.location.replace('./myid.html'); }, 100);
-  </script>
 </body>
 </html>
