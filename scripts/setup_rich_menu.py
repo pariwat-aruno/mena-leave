@@ -2,29 +2,25 @@
 """
 setup_rich_menu.py — สร้าง rich menu ของ mena-leave + upload ผ่าน LINE Messaging API
 
-ใช้ครั้งเดียวหลังสร้าง LINE Messaging API channel แล้ว
-ปุ่มทั้ง 5:
-  1. ส่งใบลา           → LIFF request.html
-  2. ใบลาของฉัน         → LIFF my-requests.html
-  3. อนุมัติ            → LIFF approve.html (auto stage-aware)
-  4. จัดการ             → LIFF admin.html (block VISITOR/USER ใน backend)
-  5. คู่มือ              → LIFF manual.html
+ใช้ครั้งเดียวหลังสร้าง LINE Messaging API channel + LIFF app แล้ว
+ปุ่ม 5:
+  1. ส่งใบลา           → request.html
+  2. ใบลาของฉัน         → my-requests.html
+  3. อนุมัติ            → approve.html  (auto stage-aware)
+  4. จัดการ             → admin.html    (block VISITOR/USER ใน backend)
+  5. คู่มือ              → manual.html
 
 ใช้งาน:
   export LINE_CHANNEL_ACCESS_TOKEN='xxx'
-  export LIFF_ID_REQUEST='xxx-xxx'
-  export LIFF_ID_HISTORY='xxx-xxx'
-  export LIFF_ID_APPROVE='xxx-xxx'
-  export LIFF_ID_ADMIN='xxx-xxx'
-  export LIFF_ID_MANUAL='xxx-xxx'
+  export LIFF_ID='2010175593-Fqjuhv0q'
   pip install Pillow requests
   python3 scripts/setup_rich_menu.py
 
-ทำ 4 step:
-  1) ลบ rich menu เก่า (ที่ชื่อ mena-leave-default)
-  2) gen image 2500x1686 (LINE size large)
-  3) upload menu definition → ได้ richMenuId
-  4) upload image + set default
+URL ผูกแต่ละปุ่ม:
+  https://liff.line.me/{LIFF_ID}/<page>.html
+  (concat subpath pattern — LIFF เดียวสำหรับทุกหน้า)
+
+Brand: minimal cherry/magenta — ห้าม emoji (CONTEXT §7)
 """
 import os
 import sys
@@ -37,14 +33,10 @@ if not TOKEN:
     print('ERROR: ตั้ง env LINE_CHANNEL_ACCESS_TOKEN ก่อน')
     sys.exit(1)
 
-LIFF_REQUEST = os.environ.get('LIFF_ID_REQUEST', '')
-LIFF_HISTORY = os.environ.get('LIFF_ID_HISTORY', '')
-LIFF_APPROVE = os.environ.get('LIFF_ID_APPROVE', '')
-LIFF_ADMIN = os.environ.get('LIFF_ID_ADMIN', '')
-LIFF_MANUAL = os.environ.get('LIFF_ID_MANUAL', '')
-
-if not all([LIFF_REQUEST, LIFF_HISTORY, LIFF_APPROVE, LIFF_ADMIN, LIFF_MANUAL]):
-    print('WARN: บาง LIFF_ID env ว่าง — rich menu จะมี link ใช้ไม่ได้')
+LIFF_ID = os.environ.get('LIFF_ID', '')
+if not LIFF_ID:
+    print('ERROR: ตั้ง env LIFF_ID ก่อน')
+    sys.exit(1)
 
 HEADERS = {
     'Authorization': f'Bearer {TOKEN}',
@@ -52,81 +44,113 @@ HEADERS = {
 }
 API = 'https://api.line.me/v2/bot'
 
-# Layout: 2500 x 1686 = LINE large rich menu size
-# Grid 3-cols top + 2-cols bottom (1 ใหญ่กลาง + 4 มุม)
-# ง่าย ๆ: 2 row × layout 3+2
+# LINE large rich menu size
 W, H = 2500, 1686
-TINT = (251, 234, 237)   # #fce4ef
-PRIMARY = (200, 16, 46)  # #d51f7d
-DARK_TEXT = (34, 34, 34)
-SUBTLE = (102, 102, 102)
-BORDER = (240, 220, 225)
+TINT = (252, 228, 239)         # #fce4ef — bg
+PRIMARY = (213, 31, 125)       # #d51f7d — accent
+DARK_TEXT = (40, 40, 40)
+SUBTLE = (130, 130, 130)
+BORDER = (240, 215, 228)
+CARD_BG = (255, 255, 255)
+ACCENT_BG = (255, 240, 247)    # ปุ่มหลัก primary action
 
-# Areas (x, y, w, h) - 5 ปุ่ม
-# Row 1 (top): 3 ปุ่ม
-# Row 2 (bottom): 2 ปุ่ม
+# Layout — 5 ปุ่ม
+# Row 1 (top, 3 ปุ่ม): ส่งใบลา (ใหญ่กลาง) | ใบลาของฉัน | อนุมัติ
+# Row 2 (bottom, 2 ปุ่ม): จัดการ | คู่มือ
 HALF_H = H // 2
 THIRD_W = W // 3
 HALF_W = W // 2
 
+# (label, sublabel, x, y, w, h, page, is_primary)
 AREAS = [
-    # (label, icon, x, y, w, h, liff_id)
-    ('ส่งใบลา',       '📝', 0,             0,        THIRD_W,           HALF_H,            LIFF_REQUEST),
-    ('ใบลาของฉัน',     '📋', THIRD_W,       0,        THIRD_W,           HALF_H,            LIFF_HISTORY),
-    ('อนุมัติ',         '✅', THIRD_W * 2,   0,        W - THIRD_W * 2,   HALF_H,            LIFF_APPROVE),
-    ('จัดการ',         '⚙️', 0,             HALF_H,   HALF_W,            H - HALF_H,        LIFF_ADMIN),
-    ('คู่มือ',          '📖', HALF_W,        HALF_H,   W - HALF_W,        H - HALF_H,        LIFF_MANUAL),
+    ('ส่งใบลา',       'แจ้งลาป่วย / กิจ / พักร้อน',  0,           0,       THIRD_W,           HALF_H,     'request.html',      True),
+    ('ใบลาของฉัน',     'ดูประวัติ + สถานะอนุมัติ',     THIRD_W,     0,       THIRD_W,           HALF_H,     'my-requests.html',  False),
+    ('อนุมัติ',         'หัวหน้างาน / HR / เจ้าของ',    THIRD_W * 2, 0,       W - THIRD_W * 2,   HALF_H,     'approve.html',      False),
+    ('จัดการ',         'พนักงาน · โควตา · กฎ',         0,           HALF_H,  HALF_W,            H - HALF_H, 'admin.html',        False),
+    ('คู่มือ',          'วิธีใช้งานระบบ',                HALF_W,      HALF_H,  W - HALF_W,        H - HALF_H, 'manual.html',       False),
 ]
 
 
 def find_thai_font():
-    """ลองหา font ที่รองรับไทยในระบบ — fallback default"""
-    candidates = [
+    """หา bold + regular Thai font บน macOS"""
+    bold_candidates = [
+        os.path.expanduser('~/Library/Fonts/payroll-edge/Prompt-Bold.ttf'),
+        '/System/Library/Fonts/Supplemental/Tahoma Bold.ttf',
+        '/System/Library/Fonts/Supplemental/Thonburi.ttc',
         '/usr/share/fonts/truetype/tlwg/Sarabun-Bold.ttf',
-        '/usr/share/fonts/truetype/tlwg/Garuda-Bold.ttf',
-        '/System/Library/Fonts/Supplemental/Tahoma.ttf',
-        'C:/Windows/Fonts/tahomabd.ttf',
-        '/usr/share/fonts/TTF/Sarabun-Bold.ttf',
     ]
-    for p in candidates:
-        if os.path.exists(p):
-            return p
-    return None
+    regular_candidates = [
+        os.path.expanduser('~/Library/Fonts/payroll-edge/Prompt-Regular.ttf'),
+        '/System/Library/Fonts/Supplemental/Tahoma.ttf',
+        '/System/Library/Fonts/Supplemental/Thonburi.ttc',
+        '/usr/share/fonts/truetype/tlwg/Sarabun.ttf',
+    ]
+    bold = next((p for p in bold_candidates if os.path.exists(p)), None)
+    regular = next((p for p in regular_candidates if os.path.exists(p)), bold)
+    return bold, regular
+
+
+def draw_button(draw, x, y, w, h, label, sublabel, is_primary, label_font, sub_font, divider_font):
+    """วาด 1 ปุ่ม minimal style"""
+    pad = 16
+    bg = ACCENT_BG if is_primary else CARD_BG
+    draw.rectangle([x + pad, y + pad, x + w - pad, y + h - pad], fill=bg, outline=BORDER, width=4)
+
+    # แถบสี primary ที่ขอบบน (สำหรับปุ่มหลัก)
+    if is_primary:
+        draw.rectangle([x + pad, y + pad, x + w - pad, y + pad + 18], fill=PRIMARY)
+
+    # label (กลาง)
+    cx = x + w // 2
+    cy = y + h // 2
+
+    try:
+        lw = draw.textlength(label, font=label_font)
+    except Exception:
+        lw = 300
+    draw.text((cx - lw / 2, cy - 80), label, font=label_font, fill=PRIMARY if is_primary else DARK_TEXT)
+
+    # divider
+    line_w = w // 4
+    draw.line([(cx - line_w / 2, cy + 30), (cx + line_w / 2, cy + 30)], fill=PRIMARY if is_primary else BORDER, width=3)
+
+    # sublabel (เล็ก)
+    try:
+        sw = draw.textlength(sublabel, font=sub_font)
+    except Exception:
+        sw = 200
+    draw.text((cx - sw / 2, cy + 55), sublabel, font=sub_font, fill=SUBTLE)
 
 
 def make_image(output_path):
     img = Image.new('RGB', (W, H), TINT)
     draw = ImageDraw.Draw(img)
-    font_path = find_thai_font()
-    label_font = ImageFont.truetype(font_path, 80) if font_path else ImageFont.load_default()
-    icon_font = ImageFont.truetype(font_path, 130) if font_path else ImageFont.load_default()
+    bold_path, regular_path = find_thai_font()
+    if not bold_path:
+        print('ERROR: ไม่พบ Thai font บนเครื่อง')
+        sys.exit(1)
+    print(f'  using bold: {bold_path}')
+    print(f'  using regular: {regular_path}')
 
-    for (label, icon, x, y, w, h, _liff) in AREAS:
-        # cell background — slightly lighter
-        draw.rectangle([x + 8, y + 8, x + w - 8, y + h - 8], fill=(255, 255, 255), outline=BORDER, width=4)
-        # icon
-        cx = x + w // 2
-        cy = y + h // 2 - 60
-        try:
-            iw = draw.textlength(icon, font=icon_font)
-        except Exception:
-            iw = 100
-        draw.text((cx - iw / 2, cy - 80), icon, font=icon_font, fill=PRIMARY)
-        # label
-        try:
-            lw = draw.textlength(label, font=label_font)
-        except Exception:
-            lw = 200
-        draw.text((cx - lw / 2, cy + 80), label, font=label_font, fill=DARK_TEXT)
+    label_font = ImageFont.truetype(bold_path, 110)
+    sub_font = ImageFont.truetype(regular_path, 48)
+    divider_font = None
 
-    # header bar
-    draw.rectangle([0, 0, W, 12], fill=PRIMARY)
-    img.save(output_path, 'JPEG', quality=85, optimize=True)
-    print(f'✓ wrote image: {output_path}')
+    for (label, sublabel, x, y, w, h, _page, is_primary) in AREAS:
+        draw_button(draw, x, y, w, h, label, sublabel, is_primary, label_font, sub_font, divider_font)
+
+    # header band บนสุด (brand stripe)
+    draw.rectangle([0, 0, W, 16], fill=PRIMARY)
+
+    # footer band
+    draw.rectangle([0, H - 12, W, H], fill=PRIMARY)
+
+    img.save(output_path, 'JPEG', quality=88, optimize=True)
+    print(f'✓ wrote image: {output_path}  ({os.path.getsize(output_path)} bytes)')
 
 
 def get_existing_menus():
-    res = requests.get(f'{API}/richmenu/list', headers=HEADERS)
+    res = requests.get(f'{API}/richmenu/list', headers={'Authorization': f'Bearer {TOKEN}'})
     if res.status_code != 200:
         print(f'list failed: {res.status_code} {res.text}')
         return []
@@ -134,7 +158,7 @@ def get_existing_menus():
 
 
 def delete_menu(menu_id):
-    res = requests.delete(f'{API}/richmenu/{menu_id}', headers=HEADERS)
+    res = requests.delete(f'{API}/richmenu/{menu_id}', headers={'Authorization': f'Bearer {TOKEN}'})
     print(f'  delete {menu_id}: {res.status_code}')
 
 
@@ -146,11 +170,8 @@ def create_menu():
         'chatBarText': 'เมนูระบบลางาน',
         'areas': [],
     }
-    for (label, _icon, x, y, w, h, liff_id) in AREAS:
-        if liff_id:
-            uri = f'https://liff.line.me/{liff_id}'
-        else:
-            uri = 'https://line.me'
+    for (label, _sub, x, y, w, h, page, _primary) in AREAS:
+        uri = f'https://liff.line.me/{LIFF_ID}/{page}'
         body['areas'].append({
             'bounds': {'x': x, 'y': y, 'width': w, 'height': h},
             'action': {'type': 'uri', 'label': label, 'uri': uri},
@@ -179,7 +200,7 @@ def upload_image(menu_id, image_path):
 
 
 def set_default(menu_id):
-    res = requests.post(f'{API}/user/all/richmenu/{menu_id}', headers=HEADERS)
+    res = requests.post(f'{API}/user/all/richmenu/{menu_id}', headers={'Authorization': f'Bearer {TOKEN}'})
     if res.status_code != 200:
         print(f'set default failed: {res.status_code} {res.text}')
         sys.exit(1)
@@ -206,9 +227,9 @@ def main():
     print('5) setting as default for all users...')
     set_default(menu_id)
 
-    print('\n✅ Done — rich menu installed:')
+    print('\nDone — rich menu installed:')
     print('   menu_id =', menu_id)
-    print('   พนักงานที่ add เพื่อนกับ OA แล้ว ต้องลบเพื่อน + add ใหม่ เพื่อเห็นเมนูใหม่')
+    print('   พนักงานที่ add เพื่อนกับ OA แล้ว — ต้องปิด-เปิดแชทใหม่ หรือ unfriend+refriend เพื่อเห็นเมนูใหม่')
 
 
 if __name__ == '__main__':
