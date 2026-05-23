@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>คู่มือเจ้าของ — ระบบลางาน MENA COSMETICS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./docs.css" />
+</head>
+<body>
+  <div class="docs-wrap">
+    <a class="back-link" href="./index.html">← กลับไปหน้าเลือกคู่มือ</a>
+
+    <div class="docs-header">
+      <div class="brand">MENA COSMETICS</div>
+      <h1>คู่มือเจ้าของ (OWNER)</h1>
+      <p class="subtitle">
+        สำหรับ <span class="role-tag" style="background:#fff;color:#a01560">เจ้าของกิจการ</span> — สิทธิ์สูงสุดในระบบ
+      </p>
+    </div>
+
+    <div class="toc">
+      <h3>หน้าที่และฟีเจอร์ของ OWNER</h3>
+      <ul>
+        <li><a href="#overview">สิทธิ์รวมของ OWNER</a></li>
+        <li><a href="#richmenu">เมนูหลัก</a></li>
+        <li><a href="#myid">บัญชีของฉัน</a></li>
+        <li><a href="#request">ส่งใบลา (auto-approve)</a></li>
+        <li><a href="#approve">อนุมัติชั้นสุดท้าย (Stage 3)</a></li>
+        <li><a href="#admin">จัดการระบบ (เต็มสิทธิ์)</a></li>
+        <li><a href="#pending">อนุมัติ Pending Changes</a></li>
+        <li><a href="#invite-owner">เชิญ OWNER เพิ่ม</a></li>
+        <li><a href="#settings">Settings — ตั้งค่าระบบ</a></li>
+      </ul>
+    </div>
+
+    <!-- Overview -->
+    <section class="page" id="overview">
+      <header>
+        <h2>สิทธิ์รวมของ OWNER</h2>
+        <div class="filename">role = OWNER</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col" style="grid-column: 1 / -1">
+          <ul class="flow-list">
+            <li><strong>ทุกอย่างที่พนักงาน + ฝ่ายบุคคล (HR/ADMIN) ทำได้</strong></li>
+            <li><strong>อนุมัติชั้นสุดท้าย (Stage 3)</strong> ของใบลาทุกใบ — ใบลาจะ approved ได้ต้องผ่านชั้นนี้</li>
+            <li><strong>อนุมัติ Pending Changes</strong> — เมื่อ ADMIN propose แก้ quota/rule/settings/users มันจะถูก queue รอ OWNER ตัดสิน</li>
+            <li><strong>เชิญ OWNER ใหม่</strong> ได้ทันที (I-016) — ADMIN ไม่มีสิทธิ์นี้</li>
+            <li><strong>ตั้งค่า Sheet Settings ทั้งหมด</strong> โดยไม่ผ่าน Pending_Changes</li>
+            <li><strong>ลาเอง = auto-approve</strong> — ใบลาจะอนุมัติทันที + log ใน Audit_Log</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rich menu (same as user) -->
+    <section class="page" id="richmenu">
+      <header>
+        <h2>เมนูหลัก (Rich menu)</h2>
+        <div class="filename">เหมือนพนักงาน — แต่ทุกปุ่มใช้ได้</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col">
+          <h4>หน้าตา</h4>
+          <div class="richmenu-mockup">
+            <div class="rm-btn primary">ส่งใบลา<div class="sub">auto-approve</div></div>
+            <div class="rm-btn">ใบลาของฉัน<div class="sub">ดูประวัติ</div></div>
+            <div class="rm-btn">อนุมัติ<div class="sub">Stage 3 ทุกใบ</div></div>
+            <div class="rm-btn b4">จัดการ<div class="sub">เข้าได้ทุกแท็บ</div></div>
+            <div class="rm-btn b5">คู่มือ<div class="sub">manual-admin.html</div></div>
+          </div>
+        </div>
+        <div class="flow-col">
+          <h4>ปุ่ม → ฟีเจอร์พิเศษของ OWNER</h4>
+          <ul class="flow-list">
+            <li><span class="btn-name">ส่งใบลา</span><span class="arrow">→</span> OWNER ลา = auto-approve ทันที</li>
+            <li><span class="btn-name">อนุมัติ</span><span class="arrow">→</span> เห็น Stage 3 ของใบลาทุกใบ + Pending_Changes ที่ ADMIN propose</li>
+            <li><span class="btn-name">จัดการ</span><span class="arrow">→</span> เข้าทุกแท็บ + แท็บพิเศษ "อนุมัติ pending changes"</li>
+            <li><span class="btn-name">คู่มือ</span><span class="arrow">→</span> manual-admin.html (เนื้อหาเหมือน ADMIN)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- myid.html (highlighted differences) -->
+    <section class="page" id="myid">
+      <header>
+        <h2>บัญชีของฉัน</h2>
+        <div class="filename">myid.html</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col">
+          <h4>หน้าตา (OWNER)</h4>
+          <div class="mockup">
+            <div class="mockup-header">
+              <div class="mockup-logo"><em>m</em></div>
+              <div><div class="mockup-brand">MENA COSMETICS</div><div class="mockup-title">บัญชีของคุณ</div></div>
+            </div>
+            <div class="mockup-card">
+              <div style="text-align:center;font-weight:600">พี่ปุ้ย</div>
+              <div class="id-display">Ub47d6b519be013dbe6e83c4fbd079c56</div>
+              <div class="mockup-btn">คัดลอก User ID</div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between">สถานะ <span class="mockup-badge approved">ใช้งานอยู่</span></div>
+              <div style="display:flex;justify-content:space-between">รหัสพนักงาน <strong>OWNER-001</strong></div>
+              <div style="display:flex;justify-content:space-between">บทบาท <span class="mockup-badge" style="background:#d51f7d;color:white">เจ้าของ</span></div>
+              <div class="mockup-btn">ส่งใบลา</div>
+              <div class="mockup-btn secondary">ใบลาของฉัน</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col">
+          <h4>ความต่างกับพนักงาน</h4>
+          <ul class="flow-list">
+            <li>Badge บทบาทแสดง <span class="mockup-badge" style="background:#d51f7d;color:white">เจ้าของ</span> (สีหลักของแบรนด์)</li>
+            <li>รหัสพนักงาน OWNER-001 (จาก bootstrapFirstOwner)</li>
+            <li>คงเห็นปุ่ม "ส่งใบลา" และ "ใบลาของฉัน" เหมือนพนักงาน</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- request.html (auto-approve) -->
+    <section class="page" id="request">
+      <header>
+        <h2>ส่งใบลา (auto-approve)</h2>
+        <div class="filename">request.html</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col">
+          <h4>หน้าตา</h4>
+          <div class="mockup">
+            <div class="mockup-header">
+              <div class="mockup-logo"><em>m</em></div>
+              <div><div class="mockup-brand">MENA COSMETICS</div><div class="mockup-title">ส่งใบลา</div></div>
+            </div>
+            <div class="mockup-card">
+              <div>ลาป่วย · เหลือ 30 วัน</div>
+              <div>ลากิจ · เหลือ 6 วัน</div>
+              <div>ลาพักร้อน · เหลือ 10 วัน</div>
+            </div>
+            <div class="mockup-input">ประเภท: ลาพักร้อน</div>
+            <div class="mockup-input">3-7 มิ.ย. 2026 (5 วัน)</div>
+            <div class="mockup-input">เหตุผล: พักร้อนต่างประเทศ</div>
+            <div class="mockup-card" style="background:#e8f5e9;font-size:11px">GPS: 13.7563, 100.5018 ✓</div>
+            <div class="mockup-btn">ส่งใบลา</div>
+            <div style="text-align:center;font-size:11px;color:#1e7d1e;margin-top:8px">
+              <span class="mockup-badge approved">อนุมัติแล้ว (auto)</span>
+              <div style="margin-top:4px">ระบบบันทึก audit log แล้ว</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col">
+          <h4>flow ของ OWNER (ต่างจากพนักงาน)</h4>
+          <ul class="flow-list">
+            <li>1. กรอกฟอร์ม + GPS เหมือนพนักงาน</li>
+            <li>2. กด <span class="btn-name">ส่งใบลา</span></li>
+            <li>3. ระบบเช็คโควตา + กฎ (เหมือนทั่วไป)</li>
+            <li>4. <strong>ไม่ผ่าน 3 stage</strong> → set final_status = approved ทันที</li>
+            <li>5. เพิ่ม Audit_Log: action="owner_auto_approve_leave"</li>
+            <li>6. หักโควตาทันที (sick_used / personal_used / vacation_used)</li>
+          </ul>
+          <div style="margin-top:12px;padding:12px;background:#fff4e0;border-left:3px solid #b86700;font-size:13px;border-radius:6px">
+            <strong>หมายเหตุ:</strong> ระบบบังคับ GPS เหมือนทุกคน + ลาย้อนหลังได้เฉพาะลาป่วย (rule เดียวกัน) — แค่ approval flow ที่ลัดสั้น
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- approve.html for Stage 3 -->
+    <section class="page" id="approve">
+      <header>
+        <h2>อนุมัติชั้นสุดท้าย (Stage 3)</h2>
+        <div class="filename">approve.html</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col">
+          <h4>หน้าตา</h4>
+          <div class="mockup">
+            <div class="mockup-header">
+              <div class="mockup-logo"><em>m</em></div>
+              <div><div class="mockup-brand">MENA COSMETICS</div><div class="mockup-title">รออนุมัติ (Stage 3)</div></div>
+            </div>
+            <div class="mockup-card">
+              <div><strong>สมหญิง รักงาน</strong> <span class="mockup-badge role">พนักงาน</span></div>
+              <div style="font-size:11px;color:#666">ลาพักร้อน · 10-15 มิ.ย. (5 วัน)</div>
+              <div style="font-size:11px;color:#888;margin:4px 0">"พักร้อนต่างประเทศกับครอบครัว"</div>
+              <div style="font-size:10px;color:#888;border-top:1px dashed #ddd;padding-top:6px;margin-top:6px">
+                ✓ Stage 1: หัวหน้างาน (4 ชม.ก่อน)<br>
+                ✓ Stage 2: HR (1 ชม.ก่อน)<br>
+                <strong style="color:#d51f7d">→ Stage 3: รอคุณตัดสิน</strong>
+              </div>
+              <div class="mockup-btn ghost" style="font-size:11px">ดูไฟล์แนบ</div>
+              <div class="mockup-btn ghost" style="font-size:11px">ดูตำแหน่ง GPS</div>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <div class="mockup-btn" style="flex:1;background:#1e7d1e;font-size:11px">อนุมัติ (Final)</div>
+                <div class="mockup-btn" style="flex:1;background:#c41818;font-size:11px">ปฏิเสธ</div>
+              </div>
+            </div>
+            <div class="mockup-card" style="background:#fff4e0">
+              <strong style="font-size:11px">Pending_Changes รออนุมัติ</strong>
+              <div style="font-size:10px;color:#666">ADMIN propose: เพิ่ม sick_total ของ EMP-0010 → 35 วัน</div>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <div class="mockup-btn" style="flex:1;background:#1e7d1e;font-size:11px">อนุมัติ</div>
+                <div class="mockup-btn" style="flex:1;background:#c41818;font-size:11px">ปฏิเสธ</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col">
+          <h4>OWNER เห็นอะไร</h4>
+          <ul class="flow-list">
+            <li><strong>ใบลาทุกใบที่ผ่าน Stage 2 แล้ว</strong> รอ OWNER คนใดคนหนึ่งตัดสิน (1st OWNER wins)</li>
+            <li><strong>Pending_Changes</strong> ที่ ADMIN propose ไว้ — ทุกการเปลี่ยน quota/rule/settings ของ ADMIN ต้อง OWNER อนุมัติ</li>
+            <li>ในแชท LINE ก็ได้ Flex card ทั้ง 2 ประเภท + กดอนุมัติได้ทันที</li>
+          </ul>
+          <h4 style="margin-top:16px">เมื่อ OWNER กด Stage 3 = approved</h4>
+          <ul class="flow-list">
+            <li>final_status = approved</li>
+            <li>หักโควตา: used += days, reserved -= days</li>
+            <li>push final approve card → ผู้ลา + supervisor + HR ทุกคน</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- admin.html OWNER edition -->
+    <section class="page" id="admin">
+      <header>
+        <h2>จัดการระบบ (เต็มสิทธิ์)</h2>
+        <div class="filename">admin.html</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col">
+          <h4>หน้าตา (OWNER มีแท็บพิเศษ)</h4>
+          <div class="mockup">
+            <div class="mockup-header">
+              <div class="mockup-logo"><em>m</em></div>
+              <div><div class="mockup-brand">MENA COSMETICS</div><div class="mockup-title">จัดการระบบ</div></div>
+            </div>
+            <div style="display:flex;gap:4px;overflow-x:auto;font-size:10px;margin-bottom:8px;flex-wrap:wrap">
+              <div style="background:#fce4ef;padding:4px 8px;border-radius:4px">พนักงาน</div>
+              <div style="background:#fce4ef;padding:4px 8px;border-radius:4px">หัวหน้างาน</div>
+              <div style="background:#fce4ef;padding:4px 8px;border-radius:4px">โควตา</div>
+              <div style="background:#fce4ef;padding:4px 8px;border-radius:4px">กฎ</div>
+              <div style="background:#fce4ef;padding:4px 8px;border-radius:4px">Settings</div>
+              <div style="background:#d51f7d;color:white;padding:4px 8px;border-radius:4px">Pending Changes</div>
+              <div style="background:#fce4ef;padding:4px 8px;border-radius:4px">Report</div>
+            </div>
+            <div class="mockup-card">
+              <strong style="font-size:12px">เพิ่ม OWNER ใหม่</strong>
+              <div style="font-size:10px;color:#888;margin:4px 0">สร้าง pairing code → ส่งให้ผู้ที่จะเป็น OWNER → ผู้นั้น redeem ผ่าน LIFF</div>
+              <div class="mockup-btn">เชิญ OWNER ใหม่</div>
+            </div>
+            <div class="mockup-card">
+              <strong style="font-size:12px">จัดการพนักงาน</strong>
+              <div style="font-size:10px;color:#888;margin:4px 0">3 พนักงาน · 1 หัวหน้างาน · 1 ADMIN</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-col">
+          <h4>แท็บ "Pending Changes" (เฉพาะ OWNER)</h4>
+          <ul class="flow-list">
+            <li>list ทุก change_id ที่ ADMIN propose</li>
+            <li>แสดง: ใคร propose · target (Users/Quota/Rule/Settings) · change_type · payload diff</li>
+            <li>OWNER กดอนุมัติ → ระบบ apply change จริงเข้า Sheet</li>
+            <li>OWNER กดปฏิเสธ → mark rejected + แจ้ง ADMIN</li>
+          </ul>
+          <h4 style="margin-top:16px">แท็บ Settings (OWNER แก้ได้ตรง)</h4>
+          <ul class="flow-list">
+            <li>brand_name · brand_logo_url · brand_color_primary · brand_color_tint</li>
+            <li>approval_levels (default 3) — ถ้าตั้ง 2 = ไม่ผ่าน OWNER · ตั้ง 1 = หัวหน้างานคนเดียวอนุมัติ</li>
+            <li>default_sick_total / default_personal_total / default_vacation_total</li>
+            <li>count_weekends_as_leave (TRUE/FALSE)</li>
+            <li>gps_required (TRUE/FALSE)</li>
+            <li>attachment_required_above_days (default 3)</li>
+            <li>support_line_id (default @966nnfkr)</li>
+            <li>quota_reset_month/day (default 1 ม.ค.)</li>
+            <li>pairing_code_ttl_hours (default 24)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pending changes -->
+    <section class="page" id="pending">
+      <header>
+        <h2>อนุมัติ Pending Changes</h2>
+        <div class="filename">admin.html → tab "Pending Changes" (OWNER only)</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col" style="grid-column: 1 / -1">
+          <h4>ทำไมต้องมี Pending_Changes</h4>
+          <p style="font-size:14px;color:#444">
+            ป้องกัน ADMIN (HR) แก้ระบบเอง — เช่น เพิ่มโควตาให้ตัวเอง, ปิด GPS เพื่อโกง, เปลี่ยน approval levels, เปลี่ยน supervisor ลูกน้องตัวเอง — การกระทำเหล่านี้จะถูก <strong>queue</strong> รอ OWNER ยืนยัน
+          </p>
+          <h4 style="margin-top:16px">ตัวอย่างที่ trigger Pending_Changes</h4>
+          <ul class="flow-list">
+            <li>ADMIN set quota รายคน <strong>(non-default)</strong> → queue</li>
+            <li>ADMIN แก้ LeaveRules → queue</li>
+            <li>ADMIN แก้ Sheet Settings → queue</li>
+            <li>ADMIN เปลี่ยน supervisor pair (Supervisors row) → queue</li>
+            <li>ADMIN approve register ใหม่ + สร้าง default quota → <strong>ไม่ queue</strong> (ปกติ — ใช้ default จาก Settings)</li>
+            <li>ADMIN ระงับการใช้งานพนักงาน → <strong>ไม่ queue</strong> (operational action)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Invite OWNER -->
+    <section class="page" id="invite-owner">
+      <header>
+        <h2>เชิญ OWNER ใหม่</h2>
+        <div class="filename">admin.html → ปุ่ม "เชิญ OWNER ใหม่"</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col">
+          <h4>วิธีเชิญ</h4>
+          <ul class="flow-list">
+            <li>1. ใน admin → ปุ่ม <span class="btn-name">เชิญ OWNER ใหม่</span></li>
+            <li>2. ระบบสร้าง pairing code 6 หลัก (TTL 24h)</li>
+            <li>3. copy ข้อความเชิญ → ส่งให้ผู้ที่จะเป็น OWNER ใหม่</li>
+            <li>4. ผู้นั้นเปิด LINE OA → add friend → เปิด LIFF myid.html</li>
+            <li>5. ระบบเห็นว่ายังไม่ register → ให้กรอก code 6 หลัก</li>
+            <li>6. ระบบ link line_user_id กับ Users row (role=OWNER) → status=active</li>
+          </ul>
+        </div>
+        <div class="flow-col">
+          <h4>ความสำคัญ</h4>
+          <ul class="flow-list">
+            <li>OWNER เพิ่ม OWNER ใหม่ได้<strong>ทันที</strong> ไม่ผ่าน Pending_Changes</li>
+            <li>ADMIN ไม่สามารถเพิ่ม OWNER ได้ — แม้จะ propose ผ่าน Pending_Changes</li>
+            <li>การมี OWNER หลายคน = approve stage 3 ได้เร็วขึ้น (1st OWNER wins)</li>
+            <li>ถ้า OWNER คนเดียวลาออก/ลืม phone → ระบบจะลาทุกใบไม่ผ่าน Stage 3 — ควรมีอย่างน้อย 2 OWNER เสมอ</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings details -->
+    <section class="page" id="settings">
+      <header>
+        <h2>Settings — ตั้งค่าระบบ</h2>
+        <div class="filename">Sheet `Settings` หรือ admin.html → tab Settings</div>
+      </header>
+      <div class="content">
+        <div class="mockup-col" style="grid-column: 1 / -1">
+          <h4>วิธีแก้</h4>
+          <ul class="flow-list">
+            <li><strong>ผ่าน Google Sheet โดยตรง</strong> — เปิดไฟล์ <code>mena-leave - Database</code> → tab <code>Settings</code> → แก้ค่าใน column "value"</li>
+            <li><strong>ผ่าน LIFF admin.html</strong> → tab "Settings" — OWNER แก้ได้ตรง · ADMIN แก้ต้องผ่าน Pending_Changes</li>
+          </ul>
+          <h4 style="margin-top:16px">ค่าที่แก้ได้ทั้งหมด (18 keys)</h4>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:#fce4ef;text-align:left">
+                <th style="padding:8px;border:1px solid #f0d7e4">key</th>
+                <th style="padding:8px;border:1px solid #f0d7e4">default</th>
+                <th style="padding:8px;border:1px solid #f0d7e4">หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody style="font-size:12px">
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">brand_name</td><td style="padding:6px;border:1px solid #f0d7e4">MENA COSMETICS</td><td style="padding:6px;border:1px solid #f0d7e4">ชื่อแบรนด์</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">brand_logo_url</td><td style="padding:6px;border:1px solid #f0d7e4">(ว่าง)</td><td style="padding:6px;border:1px solid #f0d7e4">Drive URL ของ logo</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">brand_color_primary</td><td style="padding:6px;border:1px solid #f0d7e4">#d51f7d</td><td style="padding:6px;border:1px solid #f0d7e4">สีหลัก</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">brand_color_tint</td><td style="padding:6px;border:1px solid #f0d7e4">#fce4ef</td><td style="padding:6px;border:1px solid #f0d7e4">สีอ่อน</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">approval_levels</td><td style="padding:6px;border:1px solid #f0d7e4">3</td><td style="padding:6px;border:1px solid #f0d7e4">จำนวน stage</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">default_sick_total</td><td style="padding:6px;border:1px solid #f0d7e4">30</td><td style="padding:6px;border:1px solid #f0d7e4">โควตาลาป่วยเริ่มต้น</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">default_personal_total</td><td style="padding:6px;border:1px solid #f0d7e4">6</td><td style="padding:6px;border:1px solid #f0d7e4">โควตาลากิจเริ่มต้น</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">default_vacation_total</td><td style="padding:6px;border:1px solid #f0d7e4">10</td><td style="padding:6px;border:1px solid #f0d7e4">โควตาลาพักร้อนเริ่มต้น</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">count_weekends_as_leave</td><td style="padding:6px;border:1px solid #f0d7e4">FALSE</td><td style="padding:6px;border:1px solid #f0d7e4">นับ ส-อา เป็นวันลาไหม</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">gps_required</td><td style="padding:6px;border:1px solid #f0d7e4">TRUE</td><td style="padding:6px;border:1px solid #f0d7e4">บังคับ GPS ตอน submit</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">attachment_required_above_days</td><td style="padding:6px;border:1px solid #f0d7e4">3</td><td style="padding:6px;border:1px solid #f0d7e4">ลาเกินกี่วันต้องแนบไฟล์</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">support_line_id</td><td style="padding:6px;border:1px solid #f0d7e4">@966nnfkr</td><td style="padding:6px;border:1px solid #f0d7e4">LINE OA สำหรับติดต่อ HR</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">pairing_code_ttl_hours</td><td style="padding:6px;border:1px solid #f0d7e4">24</td><td style="padding:6px;border:1px solid #f0d7e4">อายุรหัสเชิญ (ชม.)</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">quota_reset_month</td><td style="padding:6px;border:1px solid #f0d7e4">1</td><td style="padding:6px;border:1px solid #f0d7e4">เดือนรีเซ็ตโควตา</td></tr>
+              <tr><td style="padding:6px;border:1px solid #f0d7e4">quota_reset_day</td><td style="padding:6px;border:1px solid #f0d7e4">1</td><td style="padding:6px;border:1px solid #f0d7e4">วันรีเซ็ตโควตา</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="docs-footer">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div style="margin-top:8px">ระบบลางานออนไลน์ · LINE @966nnfkr</div>
+      <div style="margin-top:4px"><a href="./user-guide.html" style="color:#d51f7d">ดูคู่มือพนักงาน →</a></div>
+    </footer>
+  </div>
+</body>
+</html>

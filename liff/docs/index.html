@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>คู่มือระบบลางาน — MENA COSMETICS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./docs.css" />
+</head>
+<body>
+  <div class="docs-wrap">
+    <div class="docs-header">
+      <div class="brand">MENA COSMETICS</div>
+      <h1>คู่มือระบบลางาน</h1>
+      <p class="subtitle">เลือกประเภทผู้ใช้ที่ตรงกับคุณเพื่อดูคู่มือฉบับเต็ม</p>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta" href="./user-guide.html">
+        <h3>คู่มือพนักงาน</h3>
+        <p>สำหรับพนักงานทั่วไป · หัวหน้างาน · ฝ่ายบุคคล (HR/ADMIN)<br>ครอบคลุม: ลงทะเบียน · ส่งใบลา · ดูประวัติ · อนุมัติ · จัดการพนักงาน</p>
+      </a>
+      <a class="cta" href="./owner-guide.html">
+        <h3>คู่มือเจ้าของ (OWNER)</h3>
+        <p>สำหรับเจ้าของกิจการ<br>ครอบคลุม: ทุกอย่างของพนักงาน + อนุมัติชั้นสุดท้าย + ตั้งค่าระบบ + invite OWNER ใหม่</p>
+      </a>
+    </div>
+
+    <div class="flowchart" style="margin-top:32px">
+      <h2>ภาพรวมระบบ</h2>
+      <p style="margin-top:0;color:#666;font-size:14px">ระบบลางานออนไลน์ผ่าน LINE — ใช้ผ่าน Rich menu ในแชท OA <strong>@966nnfkr</strong> (Mena)</p>
+      <pre>4 บทบาท (Roles):
+  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+  │ VISITOR  │ →  │   USER   │ →  │  ADMIN   │ →  │  OWNER   │
+  │ ยังไม่    │    │ พนักงาน  │    │ ฝ่ายบุคคล │    │ เจ้าของ   │
+  │ ลงทะเบียน│    │+หัวหน้างาน│    │   (HR)   │    │          │
+  └──────────┘    └──────────┘    └──────────┘    └──────────┘
+
+3 ชั้นอนุมัติใบลา (3-stage approval):
+  ผู้ลาส่งใบลา
+       ↓
+  Stage 1: หัวหน้างาน (USER + is_supervisor=TRUE)
+       ↓
+  Stage 2: ฝ่ายบุคคล (ADMIN) — คนใดคนหนึ่งกดได้ (1st wins)
+       ↓
+  Stage 3: เจ้าของ (OWNER) — คนใดคนหนึ่งกดได้
+       ↓
+  ✅ อนุมัติแล้ว (final_status=approved + หักโควตา)
+
+ข้อยกเว้น:
+  • หัวหน้างานลาเอง → ข้าม Stage 1 → เริ่มที่ Stage 2
+  • ADMIN ลาเอง → ข้าม Stage 1+2 → ตรงไป Stage 3
+  • OWNER ลาเอง → auto-approve (มี audit log)</pre>
+    </div>
+
+    <footer class="docs-footer">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div style="margin-top:8px">ระบบลางานออนไลน์ · LINE @966nnfkr</div>
+    </footer>
+  </div>
+</body>
+</html>
