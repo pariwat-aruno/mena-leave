@@ -400,6 +400,14 @@ function verifyLineSecrets() {
 }
 
 /**
+ * Wrapper สำหรับ Apps Script Run dropdown (function ไม่รับ param ถึงจะโผล่ใน Run)
+ * — ใส่ LINE userId ของ OWNER คนแรกแล้วกด Run
+ */
+function bootstrapMe() {
+  return bootstrapFirstOwner('Ub47d6b519be013dbe6e83c4fbd079c56');
+}
+
+/**
  * bootstrap OWNER คนแรก — รัน 1 ครั้งหลัง setupAll() + ใส่ LINE userId ของพี่ปุ้ย
  * idempotent: ถ้ามี OWNER แล้วจะไม่สร้างใหม่
  *
