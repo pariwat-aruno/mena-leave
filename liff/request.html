@@ -95,7 +95,7 @@
         <h2 class="section-title">ยืนยันตำแหน่ง</h2>
         <p class="subtle">ระบบจะบันทึก GPS ตอนกดส่งเพื่อยืนยันว่าคุณเป็นผู้กดเอง — ไม่ติดตามตำแหน่งของคุณตลอดเวลา</p>
 
-        <div id="gps-status" class="gps-status loading">📍 รอการตรวจสอบ GPS...</div>
+        <div id="gps-status" class="gps-status loading">รอการตรวจสอบ GPS...</div>
 
         <h2 class="section-title mt-2">สรุปก่อนส่ง</h2>
         <div class="card" id="summary"></div>
@@ -314,7 +314,7 @@ function renderSummary() {
 async function requestGps() {
   const status = document.getElementById('gps-status');
   status.className = 'gps-status loading';
-  status.textContent = '📍 กำลังขอตำแหน่ง GPS...';
+  status.textContent = 'กำลังขอตำแหน่ง GPS...';
   try {
     GPS = await window.utils.getGeolocation();
     status.className = 'gps-status ok';

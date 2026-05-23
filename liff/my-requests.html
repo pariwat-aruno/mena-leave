@@ -76,7 +76,7 @@ async function loadList() {
     return;
   }
   if (!r.requests.length) {
-    list.innerHTML = '<div class="empty"><div class="icon">📋</div>ยังไม่มีใบลา</div>';
+    list.innerHTML = '<div class="empty">ยังไม่มีใบลา</div>';
     return;
   }
   list.innerHTML = r.requests.map(req => {
@@ -118,7 +118,7 @@ async function showDetail(leaveId) {
       '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(l.reason || '-') + '</span></div>' +
       '<div class="card-row"><span class="label">สถานะ</span><span class="badge ' + l.final_status + '">' + window.STATUS_LABELS[l.final_status] + '</span></div>' +
     '</div>' +
-    (l.attachment_url ? '<div class="mt-2 text-center"><a href="' + l.attachment_url + '" target="_blank" class="btn ghost sm">📎 ดูไฟล์แนบ</a></div>' : '') +
+    (l.attachment_url ? '<div class="mt-2 text-center"><a href="' + l.attachment_url + '" target="_blank" class="btn ghost sm">ดูไฟล์แนบ</a></div>' : '') +
     '<h2 class="section-title">ลำดับการอนุมัติ</h2>' +
     '<div class="timeline">' +
       stages.map(s => {

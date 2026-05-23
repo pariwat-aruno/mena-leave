@@ -204,7 +204,7 @@ async function loadUsers() {
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">' +
         statusBadge +
-        '<button class="btn ghost sm" onclick="openUserAction(\'' + u.user_id + '\')">⚙️</button>' +
+        '<button class="btn ghost sm" onclick="openUserAction(\'' + u.user_id + '\')">แก้ไข</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -327,7 +327,7 @@ async function submitInvite() {
   document.getElementById('invite-result').innerHTML =
     '<div class="alert success mt-2">สร้างรหัสเชิญแล้ว</div>' +
     '<div class="id-display">' + r.pairing_code + '</div>' +
-    '<button class="btn secondary block" onclick="copyInvite()">📋 คัดลอกข้อความเชิญ</button>' +
+    '<button class="btn secondary block" onclick="copyInvite()">คัดลอกข้อความเชิญ</button>' +
     '<pre id="invite-text" style="white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:6px;font-size:13px;margin-top:8px">' + window.utils.escapeHtml(r.invite_text) + '</pre>';
   window._inviteText = r.invite_text;
   loadUsers();

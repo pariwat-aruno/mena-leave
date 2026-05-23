@@ -269,7 +269,7 @@ function buildApprovalRequestCard(leave, requester, stage) {
     body.contents.push(flexSeparator_());
     body.contents.push({
       type: 'box', layout: 'baseline', margin: 'md', contents: [
-        { type: 'text', text: '📍 GPS', size: 'sm', color: c.subtle, flex: 2 },
+        { type: 'text', text: 'GPS', size: 'sm', color: c.subtle, flex: 2 },
         {
           type: 'text', text: 'ดูแผนที่', size: 'sm', color: c.primary, decoration: 'underline', flex: 5,
           action: { type: 'uri', uri: mapUrl },
