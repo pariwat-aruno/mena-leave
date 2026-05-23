@@ -13,7 +13,7 @@
  *   - liff.line.me/<id>/request.html → github.io/mena-leave/request.html
  */
 window.CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/REPLACE_WITH_YOUR_DEPLOYMENT_ID/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwhvhNvpUJ2LrOCsQ35JA9OpqOR55rBfYoiayWZcqFxo754Os-YXEfmbUNEhOJ_cYN_/exec',
 
   LIFF_ID: '2010175593-Fqjuhv0q',
 

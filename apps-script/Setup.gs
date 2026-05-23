@@ -125,6 +125,7 @@ const NON_SECRET_PROPS = {
   DRIVE_FOLDER_ID:    '',  // auto จาก setupDrive()
   DRIVE_FOLDER_LEAVE_PROOFS: '',  // auto จาก setupDrive()
   LIFF_ID:            '2010175593-Fqjuhv0q',  // LIFF app เดียว (concat subpath routing)
+  WEB_APP_URL:        'https://script.google.com/macros/s/AKfycbwhvhNvpUJ2LrOCsQ35JA9OpqOR55rBfYoiayWZcqFxo754Os-YXEfmbUNEhOJ_cYN_/exec',
 };
 
 // ========== One-shot setup (I-020) ==========
