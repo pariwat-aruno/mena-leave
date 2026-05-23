@@ -1,6 +1,6 @@
 # PROGRESS.md — mena-leave
 
-> Status snapshot — อัปเดตล่าสุด 2026-05-24
+> Status snapshot — อัปเดตล่าสุด 2026-05-24 (end of session)
 
 ## สรุปด่วน
 
@@ -8,12 +8,30 @@
 |---|---|---|
 | 0. Rebrand vorda → mena | ✅ Done | สี/ชื่อ/logo SVG/LINE OA placeholder |
 | 1. Sheet + Drive setup | ✅ Done | setupAll() รันแล้ว 10 tab + Settings + Rules + Drive folder |
-| 2. LINE channel + LIFF | ✅ Done | Messaging API + 1 LIFF app + bootstrap OWNER |
-| 3. Apps Script foundation | ✅ Done | clasp project + 19 .gs files pushed |
+| 2. LINE channel + LIFF + Rich menu | ✅ Done | Messaging API + 1 LIFF + Rich menu v2 + bootstrap OWNER |
+| 3. Apps Script foundation | ✅ Done | clasp project + 20 .gs files pushed |
 | 4. Apps Script endpoints | ⏳ Code มี — ยังไม่เทสต์ flow จริง | doGet/doPost router + 25+ actions |
-| 5. LIFF frontend | ⏳ Code มี — ยังไม่เทสต์ flow จริง | 9 HTML pages + shared JS |
-| 6. Deploy + E2E test | 🔄 Web App deploy ✅ — รอเทสต์ end-to-end | ขั้นต่อไป |
-| 7. Triggers | ❌ ยังไม่รัน | setupTriggers() |
+| 5. LIFF frontend | ⏳ Code มี — myid.html เทสต์ผ่าน · หน้าอื่นรอเทสต์ | 9 HTML pages + shared JS + docs/ |
+| 6. Deploy + E2E test | 🔄 Web App + Pages live — เทสต์ flow ต่อ | OWNER bootstrap ผ่าน |
+| 7. Triggers | ❌ ยังไม่รัน | setupTriggers() — รอ 1 click |
+| 8. Public docs | ✅ Done | คู่มือพนักงาน + คู่มือเจ้าของ + landing |
+
+---
+
+## Session ล่าสุด (2026-05-23 → 2026-05-24)
+
+ทำมาทั้งหมด:
+1. Rebrand vorda-leave → mena-leave (ชื่อ, สี #d51f7d, LINE OA @966nnfkr, logo SVG placeholder)
+2. setupAll() — สร้าง Sheet/Drive/Settings/Rules ครบ
+3. สร้าง Messaging API channel + 1 LIFF app (concat subpath)
+4. clasp setup + push 20 .gs files
+5. Deploy Apps Script Web App
+6. สร้าง GitHub repo + Pages + workflow auto-deploy
+7. แก้ index.html redirect loop (preserve query string)
+8. bootstrap OWNER (พี่ปุ้ย = EMP-0001)
+9. ติดตั้ง Rich menu v2 (logo "mena" + card buttons)
+10. ลบ emoji ที่เกินมาจาก CONTEXT §7 (10 จุด)
+11. สร้าง public docs (`liff/docs/`) — user-guide + owner-guide + landing
 
 ---
 
@@ -23,6 +41,7 @@
 |---|---|
 | **GitHub repo** | https://github.com/pariwat-aruno/mena-leave (public) |
 | **GitHub Pages** | https://pariwat-aruno.github.io/mena-leave/ |
+| **Public docs** | https://pariwat-aruno.github.io/mena-leave/docs/ |
 | **Apps Script** | https://script.google.com/d/1PkAqet3C7bToyMhTT5bjOA5EMsoTz_i7GZEUUjHqN1s1oP4LJnlCk5oL/edit |
 | **Sheet (Database)** | https://docs.google.com/spreadsheets/d/1AsM39WfxQ1HtN3_49mpKnu2Sg01dRI2Y4ssdILN6_Bc/edit |
 | **Drive folder** | `1Qqvo31hox77ZDJ1i8N0awAWhFBAskVUO` (mena-leave - Storage) |
@@ -31,6 +50,7 @@
 | **LIFF URL** | https://liff.line.me/2010175593-Fqjuhv0q |
 | **LINE OA** | `@966nnfkr` (displayName: "mena") |
 | **Bot userId** | `U441d1a7df291928046c3982c1bc41948` |
+| **Rich menu ID** | `richmenu-991b333252cd9892550774d5d228618a` (v2, default) |
 | **OWNER (พี่ปุ้ย)** | `EMP-0001` / LINE userId `Ub47d6b519be013dbe6e83c4fbd079c56` |
 
 ---
@@ -45,7 +65,7 @@
 
 ---
 
-## Phase 2 — LINE + LIFF ✅
+## Phase 2 — LINE + LIFF + Rich menu ✅
 
 - ✅ TASK-06: สร้าง Messaging API channel
   - LINE_CHANNEL_ACCESS_TOKEN ✓
@@ -55,10 +75,13 @@
   - LIFF endpoint: `https://pariwat-aruno.github.io/mena-leave` (no trailing slash)
   - `permanentLinkPattern: concat` → subpath append → ทุก .html เข้าถึงได้
   - ทุกหน้า size = **Full**
-- ✅ TASK-08: Rich menu installed (richmenu-38a26c35fa11d64a7c77893e3b1793ae)
-  - 5 ปุ่ม → liff.line.me/<LIFF_ID>/<page>.html (concat subpath)
-  - Layout minimal: Prompt-Bold + Prompt-Regular, no emoji, magenta accent stripe บนปุ่ม "ส่งใบลา" (primary)
+- ✅ TASK-08: Rich menu v2 (`richmenu-991b333252cd9892550774d5d228618a`)
+  - **Header band 280px:** logo "mena" cursive (Brush Script) + tagline "ระบบลางาน"
+  - **Body:** 5 ปุ่ม card-style (shadow + accent stripe + divider) — Prompt-Bold + Prompt-Regular
+  - **ส่งใบลา** = primary (filled magenta) · อื่น = white card
+  - URL ผูก `liff.line.me/<LIFF_ID>/<page>.html` ทุกปุ่ม
   - Set default สำหรับทุก user — เห็นเลยตอนเปิดแชท OA
+  - **History:** v1 (richmenu-38a26c35fa11d64a7c77893e3b1793ae) ลบไปแล้ว — v2 ใช้แทน
 
 ### Architecture decision (สำคัญ)
 - เปลี่ยนจาก template เดิม 8 LIFF apps → **1 LIFF + concat subpath** เพราะ:
@@ -79,18 +102,19 @@
 
 - ✅ TASK-09: clasp 3.3.0 setup, Apps Script project สร้างแล้ว
 - ✅ TASK-10: Script Properties ใส่ครบ — LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET (manual), SHEET_ID, DRIVE_FOLDER_ID, DRIVE_FOLDER_LEAVE_PROOFS, LIFF_ID, WEB_APP_URL (auto)
-- ✅ TASK-11..14: foundation modules อยู่ใน 19 .gs files
-  - Logger.gs / Config.gs / Utils.gs / LineApi.gs / DriveStore.gs
+- ✅ TASK-11..14: foundation modules อยู่ใน 20 .gs files
+  - Logger.gs / Config.gs / Utils.gs / LineApi.gs / DriveStore.gs / LiffSetup.gs (added)
 
 ---
 
-## Phase 4 — Apps Script endpoints (โค้ดมี — รอเทสต์)
+## Phase 4 — Apps Script endpoints (โค้ดมี — รอเทสต์ flow จริง)
 
 โค้ดทุกไฟล์ push เข้า Apps Script แล้ว — flow E2E ยังไม่ผ่าน
 
-- ⏳ TASK-15: WebApp.gs router — health check ผ่าน, postback handler รอเทสต์
+- ⏳ TASK-15: WebApp.gs router — health check ผ่าน (`{"ok":true,"service":"mena-leave",...}`) · postback handler รอเทสต์
 - ⏳ TASK-16: Pairing.gs — 6-digit code + redeem
-- ⏳ TASK-17: Register.gs — submitRegister/approveRegister/rejectRegister + getMyStatus (verify ผ่าน Python: visitor case ทำงาน)
+- ⏳ TASK-17: Register.gs — submitRegister/approveRegister/rejectRegister + getMyStatus
+  - **verify ผ่านแล้ว** (Python urllib): visitor + active cases ตอบถูกต้อง
 - ⏳ TASK-18: Supervisor.gs
 - ⏳ TASK-19: Rules.gs
 - ⏳ TASK-20: Quota.gs
@@ -98,17 +122,18 @@
 - ⏳ TASK-22: Approval.gs (3-stage)
 - ⏳ TASK-23: Admin.gs
 - ⏳ TASK-24: Manual.gs
-- ⏳ TASK-25: FlexCard.gs (9 card types)
-- ⏳ TASK-26: Trigger.gs
+- ⏳ TASK-25: FlexCard.gs (9 card types) — ลบ emoji แล้ว
+- ⏳ TASK-26: Trigger.gs (function setupTriggers รอ user click)
 
 ---
 
-## Phase 5 — LIFF frontend (โค้ดมี — รอเทสต์)
+## Phase 5 — LIFF frontend (live บน GH Pages — รอเทสต์ flow)
 
-9 HTML pages live บน GitHub Pages:
+9 HTML pages + index.html redirect:
 
-- ⏳ TASK-27: shared modules (config.js / api.js / auth.js / role.js / utils.js / manual.js)
-- ⏳ TASK-28: myid.html — userId + status check (verify ทาง LIFF: เปิดได้, แสดง userId ของ OWNER)
+- ⏳ TASK-27: shared modules (config.js / api.js / auth.js / role.js / utils.js / manual.js) — config.js มี LIFF_ID + API_URL จริงแล้ว
+- ⏳ TASK-28: myid.html — userId + status check
+  - **verify ผ่านแล้ว**: เปิด LIFF บนมือถือ → แสดง userId ของ OWNER ได้
 - ⏳ TASK-29: register.html
 - ⏳ TASK-30: request.html (สำคัญที่สุด — GPS + form)
 - ⏳ TASK-31: my-requests.html
@@ -117,41 +142,59 @@
 - ⏳ TASK-34: manual.html + manual-admin.html
 
 ### เพิ่มเติม (นอก template)
-- ✅ `liff/index.html` — redirect handler สำหรับ LIFF root URL (ต้องเพิ่มเพราะ concat subpath ทำให้ root โดน hit)
+- ✅ `liff/index.html` — redirect handler สำหรับ LIFF root URL (preserve query string ป้องกัน SDK loop)
+- ✅ `liff/docs/` — public documentation site (3 หน้า + CSS)
+  - `index.html` (landing + flowchart)
+  - `user-guide.html` (mockup + flow ของ 7 หน้า · สำหรับพนักงาน/หัวหน้างาน/HR)
+  - `owner-guide.html` (สิทธิ์พิเศษ OWNER · Pending_Changes · Settings table 15+ keys)
 
 ---
 
-## Phase 6 — Deploy + E2E (กำลังทดสอบ)
+## Phase 6 — Deploy + E2E ✅ Backend / 🔄 Flow test
 
 - ✅ TASK-35: Web App deploy — Anyone access, doGet health check ผ่าน
 - ✅ TASK-36: GitHub Pages enabled (workflow `.github/workflows/pages.yml` auto-deploy ทุกครั้งที่ push)
-- ⏳ TASK-37: E2E test (กำลังทำ)
-  - ✅ OWNER bootstrap
+- 🔄 TASK-37: E2E test
+  - ✅ OWNER bootstrap (`bootstrapMe()` รันแล้ว)
   - ✅ เปิด LIFF บนมือถือ — myid.html แสดง userId
-  - ⏳ refresh myid → ต้องขึ้นสถานะ "ใช้งานอยู่" + badge "เจ้าของ"
+  - ✅ Backend verify: getMyStatus → `status=active, role=OWNER, role_label=เจ้าของ`
+  - ⏳ refresh myid → ต้องขึ้นสถานะ "ใช้งานอยู่" + badge "เจ้าของ" (ยังไม่ verify)
   - ⏳ submit ใบลา (OWNER auto-approve)
   - ⏳ ตรวจ LeaveRequests + LeaveQuota
   - ⏳ test multi-user flow (ต้อง invite + register USER เพิ่ม)
-- ⏳ LINE webhook URL ตั้งใน LINE Console (TODO ก่อน flex postback ทำงาน)
+- ⏳ **LINE webhook URL ตั้งใน LINE Console** (TODO ก่อน flex postback ทำงาน)
 
 ---
 
 ## Phase 7 — Triggers ❌
 
 - ⏳ TASK-38: `setupTriggers()` daily 00:00 → expirePairingCodes + dailyTick (quota reset 1 ม.ค.)
-  - **TODO**: รัน `setupTriggers` ใน `apps-script/Trigger.gs` ครั้งเดียว
+  - **TODO**: รัน `setupTriggers` ใน `apps-script/Trigger.gs` ครั้งเดียว (1 click)
 
 ---
 
-## TODO ทันที (เรียง priority)
+## Phase 8 — Public docs ✅
 
-1. **เทสต์ LIFF บนมือถือ** — refresh myid.html → ต้องเห็นสถานะ active + ปุ่มส่งใบลา
-   - Backend verify ผ่านแล้ว: getMyStatus → `status=active, role=OWNER, role_label=เจ้าของ`
-2. **ตั้ง LINE webhook URL** ใน Messaging API channel = Web App URL (สำคัญสำหรับ flex postback button)
-3. **รัน `setupTriggers`** ใน `apps-script/Trigger.gs` (ครั้งเดียว — สร้าง daily cron 00:00)
-4. **ส่งใบลาทดสอบ** (OWNER) → ตรวจ auto-approve flow
+- ✅ `liff/docs/index.html` — landing เลือก guide + flowchart 3-stage approval
+- ✅ `liff/docs/user-guide.html` — คู่มือพนักงาน/หัวหน้างาน/HR (7 sections)
+- ✅ `liff/docs/owner-guide.html` — คู่มือเจ้าของ (9 sections, Settings table)
+- ✅ `liff/docs/docs.css` — shared brand styling (Prompt + magenta)
+
+URL live:
+- https://pariwat-aruno.github.io/mena-leave/docs/
+- https://pariwat-aruno.github.io/mena-leave/docs/user-guide.html
+- https://pariwat-aruno.github.io/mena-leave/docs/owner-guide.html
+
+---
+
+## TODO ทันที (เริ่ม session ใหม่ได้เลย)
+
+1. **เทสต์ LIFF myid.html บนมือถือ** — เปิด/refresh `liff.line.me/2010175593-Fqjuhv0q/myid.html` → ต้องเห็นสถานะ active + ปุ่มส่งใบลา (Backend ตอบถูกต้องแล้ว — รอ verify frontend แสดงผล)
+2. **ตั้ง LINE webhook URL** ใน Messaging API channel = Web App URL (สำคัญสำหรับ flex postback button ที่ใช้อนุมัติในแชท)
+3. **รัน `setupTriggers`** ใน `apps-script/Trigger.gs` (1 click — สร้าง daily cron 00:00 สำหรับ expire pairing codes + quota reset ปีใหม่)
+4. **ส่งใบลาทดสอบ** (OWNER) → ตรวจ auto-approve flow ใน LeaveRequests + LeaveQuota
 5. **Multi-user E2E:** invite ADMIN → invite USER → pair supervisor → flow 3-stage
-6. **Logo จริง:** drop `liff/img/logo.jpg` (ปัจจุบันใช้ SVG placeholder ตัว "m")
+6. **Logo จริง:** drop `liff/img/logo.jpg` (ปัจจุบันใช้ SVG placeholder ตัว "m") — Rich menu ใช้ Brush Script render "mena" cursive แล้วโอเค
 
 ---
 
@@ -169,7 +212,10 @@
 - `CONTEXT.md` — data model + glossary (บังคับใช้)
 - `CLAUDE.md` — stack + workflow + gotchas
 - `TASKS.md` — 38 tasks เรียง phase
-- `apps-script/Setup.gs` — setupAll + bootstrapMe + verifyLineSecrets
+- `apps-script/Setup.gs` — setupAll · bootstrapMe · verifyLineSecrets · setupProperties
 - `apps-script/LiffSetup.gs` — listLiffApps (debug helper)
+- `apps-script/Trigger.gs` — setupTriggers (รอ run)
 - `liff/js/config.js` — runtime config (API_URL + LIFF_ID)
 - `liff/index.html` — LIFF root redirect (preserve query string)
+- `liff/docs/` — public guide pages
+- `scripts/setup_rich_menu.py` — rich menu generator (v2 layout)
