@@ -116,20 +116,15 @@ const DRIVE_SUBFOLDERS = [
 
 /**
  * non-secret IDs ที่ใส่ลง Script Properties
- * TODO: ใส่ค่าจริงหลังสร้าง LIFF apps แล้ว
+ * LIFF_ID = 1 ตัวเดียวสำหรับทุกหน้า (permanentLinkPattern=concat)
+ *   - LIFF URL: https://liff.line.me/<LIFF_ID>/<page>.html
+ *   - browser โหลด: https://pariwat-aruno.github.io/mena-leave/<page>.html
  */
 const NON_SECRET_PROPS = {
   SHEET_ID:           '',  // auto จาก setupDatabase()
   DRIVE_FOLDER_ID:    '',  // auto จาก setupDrive()
   DRIVE_FOLDER_LEAVE_PROOFS: '',  // auto จาก setupDrive()
-  LIFF_ID_MYID:          '',
-  LIFF_ID_REGISTER:      '',
-  LIFF_ID_REQUEST:       '',
-  LIFF_ID_HISTORY:       '',
-  LIFF_ID_APPROVE:       '',
-  LIFF_ID_ADMIN:         '',
-  LIFF_ID_MANUAL:        '',
-  LIFF_ID_MANUAL_ADMIN:  '',
+  LIFF_ID:            '',  // ใส่หลังสร้าง LIFF app ใน LINE Console
 };
 
 // ========== One-shot setup (I-020) ==========

@@ -134,20 +134,24 @@ function getConfig() {
   cfg.LINE_CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET') || '';
   cfg.DRIVE_FOLDER_LEAVE_PROOFS = props.getProperty('DRIVE_FOLDER_LEAVE_PROOFS') || '';
 
-  // LIFF IDs ทั้ง 8
-  cfg.LIFF_ID_MYID         = props.getProperty('LIFF_ID_MYID')         || '';
-  cfg.LIFF_ID_REGISTER     = props.getProperty('LIFF_ID_REGISTER')     || '';
-  cfg.LIFF_ID_REQUEST      = props.getProperty('LIFF_ID_REQUEST')      || '';
-  cfg.LIFF_ID_HISTORY      = props.getProperty('LIFF_ID_HISTORY')      || '';
-  cfg.LIFF_ID_APPROVE      = props.getProperty('LIFF_ID_APPROVE')      || '';
-  cfg.LIFF_ID_ADMIN        = props.getProperty('LIFF_ID_ADMIN')        || '';
-  cfg.LIFF_ID_MANUAL       = props.getProperty('LIFF_ID_MANUAL')       || '';
-  cfg.LIFF_ID_MANUAL_ADMIN = props.getProperty('LIFF_ID_MANUAL_ADMIN') || '';
+  // LIFF ID เดียวสำหรับทุกหน้า (concat subpath pattern)
+  cfg.LIFF_ID = props.getProperty('LIFF_ID') || '';
 
   // sheet `Settings`
   Object.assign(cfg, readSheetSettings_(cfg.SHEET_ID));
 
   return cfg;
+}
+
+/**
+ * สร้าง LIFF URL สำหรับหน้าใดหน้าหนึ่ง (ใช้ในการสร้าง flex card / invite message)
+ *   getLiffPageUrl('myid')        → https://liff.line.me/<LIFF_ID>/myid.html
+ *   getLiffPageUrl('my-requests') → https://liff.line.me/<LIFF_ID>/my-requests.html
+ */
+function getLiffPageUrl(page) {
+  const liffId = getConfig().LIFF_ID;
+  if (!liffId) return '';
+  return 'https://liff.line.me/' + liffId + '/' + page + '.html';
 }
 
 /**
