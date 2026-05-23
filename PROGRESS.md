@@ -55,7 +55,10 @@
   - LIFF endpoint: `https://pariwat-aruno.github.io/mena-leave` (no trailing slash)
   - `permanentLinkPattern: concat` → subpath append → ทุก .html เข้าถึงได้
   - ทุกหน้า size = **Full**
-- ⏳ TASK-08: Rich menu — **ยังไม่ทำ** (TODO: รัน `scripts/setup_rich_menu.py`)
+- ✅ TASK-08: Rich menu installed (richmenu-38a26c35fa11d64a7c77893e3b1793ae)
+  - 5 ปุ่ม → liff.line.me/<LIFF_ID>/<page>.html (concat subpath)
+  - Layout minimal: Prompt-Bold + Prompt-Regular, no emoji, magenta accent stripe บนปุ่ม "ส่งใบลา" (primary)
+  - Set default สำหรับทุก user — เห็นเลยตอนเปิดแชท OA
 
 ### Architecture decision (สำคัญ)
 - เปลี่ยนจาก template เดิม 8 LIFF apps → **1 LIFF + concat subpath** เพราะ:
@@ -136,18 +139,19 @@
 ## Phase 7 — Triggers ❌
 
 - ⏳ TASK-38: `setupTriggers()` daily 00:00 → expirePairingCodes + dailyTick (quota reset 1 ม.ค.)
+  - **TODO**: รัน `setupTriggers` ใน `apps-script/Trigger.gs` ครั้งเดียว
 
 ---
 
 ## TODO ทันที (เรียง priority)
 
 1. **เทสต์ LIFF บนมือถือ** — refresh myid.html → ต้องเห็นสถานะ active + ปุ่มส่งใบลา
+   - Backend verify ผ่านแล้ว: getMyStatus → `status=active, role=OWNER, role_label=เจ้าของ`
 2. **ตั้ง LINE webhook URL** ใน Messaging API channel = Web App URL (สำคัญสำหรับ flex postback button)
-3. **ส่งใบลาทดสอบ** (OWNER) → ตรวจ auto-approve flow
-4. **TASK-08:** Rich menu setup
-5. **TASK-38:** setupTriggers()
-6. **Multi-user E2E:** invite ADMIN → invite USER → pair supervisor → flow 3-stage
-7. **Logo จริง:** drop `liff/img/logo.jpg` (ปัจจุบันใช้ SVG placeholder ตัว "m")
+3. **รัน `setupTriggers`** ใน `apps-script/Trigger.gs` (ครั้งเดียว — สร้าง daily cron 00:00)
+4. **ส่งใบลาทดสอบ** (OWNER) → ตรวจ auto-approve flow
+5. **Multi-user E2E:** invite ADMIN → invite USER → pair supervisor → flow 3-stage
+6. **Logo จริง:** drop `liff/img/logo.jpg` (ปัจจุบันใช้ SVG placeholder ตัว "m")
 
 ---
 
@@ -155,8 +159,8 @@
 
 - ทำ smart routing ใน `index.html` (เช็ค role จาก backend → redirect ไปหน้าที่เหมาะ แทน hardcoded myid.html)
 - audit checklist files (`audit/phase-N.md`) ยังไม่ tick checklist
-- ลบ emoji `📋` ออกจาก myid.html (CONTEXT §7 ห้าม emoji ยกเว้น ⚠️ ✅)
 - เพิ่ม `verifyConfig()` function ตรวจ Script Properties ครบ + Sheet ตรงกับ schema
+- ✅ ลบ emoji `📋` `📍` `📎` `⚙️` ออกจาก LIFF + FlexCard (CONTEXT §7) — done 2026-05-24
 
 ---
 
