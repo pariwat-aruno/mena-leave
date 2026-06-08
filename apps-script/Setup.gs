@@ -73,7 +73,7 @@ const SHEET_HEADERS = {
 
 /**
  * default ใน Sheet Settings
- * เจ้าของแก้ผ่าน Sheet UI โดยไม่ต้องแก้ code ได้
+ * ผู้บริหารแก้ผ่าน Sheet UI โดยไม่ต้องแก้ code ได้
  */
 const SETTINGS_DEFAULTS = [
   ['brand_name',                    'MENA COSMETICS',  'I-017 brand name'],
@@ -223,7 +223,7 @@ function setupDatabase() {
 
 /**
  * Seed Settings defaults ลง Sheet `Settings`
- * รันซ้ำ → key เดิมไม่ทับ (เก็บค่าที่เจ้าของแก้ไว้)
+ * รันซ้ำ → key เดิมไม่ทับ (เก็บค่าที่ผู้บริหารแก้ไว้)
  */
 function seedSettings() {
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
@@ -448,7 +448,7 @@ function bootstrapFirstOwner(lineUserId) {
   // [user_id, line_user_id, role, display_name, emp_code, phone, email, dept, position,
   //  is_supervisor, status, invited_by, created_at, approved_at, approved_by]
   sh.appendRow([
-    userId, lineUserId, 'OWNER', 'เจ้าของ (bootstrap)', 'OWNER-001',
+    userId, lineUserId, 'OWNER', 'ผู้บริหาร (bootstrap)', 'OWNER-001',
     '', '', '', '',
     true, 'active', '(system)', now, now, '(system)',
   ]);

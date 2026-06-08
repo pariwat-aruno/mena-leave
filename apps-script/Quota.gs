@@ -67,7 +67,7 @@ function setQuota(payload) {
       '', '', '',
     ]);
     audit(payload.lineUserId, 'propose_set_quota', 'Pending_Changes', changeId, payload);
-    return { ok: true, mode: 'proposed', changeId: changeId, message: 'ส่งให้เจ้าของอนุมัติแล้ว' };
+    return { ok: true, mode: 'proposed', changeId: changeId, message: 'ส่งให้ผู้บริหารอนุมัติแล้ว' };
   }
 
   // OWNER → apply ตรง

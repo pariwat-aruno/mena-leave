@@ -211,6 +211,110 @@ function invalidateSupervisorPairsOf_(supervisorUserId) {
 }
 
 /**
+ * ตั้งค่าระดับ (role) ของพนักงานที่ลงทะเบียนแล้ว — HR/ผู้บริหารใช้
+ * payload = { lineUserId, user_id, role }
+ *
+ * กฎ:
+ *   - HR (ADMIN) ตั้งได้: พนักงาน / พนักงานพิเศษ / หัวหน้างาน / HR
+ *   - ผู้บริหาร (OWNER) ตั้งได้ทุกระดับ รวม ผู้บริหาร
+ *   - ห้าม ADMIN แตะ row ที่เป็น OWNER (เปลี่ยน/ลดระดับผู้บริหารได้เฉพาะผู้บริหาร)
+ *   - SUPERVISOR → set is_supervisor=TRUE, USER/SPECIAL → set is_supervisor=FALSE
+ */
+function setUserRole(payload) {
+  payload = payload || {};
+  if (!isAdmin(payload.lineUserId)) return { ok: false, error: 'forbidden' };
+  if (!payload.user_id || !payload.role) return { ok: false, error: 'missing_fields' };
+  if (ASSIGNABLE_ROLES.indexOf(payload.role) < 0) return { ok: false, error: 'invalid_role' };
+
+  const actor = findUserByLineId_(payload.lineUserId);
+  const target = findUserByUserId_(payload.user_id);
+  if (!target) return { ok: false, error: 'user_not_found' };
+
+  // กันตัวเองหลุดสิทธิ์ — ต้องให้คนอื่นเปลี่ยนระดับให้
+  if (actor && target.user_id === actor.user_id) {
+    return { ok: false, error: 'cannot_change_self', message: 'เปลี่ยนระดับตัวเองไม่ได้ ต้องให้ผู้ดูแลอื่นเปลี่ยนให้' };
+  }
+  // เฉพาะผู้บริหารเท่านั้นที่ตั้ง/แก้ระดับผู้บริหารได้
+  const actorIsOwner = actor && actor.role === ROLES.OWNER;
+  if ((payload.role === ROLES.OWNER || target.role === ROLES.OWNER) && !actorIsOwner) {
+    return { ok: false, error: 'forbidden_owner_only', message: 'เฉพาะผู้บริหารเท่านั้นที่ตั้งระดับผู้บริหารได้' };
+  }
+
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+
+  sh.getRange(target._rowNumber, hdr.indexOf('role') + 1).setValue(payload.role);
+
+  // sync is_supervisor flag ตาม role
+  const iSup = hdr.indexOf('is_supervisor');
+  if (iSup >= 0) {
+    if (payload.role === ROLES.SUPERVISOR || payload.role === ROLES.OWNER) {
+      sh.getRange(target._rowNumber, iSup + 1).setValue(true);
+    } else if (payload.role === ROLES.USER || payload.role === ROLES.SPECIAL) {
+      sh.getRange(target._rowNumber, iSup + 1).setValue(false);
+      // ลดจากหัวหน้างาน → ยกเลิก pair ที่เคยเป็นหัวหน้าของคนอื่น
+      invalidateSupervisorPairsOf_(target.user_id);
+    }
+  }
+
+  audit(payload.lineUserId, 'set_user_role', 'Users', target.user_id, { role: payload.role, from: target.role });
+
+  // แจ้งผู้ถูกตั้งระดับ
+  try {
+    if (target.line_user_id) {
+      pushText(target.line_user_id,
+        'ระดับการใช้งานของคุณถูกปรับเป็น "' + (ROLE_LABELS_TH[payload.role] || payload.role) + '" โดย' +
+        (actor ? actor.display_name : 'ผู้ดูแลระบบ'));
+    }
+  } catch (e) {
+    logWarn('setUserRole', 'push notify failed: ' + e.message);
+  }
+
+  return { ok: true, role: payload.role, role_label: ROLE_LABELS_TH[payload.role] || payload.role };
+}
+
+/**
+ * รายชื่อพนักงานที่ "พนักงานพิเศษ/HR/ผู้บริหาร" เลือกลาแทนได้
+ * (เบากว่า getAllUsers — เปิดให้ SPECIAL เข้าถึงได้ ไม่ต้องเป็น ADMIN)
+ * payload = { lineUserId }
+ */
+function getProxyTargets(payload) {
+  payload = payload || {};
+  const actor = findUserByLineId_(payload.lineUserId);
+  if (!actor || actor.status !== 'active' || !canProxyLeave_(actor)) {
+    return { ok: false, error: 'forbidden' };
+  }
+
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');
+  if (sh.getLastRow() < 2) return { ok: true, users: [] };
+
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  const iId = hdr.indexOf('user_id');
+  const iName = hdr.indexOf('display_name');
+  const iEmp = hdr.indexOf('emp_code');
+  const iDept = hdr.indexOf('department');
+  const iStatus = hdr.indexOf('status');
+
+  const users = data
+    .filter(function (row) {
+      return row[iStatus] === 'active' && row[iId] !== actor.user_id;
+    })
+    .map(function (row) {
+      return {
+        user_id: row[iId],
+        display_name: row[iName],
+        emp_code: row[iEmp],
+        department: row[iDept],
+      };
+    });
+
+  return { ok: true, users: users };
+}
+
+/**
  * payload = { lineUserId, display_name, emp_code, phone?, email?, department?, position?, is_supervisor?, role? }
  * - role default = USER
  * - สร้าง Users row status=invited + pairing code + ส่ง invite message
@@ -221,13 +325,14 @@ function inviteUser(payload) {
   if (!payload.display_name || !payload.emp_code) return { ok: false, error: 'missing_fields' };
 
   const role = payload.role || ROLES.USER;
-  if ([ROLES.USER, ROLES.ADMIN].indexOf(role) < 0) {
+  // เชิญได้ทุกระดับยกเว้น OWNER (ผู้บริหาร) — ใช้ inviteOwner สำหรับ OWNER
+  if ([ROLES.USER, ROLES.SPECIAL, ROLES.SUPERVISOR, ROLES.ADMIN].indexOf(role) < 0) {
     return { ok: false, error: 'invalid_role' };
   }
-  // ห้าม ADMIN เชิญ OWNER (ใช้ inviteOwner สำหรับ OWNER)
-  // ห้าม ADMIN เชิญ ADMIN → ผ่าน Pending_Changes แทน (out of scope phase 1 — for now allow)
 
   const actor = findUserByLineId_(payload.lineUserId);
+  // SUPERVISOR (หัวหน้างาน) → ตั้ง is_supervisor=TRUE ให้อัตโนมัติ
+  const isSupervisorFlag = !!payload.is_supervisor || role === ROLES.SUPERVISOR;
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');
   const userId = nextUserId();
@@ -243,7 +348,7 @@ function inviteUser(payload) {
     payload.email || '',
     payload.department || '',
     payload.position || '',
-    !!payload.is_supervisor,
+    isSupervisorFlag,
     'invited',
     actor.user_id,
     now, '', '',

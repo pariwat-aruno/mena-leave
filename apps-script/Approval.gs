@@ -60,7 +60,7 @@ function approveLeave(payload) {
       return { ok: false, error: 'stage3_not_pending', message: 'ใบลานี้ตัดสินไปแล้ว' };
     }
     if (approver.role !== ROLES.OWNER) {
-      return { ok: false, error: 'forbidden', message: 'เฉพาะเจ้าของเท่านั้น' };
+      return { ok: false, error: 'forbidden', message: 'เฉพาะผู้บริหารเท่านั้น' };
     }
   }
 
@@ -162,7 +162,7 @@ function approveLeave(payload) {
     // intermediate approved → notify ผู้ลาว่าผ่านชั้น stage X + trigger next stage
     try {
       const updatedLeave = findLeaveById_(payload.leave_id);
-      const stageNames = { 1: 'หัวหน้างาน', 2: 'HR', 3: 'เจ้าของ' };
+      const stageNames = { 1: 'หัวหน้างาน', 2: 'HR', 3: 'ผู้บริหาร' };
       const updateCard = buildApprovalUpdateCard(
         updatedLeave, stage, approver.display_name,
         'รอ' + stageNames[nextStage]
@@ -239,7 +239,7 @@ function getPendingForMe(payload) {
   if (!isUser(payload.lineUserId)) return { ok: false, error: 'not_registered' };
 
   const user = findUserByLineId_(payload.lineUserId);
-  const isSup = user.is_supervisor === true || user.is_supervisor === 'TRUE';
+  const isSup = isSupervisorUser_(user);
 
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');

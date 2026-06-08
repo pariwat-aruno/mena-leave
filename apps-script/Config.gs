@@ -3,7 +3,7 @@
  *
  * 2 แหล่ง:
  *   1) Script Properties — secret + ID (Sheet ID, LINE token, LIFF IDs)
- *   2) Sheet `Settings` — ค่าที่เจ้าของอาจอยากแก้เอง
+ *   2) Sheet `Settings` — ค่าที่ผู้บริหารอาจอยากแก้เอง
  *
  * cache 5 นาที กัน read sheet ซ้ำ
  */
@@ -14,24 +14,44 @@ const CONFIG_CACHE_TTL = 300; // 5 นาที
 // ========== Role naming (I-022) ==========
 
 const ROLES = {
-  OWNER:   'OWNER',
-  ADMIN:   'ADMIN',
-  USER:    'USER',
-  VISITOR: 'VISITOR',
+  OWNER:      'OWNER',       // ผู้บริหาร
+  ADMIN:      'ADMIN',       // HR
+  SUPERVISOR: 'SUPERVISOR',  // หัวหน้างาน
+  SPECIAL:    'SPECIAL',     // พนักงานพิเศษ (ลาแทนคนอื่นได้)
+  USER:       'USER',        // พนักงาน
+  VISITOR:    'VISITOR',     // ยังไม่ลงทะเบียน
 };
 
 const ROLE_LABELS_TH = {
-  OWNER:   'เจ้าของ',
-  ADMIN:   'ฝ่ายบุคคล (HR)',
-  USER:    'พนักงาน',
-  VISITOR: 'ยังไม่ลงทะเบียน',
+  OWNER:      'ผู้บริหาร',
+  ADMIN:      'HR',
+  SUPERVISOR: 'หัวหน้างาน',
+  SPECIAL:    'พนักงานพิเศษ',
+  USER:       'พนักงาน',
+  VISITOR:    'ยังไม่ลงทะเบียน',
 };
 
-// ascending hierarchy — OWNER > ADMIN > USER > VISITOR
-const ROLE_HIERARCHY = ['VISITOR', 'USER', 'ADMIN', 'OWNER'];
+// ascending hierarchy — OWNER > ADMIN > SUPERVISOR > SPECIAL > USER > VISITOR
+const ROLE_HIERARCHY = ['VISITOR', 'USER', 'SPECIAL', 'SUPERVISOR', 'ADMIN', 'OWNER'];
+
+// role ที่ HR/ผู้บริหาร ตั้งให้พนักงานได้ (ไม่รวม VISITOR)
+const ASSIGNABLE_ROLES = ['USER', 'SPECIAL', 'SUPERVISOR', 'ADMIN', 'OWNER'];
 
 function hasRole(userRole, requiredRole) {
   return ROLE_HIERARCHY.indexOf(userRole) >= ROLE_HIERARCHY.indexOf(requiredRole);
+}
+
+/** หัวหน้างาน — role SUPERVISOR หรือ is_supervisor flag (รองรับ legacy + Supervisors pairing) */
+function isSupervisorUser_(user) {
+  if (!user) return false;
+  return user.role === ROLES.SUPERVISOR ||
+         user.is_supervisor === true || user.is_supervisor === 'TRUE';
+}
+
+/** สิทธิ์กดลาแทนคนอื่น (proxy) — พนักงานพิเศษ + HR + ผู้บริหาร */
+function canProxyLeave_(user) {
+  if (!user) return false;
+  return user.role === ROLES.SPECIAL || hasRole(user.role, ROLES.ADMIN);
 }
 
 /** เช็คว่า lineUserId เป็น OWNER ไหม (ลึก ๆ จาก Sheet Users) */

@@ -47,6 +47,14 @@
       <section id="step2" class="hidden">
         <div id="alert-msg" class="hidden"></div>
 
+        <div class="form-group hidden" id="proxy-group">
+          <label>ส่งใบลาให้</label>
+          <select id="proxy-target">
+            <option value="">ตัวฉันเอง</option>
+          </select>
+          <div class="hint">พนักงานพิเศษ / HR / ผู้บริหาร กดลาแทนเพื่อนร่วมงานที่ใช้แอปเองไม่สะดวกได้</div>
+        </div>
+
         <div class="form-group">
           <label>ประเภทการลา <span class="required">*</span></label>
           <select id="leave_type">
@@ -131,6 +139,8 @@
 let CONDITIONS = null;  // { quota, rules }
 let GPS = null;         // { lat, lng, accuracy }
 let ATTACHMENT = null;  // { base64, filename }
+let ME = null;          // current user (สำหรับเช็คสิทธิ์ลาแทน)
+let PROXY_TARGETS = []; // รายชื่อพนักงานที่ลาแทนได้
 
 (async function () {
   try { await window.auth.init(); }
@@ -147,6 +157,7 @@ let ATTACHMENT = null;  // { base64, filename }
     return;
   }
 
+  ME = status.user;
   document.getElementById('content').classList.remove('hidden');
 
   const cond = await window.api.post('getApprovalConditions', { lineUserId: window.state.lineUserId });
@@ -156,7 +167,27 @@ let ATTACHMENT = null;  // { base64, filename }
   }
   CONDITIONS = cond;
   renderConditions(cond);
+
+  // โหมดลาแทน — เฉพาะพนักงานพิเศษ / HR / ผู้บริหาร
+  if (window.canProxyLeave(ME.role)) {
+    const pr = await window.api.post('getProxyTargets', { lineUserId: window.state.lineUserId });
+    if (pr.ok && pr.users.length) {
+      PROXY_TARGETS = pr.users;
+      const sel = document.getElementById('proxy-target');
+      sel.innerHTML = '<option value="">ตัวฉันเอง</option>' +
+        pr.users.map(u => '<option value="' + u.user_id + '">' +
+          window.utils.escapeHtml(u.display_name || u.user_id) +
+          (u.department ? ' (' + window.utils.escapeHtml(u.department) + ')' : '') +
+          '</option>').join('');
+      document.getElementById('proxy-group').classList.remove('hidden');
+    }
+  }
 })();
+
+function getProxyTargetId() {
+  const el = document.getElementById('proxy-target');
+  return el ? (el.value || '') : '';
+}
 
 function renderConditions(cond) {
   // quota grid
@@ -272,11 +303,13 @@ document.getElementById('btn-to-step3').onclick = () => {
   if (new Date(t) < new Date(f)) return window.utils.showAlert('#alert-msg', 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม', 'error');
   if (reason.length < 3) return window.utils.showAlert('#alert-msg', 'กรุณาระบุเหตุผลอย่างน้อย 3 ตัวอักษร', 'error');
 
-  // check quota client-side
+  // check quota client-side — ข้ามถ้าลาแทน (โควตาเป็นของอีกคน ให้ backend ตรวจ)
   const days = window.utils.countWeekdaysBetween(f, t);
-  const q = CONDITIONS.quota[lt];
-  if (days > q.available) {
-    return window.utils.showAlert('#alert-msg', 'โควตาคงเหลือ ' + q.available + ' วัน ลาได้ไม่เกินนี้', 'error');
+  if (!getProxyTargetId()) {
+    const q = CONDITIONS.quota[lt];
+    if (days > q.available) {
+      return window.utils.showAlert('#alert-msg', 'โควตาคงเหลือ ' + q.available + ' วัน ลาได้ไม่เกินนี้', 'error');
+    }
   }
 
   // check retroactive
@@ -301,7 +334,10 @@ function renderSummary() {
   const t = document.getElementById('date_to').value;
   const days = window.utils.countWeekdaysBetween(f, t);
   const reason = document.getElementById('reason').value.trim();
+  const proxyId = getProxyTargetId();
+  const proxyTarget = proxyId ? PROXY_TARGETS.find(u => u.user_id === proxyId) : null;
   const html = [
+    proxyTarget ? '<div class="card-row"><span class="label">ลาแทน</span><span class="value">' + window.utils.escapeHtml(proxyTarget.display_name || proxyId) + '</span></div>' : '',
     '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + ltLabel + '</span></div>',
     '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(f) + ' - ' + window.utils.formatThaiDateShort(t) + '</span></div>',
     '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + days + ' วัน</span></div>',
@@ -349,6 +385,8 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
     reason: document.getElementById('reason').value.trim(),
     gps_lat: GPS.lat, gps_lng: GPS.lng, gps_accuracy: GPS.accuracy,
   };
+  const proxyId = getProxyTargetId();
+  if (proxyId) payload.on_behalf_user_id = proxyId;
   if (ATTACHMENT) {
     payload.attachment_base64 = ATTACHMENT.base64;
     payload.attachment_filename = ATTACHMENT.filename;

@@ -235,7 +235,7 @@ function buildApprovalRequestCard(leave, requester, stage) {
   const c = flexColors_();
   const stageLabel = stage === 1 ? 'ขออนุมัติชั้น 1 (หัวหน้างาน)' :
                      stage === 2 ? 'ขออนุมัติชั้น 2 (HR)' :
-                                   'ขออนุมัติชั้น 3 (เจ้าของ)';
+                                   'ขออนุมัติชั้น 3 (ผู้บริหาร)';
 
   const body = {
     type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
@@ -299,7 +299,7 @@ function buildApprovalRequestCard(leave, requester, stage) {
 /** ผู้ลาได้ flex: stage X passed (ระหว่างทาง) */
 function buildApprovalUpdateCard(leave, stagePassed, approverName, nextStageLabel) {
   const c = flexColors_();
-  const stageNames = { 1: 'หัวหน้างาน', 2: 'ฝ่ายบุคคล (HR)', 3: 'เจ้าของ' };
+  const stageNames = { 1: 'หัวหน้างาน', 2: 'HR', 3: 'ผู้บริหาร' };
   return {
     type: 'flex', altText: 'ใบลา ' + leave.leave_id + ' ผ่านชั้น ' + stagePassed,
     contents: {
@@ -345,7 +345,7 @@ function buildFinalApprovedCard(leave, requester) {
 /** final rejected */
 function buildFinalRejectedCard(leave, requester, rejectedStage, rejectedByName, note) {
   const c = flexColors_();
-  const stageNames = { 1: 'หัวหน้างาน', 2: 'ฝ่ายบุคคล (HR)', 3: 'เจ้าของ' };
+  const stageNames = { 1: 'หัวหน้างาน', 2: 'HR', 3: 'ผู้บริหาร' };
   return {
     type: 'flex', altText: 'ใบลา ' + leave.leave_id + ' ไม่ได้รับอนุมัติ',
     contents: {

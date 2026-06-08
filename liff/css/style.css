@@ -230,6 +230,7 @@ p { margin: 8px 0; color: var(--text); }
 .badge.role-admin { background: var(--brand-tint); color: var(--brand-primary); }
 .badge.role-user { background: #e6f0ff; color: #1f51b8; }
 .badge.role-supervisor { background: #e8f5ee; color: var(--success); }
+.badge.role-special { background: #f3eafe; color: #7c3aed; }
 
 /* Status / alerts */
 .alert {

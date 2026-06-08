@@ -21,7 +21,7 @@
 
     <div id="not-allowed" class="hidden">
       <div class="alert warning">คุณไม่มีรายการที่ต้องอนุมัติ</div>
-      <p class="subtle">เฉพาะหัวหน้างาน / HR / เจ้าของ ที่จะเห็นรายการที่นี่</p>
+      <p class="subtle">เฉพาะหัวหน้างาน / HR / ผู้บริหาร ที่จะเห็นรายการที่นี่</p>
     </div>
 
     <div id="content" class="hidden">
@@ -102,7 +102,7 @@ async function loadList() {
   }
   list.innerHTML = '<h2 class="section-title">มี ' + r.pending.length + ' รายการรออนุมัติ</h2>' +
     r.pending.map((p, i) => {
-      const stageLabel = ({ 1: 'ชั้น 1 (หัวหน้างาน)', 2: 'ชั้น 2 (HR)', 3: 'ชั้น 3 (เจ้าของ)' })[p.my_stage];
+      const stageLabel = ({ 1: 'ชั้น 1 (หัวหน้างาน)', 2: 'ชั้น 2 (HR)', 3: 'ชั้น 3 (ผู้บริหาร)' })[p.my_stage];
       return '<div class="card mb-1">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<div><strong>' + window.utils.escapeHtml(p.requester_name || '-') + '</strong>' +

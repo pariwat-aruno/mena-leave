@@ -21,7 +21,7 @@
 
     <div id="not-allowed" class="hidden">
       <div class="alert error">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
-      <p class="subtle">เฉพาะ HR / เจ้าของ เท่านั้น</p>
+      <p class="subtle">เฉพาะ HR / ผู้บริหาร เท่านั้น</p>
       <a class="btn primary block mt-2" href="./myid.html">กลับ</a>
     </div>
 
@@ -44,8 +44,6 @@
       <!-- TAB: users -->
       <div class="tab-content active" data-tab="users">
         <button class="btn primary block mb-2" onclick="openInvite('USER')">+ เพิ่มพนักงานใหม่</button>
-        <button class="btn secondary block mb-2 owner-only" onclick="openInvite('ADMIN')">+ เพิ่ม HR</button>
-        <button class="btn secondary block mb-2 owner-only" onclick="openInvite('OWNER')">+ เพิ่มเจ้าของ</button>
         <div id="users-list"></div>
       </div>
 
@@ -69,14 +67,14 @@
 
       <!-- TAB: settings -->
       <div class="tab-content" data-tab="settings">
-        <p class="subtle">การเปลี่ยน Settings ของ HR จะรอให้เจ้าของอนุมัติก่อน</p>
+        <p class="subtle">การเปลี่ยน Settings ของ HR จะรอให้ผู้บริหารอนุมัติก่อน</p>
         <div id="settings-form"></div>
         <button class="btn primary block mt-2" onclick="saveSettings()">บันทึก</button>
       </div>
 
       <!-- TAB: pending changes -->
       <div class="tab-content owner-only" data-tab="pending">
-        <p class="subtle">การเปลี่ยนแปลงที่ HR เสนอ — เฉพาะเจ้าของอนุมัติ</p>
+        <p class="subtle">การเปลี่ยนแปลงที่ HR เสนอ — เฉพาะผู้บริหารอนุมัติ</p>
         <div id="pending-list"></div>
       </div>
 
@@ -176,7 +174,7 @@ async function loadDashboard() {
     '<div class="card-row"><span class="label">พนักงาน Active</span><span class="value">' + s.active_users + '</span></div>' +
     '<div class="card-row"><span class="label">รอ HR อนุมัติ register</span><span class="value">' + (s.pending_registers ? '<span class="badge pending">' + s.pending_registers + '</span>' : s.pending_registers) + '</span></div>' +
     '<div class="card-row"><span class="label">ใบลารออนุมัติ</span><span class="value">' + (s.pending_leaves ? '<span class="badge pending">' + s.pending_leaves + '</span>' : s.pending_leaves) + '</span></div>' +
-    '<div class="card-row"><span class="label">การเปลี่ยนแปลงรอเจ้าของ</span><span class="value">' + s.pending_changes + '</span></div>';
+    '<div class="card-row"><span class="label">การเปลี่ยนแปลงรอผู้บริหาร</span><span class="value">' + s.pending_changes + '</span></div>';
 }
 
 async function loadUsers() {
@@ -196,7 +194,8 @@ async function loadUsers() {
                         u.status === 'pending' ? '<span class="badge pending">รออนุมัติ</span>' :
                         u.status === 'invited' ? '<span class="badge pending">เชิญแล้ว</span>' :
                                                  '<span class="badge rejected">ปิดใช้</span>';
-    const sup = u.is_supervisor ? '<span class="badge role-supervisor">หัวหน้างาน</span>' : '';
+    // แสดง badge หัวหน้างานเฉพาะ legacy (USER ที่ติด flag) — SUPERVISOR role มี role badge อยู่แล้ว
+    const sup = (u.is_supervisor && u.role === window.ROLES.USER) ? '<span class="badge role-supervisor">หัวหน้างาน</span>' : '';
     return '<div class="list-row">' +
       '<div class="info">' +
         '<div class="name">' + window.utils.escapeHtml(u.display_name || '-') + ' ' + sup + '</div>' +
@@ -249,9 +248,24 @@ function openUserAction(userId) {
             '<button class="btn primary" onclick="approveRegisterUser(\'' + u.user_id + '\')">อนุมัติ</button>' +
             '</div>';
   } else if (u.status === 'active') {
-    body += '<div class="form-group mt-2"><label><input type="checkbox" id="sup-flag" ' + (u.is_supervisor ? 'checked' : '') + '> ตั้งเป็นหัวหน้างาน</label></div>' +
-            '<button class="btn primary block" onclick="saveSupervisorFlag(\'' + u.user_id + '\')">บันทึก</button>' +
-            '<button class="btn danger block mt-1" onclick="deactivateUser(\'' + u.user_id + '\')">ระงับการใช้งาน</button>';
+    const canEditRole = ME.role === window.ROLES.OWNER || u.role !== window.ROLES.OWNER;
+    if (canEditRole) {
+      // ตั้งระดับพนักงาน — ผู้บริหารตั้งได้ทุกระดับ, HR ตั้งได้ไม่เกิน HR
+      const roleOpts = window.ASSIGNABLE_ROLES
+        .filter(r => r !== window.ROLES.OWNER || ME.role === window.ROLES.OWNER)
+        .map(r => '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + window.ROLE_LABELS_TH[r] + '</option>')
+        .join('');
+      body += '<div class="form-group mt-2"><label>ระดับพนักงาน</label><select id="user-role">' + roleOpts + '</select></div>' +
+              '<p class="subtle" style="font-size:12px;margin-top:-4px">พนักงานพิเศษ = กดลางานแทนคนอื่นได้ · หัวหน้างาน = อนุมัติชั้น 1</p>' +
+              '<button class="btn primary block" onclick="saveUserRole(\'' + u.user_id + '\')">บันทึกระดับ</button>';
+      // ปุ่มลัดมอบสิทธิ์ผู้บริหาร — เฉพาะผู้บริหาร + เป้าหมายยังไม่ใช่ผู้บริหาร
+      if (ME.role === window.ROLES.OWNER && u.role !== window.ROLES.OWNER) {
+        body += '<button class="btn secondary block mt-1" onclick="grantOwner(\'' + u.user_id + '\', \'' + window.utils.escapeHtml(u.display_name || u.user_id).replace(/'/g, "\\'") + '\')">⭑ มอบสิทธิ์ผู้บริหาร</button>';
+      }
+      body += '<button class="btn danger block mt-1" onclick="deactivateUser(\'' + u.user_id + '\')">ระงับการใช้งาน</button>';
+    } else {
+      body += '<div class="alert info mt-2">ระดับ "ผู้บริหาร" แก้ไขได้เฉพาะผู้บริหารเท่านั้น</div>';
+    }
   } else if (u.status === 'inactive') {
     body += '<button class="btn primary block mt-2" onclick="activateUser(\'' + u.user_id + '\')">เปิดใช้งานอีกครั้ง</button>';
   } else if (u.status === 'invited') {
@@ -262,16 +276,28 @@ function openUserAction(userId) {
   document.getElementById('overlay').classList.remove('hidden');
 }
 
-async function saveSupervisorFlag(userId) {
-  const flag = document.getElementById('sup-flag').checked;
-  const r = await window.api.post('setSupervisorFlag', {
-    lineUserId: window.state.lineUserId, user_id: userId, is_supervisor: flag,
+async function saveUserRole(userId) {
+  const role = document.getElementById('user-role').value;
+  const r = await window.api.post('setUserRole', {
+    lineUserId: window.state.lineUserId, user_id: userId, role: role,
   });
   if (r.ok) {
-    window.utils.showToast('บันทึกแล้ว');
+    window.utils.showToast('ตั้งระดับเป็น "' + r.role_label + '" แล้ว');
     closeOverlay();
     loadUsers();
-  } else window.utils.showToast(r.error);
+  } else window.utils.showToast('ผิดพลาด: ' + (r.message || r.error));
+}
+
+async function grantOwner(userId, name) {
+  if (!confirm('มอบสิทธิ์ "ผู้บริหาร" (สิทธิ์สูงสุด) ให้ ' + (name || userId) + '?\n\nผู้บริหารตั้งค่าระบบ + อนุมัติชั้นสุดท้าย + แต่งตั้งผู้บริหารคนอื่นได้')) return;
+  const r = await window.api.post('setUserRole', {
+    lineUserId: window.state.lineUserId, user_id: userId, role: 'OWNER',
+  });
+  if (r.ok) {
+    window.utils.showToast('มอบสิทธิ์ผู้บริหารให้ ' + (name || userId) + ' แล้ว');
+    closeOverlay();
+    loadUsers();
+  } else window.utils.showToast('ผิดพลาด: ' + (r.message || r.error));
 }
 
 async function deactivateUser(userId) {
@@ -287,16 +313,19 @@ async function activateUser(userId) {
 
 // ====== INVITE ======
 function openInvite(role) {
-  const title = role === 'OWNER' ? 'เชิญเจ้าของใหม่ (Owner Only)' : role === 'ADMIN' ? 'เชิญ HR ใหม่' : 'เพิ่มพนักงานใหม่';
-  document.getElementById('overlay-title').textContent = title;
+  document.getElementById('overlay-title').textContent = 'เพิ่มพนักงานใหม่';
+  const roleOpts = window.ASSIGNABLE_ROLES
+    .filter(r => r !== window.ROLES.OWNER || ME.role === window.ROLES.OWNER)
+    .map(r => '<option value="' + r + '"' + ((role || 'USER') === r ? ' selected' : '') + '>' + window.ROLE_LABELS_TH[r] + '</option>')
+    .join('');
   document.getElementById('overlay-body').innerHTML =
-    '<input type="hidden" id="invite-role" value="' + role + '">' +
+    '<div class="form-group"><label>ระดับพนักงาน</label><select id="invite-role">' + roleOpts + '</select></div>' +
+    '<p class="subtle" style="font-size:12px;margin-top:-4px">พนักงานพิเศษ = กดลางานแทนคนอื่นได้ · หัวหน้างาน = อนุมัติชั้น 1</p>' +
     '<div class="form-group"><label>ชื่อ-นามสกุล *</label><input type="text" id="invite-name"></div>' +
     '<div class="form-group"><label>รหัสพนักงาน *</label><input type="text" id="invite-empcode"></div>' +
     '<div class="form-group"><label>แผนก</label><input type="text" id="invite-dept"></div>' +
     '<div class="form-group"><label>ตำแหน่ง</label><input type="text" id="invite-pos"></div>' +
     '<div class="form-group"><label>เบอร์โทร</label><input type="tel" id="invite-phone"></div>' +
-    '<div class="form-group"><label><input type="checkbox" id="invite-sup"> เป็นหัวหน้างาน</label></div>' +
     '<div id="invite-result"></div>' +
     '<button class="btn primary block" onclick="submitInvite()">สร้างรหัสเชิญ</button>';
   document.getElementById('overlay').classList.remove('hidden');
@@ -317,7 +346,6 @@ async function submitInvite() {
     department: document.getElementById('invite-dept').value.trim(),
     position: document.getElementById('invite-pos').value.trim(),
     phone: document.getElementById('invite-phone').value.trim(),
-    is_supervisor: document.getElementById('invite-sup').checked,
     role: role,
   };
   const action = role === 'OWNER' ? 'inviteOwner' : 'inviteUser';
@@ -360,9 +388,9 @@ async function loadPairs() {
 }
 
 function openPair() {
-  const subOptions = USERS_CACHE.filter(u => u.role === window.ROLES.USER && u.status === 'active' && !u.is_supervisor)
+  const subOptions = USERS_CACHE.filter(u => (u.role === window.ROLES.USER || u.role === window.ROLES.SPECIAL) && u.status === 'active' && !u.is_supervisor)
     .map(u => '<option value="' + u.user_id + '">' + window.utils.escapeHtml(u.display_name) + ' (' + u.emp_code + ')</option>').join('');
-  const supOptions = USERS_CACHE.filter(u => u.status === 'active' && (u.is_supervisor || u.role !== window.ROLES.USER))
+  const supOptions = USERS_CACHE.filter(u => u.status === 'active' && (u.is_supervisor || u.role !== window.ROLES.USER) && u.role !== window.ROLES.SPECIAL)
     .map(u => '<option value="' + u.user_id + '">' + window.utils.escapeHtml(u.display_name) + ' · ' + window.getRoleLabelTh(u.role, u.is_supervisor) + '</option>').join('');
 
   document.getElementById('overlay-title').textContent = 'ผูกหัวหน้างาน';
@@ -416,7 +444,7 @@ async function openQuota(userId) {
   // เนื่องจาก backend ไม่มี endpoint admin lookup quota — เรียก setQuota เพื่อตั้งโดยตรงพอ
   document.getElementById('overlay-body').innerHTML =
     '<p class="subtle">ตั้งโควตาปี ' + new Date().getFullYear() + '</p>' +
-    (ME.role === window.ROLES.ADMIN ? '<div class="alert warning">การเปลี่ยนแปลงต้องรอเจ้าของอนุมัติ</div>' : '') +
+    (ME.role === window.ROLES.ADMIN ? '<div class="alert warning">การเปลี่ยนแปลงต้องรอผู้บริหารอนุมัติ</div>' : '') +
     '<div class="form-group"><label>ลาป่วย (วัน/ปี)</label><input type="number" id="q-sick" min="0" placeholder="30"></div>' +
     '<div class="form-group"><label>ลากิจ (วัน/ปี)</label><input type="number" id="q-personal" min="0" placeholder="6"></div>' +
     '<div class="form-group"><label>ลาพักร้อน (วัน/ปี)</label><input type="number" id="q-vacation" min="0" placeholder="10"></div>' +
@@ -433,7 +461,7 @@ async function saveQuota(userId) {
   };
   const r = await window.api.post('setQuota', payload);
   if (r.ok) {
-    window.utils.showToast(r.mode === 'proposed' ? 'ส่งให้เจ้าของอนุมัติแล้ว' : 'บันทึกแล้ว');
+    window.utils.showToast(r.mode === 'proposed' ? 'ส่งให้ผู้บริหารอนุมัติแล้ว' : 'บันทึกแล้ว');
     closeOverlay();
   } else window.utils.showToast('ผิดพลาด: ' + r.error);
 }
@@ -473,7 +501,7 @@ async function openRule(ruleId) {
     '<div class="form-group"><label>ต้องแนบเอกสารถ้าลาเกิน (วัน, 0=ไม่บังคับ)</label><input type="number" id="rule-doc" value="' + (rule.doc_required_above_days || 0) + '"></div>' +
     '<div class="form-group"><label>หมายเหตุ (แสดงในหน้าลา)</label><textarea id="rule-note">' + window.utils.escapeHtml(rule.note || '') + '</textarea></div>' +
     '<div class="form-group"><label><input type="checkbox" id="rule-active" ' + (rule.is_active !== false ? 'checked' : '') + '> ใช้งาน</label></div>' +
-    (ME.role === window.ROLES.ADMIN ? '<div class="alert warning">การเปลี่ยนแปลงต้องรอเจ้าของอนุมัติ</div>' : '') +
+    (ME.role === window.ROLES.ADMIN ? '<div class="alert warning">การเปลี่ยนแปลงต้องรอผู้บริหารอนุมัติ</div>' : '') +
     '<button class="btn primary block" onclick="saveRule()">บันทึก</button>';
   document.getElementById('overlay').classList.remove('hidden');
 }
@@ -491,7 +519,7 @@ async function saveRule() {
   };
   const r = await window.api.post('upsertRule', payload);
   if (r.ok) {
-    window.utils.showToast(r.mode === 'proposed' ? 'ส่งให้เจ้าของอนุมัติแล้ว' : 'บันทึกแล้ว');
+    window.utils.showToast(r.mode === 'proposed' ? 'ส่งให้ผู้บริหารอนุมัติแล้ว' : 'บันทึกแล้ว');
     closeOverlay();
     loadRules();
   } else window.utils.showToast(r.error);
@@ -527,7 +555,7 @@ async function saveSettings() {
   });
   if (!Object.keys(updates).length) { window.utils.showToast('ไม่มีการเปลี่ยนแปลง'); return; }
   const r = await window.api.post('updateSettings', { lineUserId: window.state.lineUserId, updates: updates });
-  if (r.ok) window.utils.showToast(r.mode === 'proposed' ? 'ส่งให้เจ้าของอนุมัติ' : 'บันทึกแล้ว');
+  if (r.ok) window.utils.showToast(r.mode === 'proposed' ? 'ส่งให้ผู้บริหารอนุมัติ' : 'บันทึกแล้ว');
   else window.utils.showToast(r.error);
 }
 

@@ -26,9 +26,10 @@
 | คำที่ใช้ในระบบ | คำเทคนิค (ห้ามใช้) | ความหมาย |
 |---|---|---|
 | **พนักงาน** | employee / staff / member / user | USER ที่ HR approve register แล้ว |
-| **หัวหน้างาน** | manager / leader / boss | USER ที่ `is_supervisor=TRUE` + มีลูกน้องผูกใน Supervisors |
-| **ฝ่ายบุคคล** หรือ **HR** | hr / human-resources | ADMIN role — onboard + ผูก supervisor + ตั้ง quota |
-| **เจ้าของ** | owner / boss / executive / ceo | OWNER role — config ระบบ + approve ชั้นสุดท้าย |
+| **พนักงานพิเศษ** | special / proxy | SPECIAL role — พนักงาน + กดลางานแทนคนอื่นได้ (`on_behalf_user_id`) |
+| **หัวหน้างาน** | manager / leader / boss | SUPERVISOR role (หรือ legacy USER+`is_supervisor=TRUE`) + มีลูกน้องผูกใน Supervisors |
+| **HR** | hr / human-resources / ฝ่ายบุคคล | ADMIN role — onboard + ตั้งระดับพนักงาน + ผูก supervisor + ตั้ง quota |
+| **ผู้บริหาร** | owner / boss / executive / ceo / เจ้าของ | OWNER role — config ระบบ + approve ชั้นสุดท้าย |
 | **ยังไม่ลงทะเบียน** | guest / anonymous | VISITOR — ยังไม่กรอก register หรือยังไม่ approve |
 | **ใบลา** | leave-request / lor / absence | record ใน `LeaveRequests` |
 | **โควตา** | quota / balance / entitlement | สิทธิ์วันลาคงเหลือต่อปีต่อคน |
@@ -51,14 +52,16 @@
 |---|---|---|---|
 | **VISITOR** | ไม่จำกัด | ดู User ID + copy + ลงทะเบียน | ทุกอย่างอื่น |
 | **USER** (พนักงาน) | 25-95 คน | ส่งใบลา · ดูเงื่อนไข+โควตา · ดูประวัติตัวเอง · ดูคู่มือ | อนุมัติ · แก้ config · ดู report ทั้งระบบ |
-| **USER** (หัวหน้างาน) | 5-15 คน | + อนุมัติ stage 1 ของลูกน้อง | ขั้ามชั้น · แก้ config |
-| **ADMIN** (ฝ่ายบุคคล) | 1-3 คน | + approve register · ผูก supervisor · ตั้งโควตาต่อคน · อนุมัติ stage 2 · ดู report · ปรับ Settings ผ่าน Pending_Changes | อนุมัติ stage 3 (final) · invite OWNER ใหม่ |
-| **OWNER** (เจ้าของ) | 1-2 คน | + config โควตา default · config approval flow · config กฎ · อนุมัติ stage 3 · approve Pending_Changes · invite OWNER ใหม่ | — (ทุกอย่าง) |
+| **SPECIAL** (พนักงานพิเศษ) | ไม่จำกัด | + กดลางานแทนคนอื่น (proxy) สำหรับคนที่ใช้แอปเองไม่สะดวก | อนุมัติ · แก้ config · ตั้งระดับ |
+| **SUPERVISOR** (หัวหน้างาน) | 5-15 คน | + อนุมัติ stage 1 ของลูกน้อง | ข้ามชั้น · แก้ config |
+| **ADMIN** (HR) | 1-3 คน | + approve register · **ตั้งระดับพนักงาน** (setUserRole ≤ HR) · ผูก supervisor · ตั้งโควตาต่อคน · อนุมัติ stage 2 · ดู report · ปรับ Settings ผ่าน Pending_Changes | อนุมัติ stage 3 (final) · ตั้ง/แก้ระดับผู้บริหาร · invite OWNER ใหม่ |
+| **OWNER** (ผู้บริหาร) | 1-2 คน | + ตั้งระดับได้ทุกระดับ (รวมผู้บริหาร) · config โควตา default · config approval flow · config กฎ · อนุมัติ stage 3 · approve Pending_Changes · invite OWNER ใหม่ | — (ทุกอย่าง) |
 
 **กฎเข้าระบบ:**
 - ผู้ใช้ระบุตัวตนด้วย LINE User ID (จาก LIFF) — ไม่มี password
-- Role เก็บใน Sheet `Users` column `role`
-- หัวหน้างาน = USER + `is_supervisor=TRUE` (ไม่ใช่ role แยก)
+- Role เก็บใน Sheet `Users` column `role` (USER/SPECIAL/SUPERVISOR/ADMIN/OWNER) — HR/ผู้บริหารตั้งหลัง register ผ่าน `setUserRole`
+- หัวหน้างาน = SUPERVISOR role (set `is_supervisor=TRUE` ให้อัตโนมัติ); legacy USER+flag ยังนับเป็นหัวหน้างานผ่าน `isSupervisorUser_()`
+- พนักงานพิเศษ = SPECIAL role — ลาแทนคนอื่นได้ (helper `canProxyLeave_()`), ไม่ใช่สิทธิ์จัดการ config
 
 ---
 

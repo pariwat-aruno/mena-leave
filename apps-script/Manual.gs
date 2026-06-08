@@ -14,7 +14,7 @@ function getManualConfig(payload) {
     const user = findUserByLineId_(payload.lineUserId);
     if (user) {
       role = user.role;
-      const isSup = user.is_supervisor === true || user.is_supervisor === 'TRUE';
+      const isSup = isSupervisorUser_(user);
       roleLabel = getRoleLabelTh(role, { isSupervisor: isSup });
       displayName = user.display_name || '';
     }

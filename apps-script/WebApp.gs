@@ -88,6 +88,8 @@ function routeAction_(action, payload) {
     'getAllUsers':             function (p) { return getAllUsers(p); },
     'getAllLeaves':            function (p) { return getAllLeaves(p); },
     'setUserStatus':           function (p) { return setUserStatus(p); },
+    'setUserRole':             function (p) { return setUserRole(p); },
+    'getProxyTargets':         function (p) { return getProxyTargets(p); },
     'inviteUser':              function (p) { return inviteUser(p); },
     'inviteOwner':             function (p) { return inviteOwner(p); },
 

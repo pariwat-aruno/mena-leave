@@ -32,8 +32,22 @@ function submitLeave(payload) {
   payload = payload || {};
   if (!isUser(payload.lineUserId)) return { ok: false, error: 'not_registered' };
 
-  const requester = findUserByLineId_(payload.lineUserId);
-  if (!requester) return { ok: false, error: 'user_not_found' };
+  const actor = findUserByLineId_(payload.lineUserId);
+  if (!actor) return { ok: false, error: 'user_not_found' };
+
+  // === proxy: พนักงานพิเศษ/HR/ผู้บริหาร กดลาแทนคนอื่น ===
+  let requester = actor;
+  let proxyNote = '';
+  if (payload.on_behalf_user_id && payload.on_behalf_user_id !== actor.user_id) {
+    if (!canProxyLeave_(actor)) {
+      return { ok: false, error: 'forbidden_proxy', message: 'คุณไม่มีสิทธิ์ลาแทนคนอื่น' };
+    }
+    const target = findUserByUserId_(payload.on_behalf_user_id);
+    if (!target) return { ok: false, error: 'target_not_found', message: 'ไม่พบพนักงานที่ต้องการลาแทน' };
+    if (target.status !== 'active') return { ok: false, error: 'target_inactive', message: 'พนักงานที่ต้องการลาแทนไม่พร้อมใช้งาน' };
+    requester = target;
+    proxyNote = ' (ลาแทนโดย ' + (actor.display_name || actor.user_id) + ')';
+  }
 
   // === validate fields ===
   if (LEAVE_TYPES.indexOf(payload.leave_type) < 0) {
@@ -102,7 +116,7 @@ function submitLeave(payload) {
   }
 
   // === determine stage flow ===
-  const isSupervisor = requester.is_supervisor === true || requester.is_supervisor === 'TRUE';
+  const isSupervisor = isSupervisorUser_(requester);
   let stage1Required, stage1Status, stage2Status, stage3Status;
   let firstApprovalStage;
 
@@ -151,7 +165,7 @@ function submitLeave(payload) {
     payload.date_to,
     days,
     isRetro,
-    payload.reason,
+    payload.reason + proxyNote,
     Number(payload.gps_lat || 0) || '',
     Number(payload.gps_lng || 0) || '',
     Number(payload.gps_accuracy || 0) || '',
@@ -180,13 +194,17 @@ function submitLeave(payload) {
   // === push notifications + start approval flow ===
   const leave = findLeaveById_(leaveId);
 
-  // confirm card → ผู้ลา
+  // confirm card → ผู้ที่กดส่ง (operator) + ผู้ลา (ถ้าลาแทน)
   try {
-    const nextStageLabel = firstApprovalStage === 0 ? 'อนุมัติอัตโนมัติ (เจ้าของลาเอง)' :
+    const nextStageLabel = firstApprovalStage === 0 ? 'อนุมัติอัตโนมัติ (ผู้บริหารลาเอง)' :
                            firstApprovalStage === 1 ? 'หัวหน้างานตรวจ' :
                            firstApprovalStage === 2 ? 'HR ตรวจ' :
-                                                       'เจ้าของตรวจ';
+                                                       'ผู้บริหารตรวจ';
     pushMessage(payload.lineUserId, buildLeaveSubmittedCard(leave, nextStageLabel));
+    // ลาแทน → แจ้งผู้ลาด้วย (ถ้าผูก LINE ไว้)
+    if (proxyNote && requester.line_user_id && requester.line_user_id !== payload.lineUserId) {
+      pushMessage(requester.line_user_id, buildLeaveSubmittedCard(leave, nextStageLabel));
+    }
   } catch (e) {
     logWarn('submitLeave', 'push submitted card failed: ' + e.message);
   }

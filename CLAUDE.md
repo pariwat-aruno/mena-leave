@@ -153,15 +153,19 @@ clasp create-version "<desc>"            # สร้าง immutable version sna
 - Idempotent: setup functions รันซ้ำได้ปลอดภัย
 - ID format: `<PREFIX>-XXXX` (running) — เช่น `EMP-0001`, `LV-YYYYMMDD-XXXX`
 
-### Role naming (I-022 — บังคับ)
-- Code: `OWNER` / `ADMIN` / `USER` / `VISITOR` (uppercase) — ห้าม `HR`, `Manager`, `Staff`
-- UI: ใช้ `ROLE_LABELS_TH` หรือ Sheet Config override per project
-- mena-leave override:
-  - `OWNER` = "เจ้าของ"
-  - `ADMIN` = "ฝ่ายบุคคล (HR)"
-  - `USER` (is_supervisor=TRUE) = "หัวหน้างาน"
-  - `USER` (default) = "พนักงาน"
+### Role naming (I-022 — บังคับ) — 5 ระดับ (อัปเดต 2026-06-08)
+- Code: `OWNER` / `ADMIN` / `SUPERVISOR` / `SPECIAL` / `USER` / `VISITOR` (uppercase)
+- ascending hierarchy: `VISITOR < USER < SPECIAL < SUPERVISOR < ADMIN < OWNER`
+- UI: ใช้ `ROLE_LABELS_TH` (Config.gs + role.js mirror)
+- mena-leave labels:
+  - `OWNER` = "ผู้บริหาร"  ← เดิม "เจ้าของ" (เปลี่ยนทั้งระบบ)
+  - `ADMIN` = "HR"
+  - `SUPERVISOR` = "หัวหน้างาน"  (set `is_supervisor=TRUE` อัตโนมัติ; legacy USER+flag ยังนับเป็นหัวหน้างานผ่าน `isSupervisorUser_()`)
+  - `SPECIAL` = "พนักงานพิเศษ" — กดลางานแทนคนอื่นได้ (proxy, `on_behalf_user_id`); helper `canProxyLeave_()`
+  - `USER` = "พนักงาน"
   - `VISITOR` = "ยังไม่ลงทะเบียน"
+- หลัง register → HR/ผู้บริหาร ตั้งระดับผ่าน `setUserRole` (admin.html dropdown). เฉพาะผู้บริหารตั้ง/แก้ระดับผู้บริหารได้
+- helpers ใน Config.gs: `isSupervisorUser_(user)` · `canProxyLeave_(user)` · `ASSIGNABLE_ROLES`
 
 ### Config separation
 - **Script Properties** = secret + immutable IDs (ACCESS_TOKEN, SECRET, SHEET_ID, DRIVE_FOLDER_ID, LIFF_IDs)
@@ -191,7 +195,7 @@ clasp create-version "<desc>"            # สร้าง immutable version sna
 
 ---
 
-## 6. Access control — 4-role hierarchy
+## 6. Access control — role hierarchy (5 ระดับ + VISITOR)
 
 ทุก LIFF mini-app ต้องบังคับใช้:
 

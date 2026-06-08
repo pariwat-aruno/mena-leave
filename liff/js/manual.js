@@ -19,7 +19,7 @@ async function initManual() {
   // role gate
   if (isAdminPage) {
     if (!config.ok || !window.hasRole(config.role, window.ROLES.ADMIN)) {
-      window.utils.showToast('หน้านี้สำหรับ HR/เจ้าของเท่านั้น');
+      window.utils.showToast('หน้านี้สำหรับ HR/ผู้บริหารเท่านั้น');
       setTimeout(() => { window.location.href = './manual.html'; }, 1500);
       return;
     }
