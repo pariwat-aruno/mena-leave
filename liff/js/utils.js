@@ -57,20 +57,38 @@ window.utils = {
    * @throws Error('permission_denied' | 'timeout' | 'unavailable' | 'unsupported')
    */
   getGeolocation(timeoutMs) {
+    const limit = timeoutMs || 15000;
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject(new Error('unsupported'));
+      // iOS LIFF trap: ถ้า LINE ไม่ได้รับสิทธิ์ GPS ที่ระดับ OS, getCurrentPosition
+      // จะไม่เรียก callback ทั้ง success/error และ option `timeout` ก็ไม่ทำงาน → ค้างถาวร
+      // ป้องกันด้วย setTimeout เองเสมอ ไม่พึ่ง browser timeout
+      let done = false;
+      const guard = setTimeout(() => {
+        if (done) return;
+        done = true;
+        reject(new Error('timeout'));
+      }, limit + 1000);
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        }),
+        (pos) => {
+          if (done) return;
+          done = true;
+          clearTimeout(guard);
+          resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          });
+        },
         (err) => {
+          if (done) return;
+          done = true;
+          clearTimeout(guard);
           if (err.code === 1) return reject(new Error('permission_denied'));
           if (err.code === 3) return reject(new Error('timeout'));
           return reject(new Error('unavailable'));
         },
-        { enableHighAccuracy: true, timeout: timeoutMs || 15000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: limit, maximumAge: 30000 }
       );
     });
   },
