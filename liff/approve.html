@@ -37,8 +37,8 @@
         <div id="decision-body"></div>
 
         <div class="form-group mt-2">
-          <label>หมายเหตุ (ไม่จำเป็น)</label>
-          <textarea id="decision-note" maxlength="200" placeholder="เช่น เห็นด้วย / ขอเอกสารเพิ่ม"></textarea>
+          <label>หมายเหตุ <span class="subtle">(ถ้าไม่อนุมัติ ต้องระบุเหตุผล)</span></label>
+          <textarea id="decision-note" maxlength="200" placeholder="เช่น อนุมัติ / ขอเอกสารเพิ่ม / ไม่อนุมัติเพราะ..."></textarea>
         </div>
 
         <div id="decision-alert" class="hidden"></div>
@@ -144,6 +144,15 @@ document.getElementById('btn-close-decision').onclick = () => {
 
 async function decide(decision) {
   if (!CURRENT_LEAVE) return;
+  const note = document.getElementById('decision-note').value.trim();
+
+  // ปฏิเสธต้องระบุเหตุผลเสมอ (PDF ข้อ 2) — เพื่อให้ผู้ลา/HR/ผู้บริหารทราบสาเหตุ
+  if (decision === 'reject' && note.length < 3) {
+    window.utils.showAlert('#decision-alert', 'กรุณาระบุเหตุผลการปฏิเสธอย่างน้อย 3 ตัวอักษร', 'error');
+    document.getElementById('decision-note').focus();
+    return;
+  }
+
   const btn1 = document.getElementById('btn-approve');
   const btn2 = document.getElementById('btn-reject');
   btn1.disabled = true; btn2.disabled = true;
@@ -153,7 +162,7 @@ async function decide(decision) {
     leave_id: CURRENT_LEAVE.leave_id,
     stage: CURRENT_STAGE,
     decision: decision,
-    note: document.getElementById('decision-note').value.trim(),
+    note: note,
   });
 
   btn1.disabled = false; btn2.disabled = false;

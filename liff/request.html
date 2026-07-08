@@ -20,7 +20,7 @@
     <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
 
     <div id="not-registered" class="hidden">
-      <div class="alert warning">คุณยังไม่ได้ลงทะเบียน หรือยังไม่ได้รับอนุมัติจาก HR</div>
+      <div class="alert warning" id="not-registered-msg">คุณยังไม่ได้ลงทะเบียน หรือยังไม่ได้รับอนุมัติจาก HR</div>
       <a class="btn primary block" href="./myid.html">ดูสถานะของฉัน</a>
     </div>
 
@@ -62,8 +62,18 @@
             <option value="sick">ลาป่วย</option>
             <option value="personal">ลากิจ</option>
             <option value="vacation">ลาพักร้อน</option>
+            <option value="other">ลาอื่น ๆ</option>
           </select>
           <div class="hint" id="quota-hint"></div>
+        </div>
+
+        <!-- หัวข้อย่อยของ "ลาอื่น ๆ" — โผล่เมื่อเลือกลาอื่นๆ -->
+        <div class="form-group hidden" id="subtype-group">
+          <label>ประเภทลาอื่น ๆ <span class="required">*</span></label>
+          <select id="leave_subtype">
+            <option value="">— เลือก —</option>
+          </select>
+          <div class="hint" id="subtype-hint"></div>
         </div>
 
         <div class="form-group">
@@ -153,6 +163,10 @@ let PROXY_TARGETS = []; // รายชื่อพนักงานที่�
   document.getElementById('loading').classList.add('hidden');
 
   if (!status.ok || status.status !== 'active') {
+    if (status.status === 'inactive') {
+      document.getElementById('not-registered-msg').textContent =
+        'บัญชีของคุณพ้นสภาพ / ถูกปิดการใช้งาน จึงส่งใบลาไม่ได้ หากเข้าใจว่าเป็นข้อผิดพลาด กรุณาติดต่อฝ่ายบุคคล';
+    }
     document.getElementById('not-registered').classList.remove('hidden');
     return;
   }
@@ -187,6 +201,22 @@ let PROXY_TARGETS = []; // รายชื่อพนักงานที่�
 function getProxyTargetId() {
   const el = document.getElementById('proxy-target');
   return el ? (el.value || '') : '';
+}
+
+// เติมหัวข้อย่อยของ "ลาอื่น ๆ" ลง dropdown ที่สอง
+(function initSubtypes() {
+  const sel = document.getElementById('leave_subtype');
+  sel.innerHTML = '<option value="">— เลือก —</option>' +
+    (window.OTHER_LEAVE_TYPES || []).map(function (o) {
+      return '<option value="' + o.value + '">' + window.utils.escapeHtml(o.label) + '</option>';
+    }).join('');
+})();
+
+/** ประเภทลาที่จะส่งจริง — ถ้าเลือก "ลาอื่น ๆ" ให้ใช้ค่าจาก dropdown ย่อย */
+function getLeaveType() {
+  const main = document.getElementById('leave_type').value;
+  if (main === 'other') return document.getElementById('leave_subtype').value || '';
+  return main;
 }
 
 function renderConditions(cond) {
@@ -224,6 +254,18 @@ function renderConditions(cond) {
       '</div>';
     }).join('');
   }
+
+  // ลาอื่น ๆ (ตามกฎหมาย) — เงื่อนไขการแจ้งล่วงหน้า (ไม่หักโควตา)
+  const others = window.OTHER_LEAVE_TYPES || [];
+  if (others.length) {
+    rulesList.innerHTML += '<div class="section-title mt-2" style="font-size:14px">ลาอื่น ๆ (ตามกฎหมาย · ไม่หักโควตา)</div>' +
+      others.map(function (o) {
+        return '<div class="card muted">' +
+          '<div><strong>' + window.utils.escapeHtml(o.label) + '</strong></div>' +
+          '<div class="subtle mt-1">' + window.utils.escapeHtml(o.condition) + '</div>' +
+        '</div>';
+      }).join('');
+  }
 }
 
 // === step navigation ===
@@ -241,18 +283,40 @@ function showStep(n) {
 document.getElementById('btn-to-step2').onclick = () => showStep(2);
 document.getElementById('btn-back-step2').onclick = () => showStep(1);
 
-document.getElementById('leave_type').addEventListener('change', updateQuotaHint);
+document.getElementById('leave_type').addEventListener('change', onLeaveTypeChange);
+document.getElementById('leave_subtype').addEventListener('change', updateQuotaHint);
 document.getElementById('date_from').addEventListener('change', updateDateHints);
 document.getElementById('date_to').addEventListener('change', updateDateHints);
 
+function onLeaveTypeChange() {
+  const isOther = document.getElementById('leave_type').value === 'other';
+  document.getElementById('subtype-group').classList.toggle('hidden', !isOther);
+  if (!isOther) document.getElementById('leave_subtype').value = '';
+  updateQuotaHint();
+}
+
 function updateQuotaHint() {
-  const lt = document.getElementById('leave_type').value;
-  if (!lt || !CONDITIONS) {
-    document.getElementById('quota-hint').textContent = '';
+  const mainSel = document.getElementById('leave_type').value;
+  const quotaHint = document.getElementById('quota-hint');
+  const subHint = document.getElementById('subtype-hint');
+  subHint.textContent = '';
+
+  // ลาอื่น ๆ — ไม่มีโควตา แสดงเงื่อนไขการแจ้งล่วงหน้าแทน
+  if (mainSel === 'other') {
+    quotaHint.textContent = 'ลาตามกฎหมาย — ไม่หักโควตาวันลาปกติ';
+    const sub = document.getElementById('leave_subtype').value;
+    const meta = (window.OTHER_LEAVE_TYPES || []).filter(function (o) { return o.value === sub; })[0];
+    if (meta) subHint.textContent = 'เงื่อนไข: ' + meta.condition;
+    return;
+  }
+
+  const lt = mainSel;
+  if (!lt || !CONDITIONS || !CONDITIONS.quota[lt]) {
+    quotaHint.textContent = '';
     return;
   }
   const q = CONDITIONS.quota[lt];
-  document.getElementById('quota-hint').textContent = 'คงเหลือ ' + q.available + ' วัน (จากทั้งหมด ' + q.total + ' วัน)';
+  quotaHint.textContent = 'คงเหลือ ' + q.available + ' วัน (จากทั้งหมด ' + q.total + ' วัน)';
 }
 
 function updateDateHints() {
@@ -292,31 +356,36 @@ document.getElementById('btn-remove-attachment').onclick = () => {
 
 document.getElementById('btn-to-step3').onclick = () => {
   // basic validate
-  const lt = document.getElementById('leave_type').value;
+  const mainSel = document.getElementById('leave_type').value;
+  const lt = getLeaveType();
   const f = document.getElementById('date_from').value;
   const t = document.getElementById('date_to').value;
   const reason = document.getElementById('reason').value.trim();
 
   window.utils.clearAlert('#alert-msg');
-  if (!lt) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกประเภทการลา', 'error');
+  if (!mainSel) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกประเภทการลา', 'error');
+  if (mainSel === 'other' && !lt) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกประเภทลาอื่น ๆ', 'error');
   if (!f || !t) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกวันที่', 'error');
   if (new Date(t) < new Date(f)) return window.utils.showAlert('#alert-msg', 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม', 'error');
   if (reason.length < 3) return window.utils.showAlert('#alert-msg', 'กรุณาระบุเหตุผลอย่างน้อย 3 ตัวอักษร', 'error');
 
-  // check quota client-side — ข้ามถ้าลาแทน (โควตาเป็นของอีกคน ให้ backend ตรวจ)
   const days = window.utils.countWeekdaysBetween(f, t);
-  if (!getProxyTargetId()) {
+  const isQuotaType = window.isQuotaLeaveType(lt);
+
+  // check quota client-side — เฉพาะประเภทมีโควตา + ไม่ใช่ลาแทน (โควตาเป็นของอีกคน ให้ backend ตรวจ)
+  if (isQuotaType && !getProxyTargetId()) {
     const q = CONDITIONS.quota[lt];
-    if (days > q.available) {
+    if (q && days > q.available) {
       return window.utils.showAlert('#alert-msg', 'โควตาคงเหลือ ' + q.available + ' วัน ลาได้ไม่เกินนี้', 'error');
     }
   }
 
-  // check retroactive
+  // check retroactive — ลาย้อนหลังได้เฉพาะลาป่วย/ลาคลอด(ฉุกเฉิน)
   const today = new Date(); today.setHours(0,0,0,0);
   const startDate = new Date(f + 'T00:00:00');
-  if (startDate < today && lt !== 'sick') {
-    return window.utils.showAlert('#alert-msg', 'ลาย้อนหลังทำได้เฉพาะลาป่วยเท่านั้น', 'error');
+  const retroAllowed = (lt === 'sick' || lt === 'maternity');
+  if (startDate < today && !retroAllowed) {
+    return window.utils.showAlert('#alert-msg', 'ลาย้อนหลังทำได้เฉพาะลาป่วย/ลาคลอดฉุกเฉินเท่านั้น', 'error');
   }
 
   renderSummary();
@@ -328,7 +397,7 @@ document.getElementById('btn-back-step3').onclick = () => showStep(2);
 document.getElementById('btn-another').onclick = () => window.location.reload();
 
 function renderSummary() {
-  const lt = document.getElementById('leave_type').value;
+  const lt = getLeaveType();
   const ltLabel = window.LEAVE_TYPE_LABELS[lt] || lt;
   const f = document.getElementById('date_from').value;
   const t = document.getElementById('date_to').value;
@@ -359,13 +428,32 @@ async function requestGps() {
     GPS = null;
     status.className = 'gps-status error';
     let msg = 'ตำแหน่ง GPS ไม่พร้อม';
-    if (err.message === 'permission_denied') msg = 'กรุณาอนุญาตการเข้าถึง GPS เพื่อยืนยันการส่งใบลา';
-    else if (err.message === 'timeout') msg = 'GPS ไม่ตอบสนอง — ลองอีกครั้ง';
-    else if (err.message === 'unsupported') msg = 'อุปกรณ์ไม่รองรับ GPS';
-    status.innerHTML = '⚠️ ' + msg + ' <a href="#" id="btn-retry-gps" style="margin-left:8px">ลองอีกครั้ง</a>';
+    let needReload = false;
+    if (err.message === 'permission_denied') {
+      msg = 'กรุณาอนุญาตให้เข้าถึงตำแหน่ง (Location) เพื่อยืนยันการส่งใบลา';
+      needReload = true;
+    } else if (err.message === 'unavailable') {
+      // มักเกิดตอนปิด Location ที่ระดับเครื่อง (iOS) — เปิดแล้วต้องโหลดหน้าใหม่
+      msg = 'ยังหาตำแหน่งไม่เจอ — เปิด "ตำแหน่งที่ตั้ง / Location" ในตั้งค่าเครื่องก่อน แล้วกดโหลดหน้าใหม่';
+      needReload = true;
+    } else if (err.message === 'timeout') {
+      msg = 'GPS ไม่ตอบสนอง — เปิด Location แล้วลองอีกครั้ง หรือกดโหลดหน้าใหม่';
+      needReload = true;
+    } else if (err.message === 'unsupported') {
+      msg = 'อุปกรณ์ไม่รองรับ GPS';
+    }
+    // ปุ่ม "ลองอีกครั้ง" (อ่านตำแหน่งใหม่ในหน้าเดิม) + "โหลดหน้าใหม่"
+    // (iOS/LINE เปิด Location ทีหลัง ต้อง reload หน้าถึงจะขอสิทธิ์ใหม่ได้)
+    status.innerHTML = '⚠️ ' + msg +
+      '<div style="margin-top:8px">' +
+        '<a href="#" id="btn-retry-gps" style="margin-right:16px">ลองอีกครั้ง</a>' +
+        (needReload ? '<a href="#" id="btn-reload-gps">โหลดหน้าใหม่</a>' : '') +
+      '</div>';
     setTimeout(() => {
       const btn = document.getElementById('btn-retry-gps');
       if (btn) btn.onclick = (e) => { e.preventDefault(); requestGps(); };
+      const rl = document.getElementById('btn-reload-gps');
+      if (rl) rl.onclick = (e) => { e.preventDefault(); window.location.reload(); };
     }, 10);
   }
 }
@@ -379,7 +467,7 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
 
   const payload = {
     lineUserId: window.state.lineUserId,
-    leave_type: document.getElementById('leave_type').value,
+    leave_type: getLeaveType(),
     date_from: document.getElementById('date_from').value,
     date_to: document.getElementById('date_to').value,
     reason: document.getElementById('reason').value.trim(),

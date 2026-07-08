@@ -193,7 +193,7 @@ async function loadUsers() {
     const statusBadge = u.status === 'active' ? '<span class="badge approved">ใช้งาน</span>' :
                         u.status === 'pending' ? '<span class="badge pending">รออนุมัติ</span>' :
                         u.status === 'invited' ? '<span class="badge pending">เชิญแล้ว</span>' :
-                                                 '<span class="badge rejected">ปิดใช้</span>';
+                                                 '<span class="badge rejected">พ้นสภาพ</span>';
     // แสดง badge หัวหน้างานเฉพาะ legacy (USER ที่ติด flag) — SUPERVISOR role มี role badge อยู่แล้ว
     const sup = (u.is_supervisor && u.role === window.ROLES.USER) ? '<span class="badge role-supervisor">หัวหน้างาน</span>' : '';
     return '<div class="list-row">' +
@@ -238,9 +238,10 @@ function openUserAction(userId) {
   if (!u) return;
   document.getElementById('overlay-title').textContent = u.display_name || u.user_id;
 
+  const statusText = ({ active: 'ใช้งาน', pending: 'รออนุมัติ', invited: 'เชิญแล้ว', inactive: 'พ้นสภาพ / ปิดการเข้าถึง' })[u.status] || u.status;
   let body = '<div class="card-row"><span class="label">รหัส</span><span class="value">' + u.emp_code + '</span></div>' +
              '<div class="card-row"><span class="label">บทบาท</span><span class="value">' + window.getRoleLabelTh(u.role) + '</span></div>' +
-             '<div class="card-row"><span class="label">สถานะ</span><span class="value">' + u.status + '</span></div>';
+             '<div class="card-row"><span class="label">สถานะ</span><span class="value">' + statusText + '</span></div>';
 
   if (u.status === 'pending') {
     body += '<div class="btn-row mt-2">' +
@@ -262,12 +263,14 @@ function openUserAction(userId) {
       if (ME.role === window.ROLES.OWNER && u.role !== window.ROLES.OWNER) {
         body += '<button class="btn secondary block mt-1" onclick="grantOwner(\'' + u.user_id + '\', \'' + window.utils.escapeHtml(u.display_name || u.user_id).replace(/'/g, "\\'") + '\')">⭑ มอบสิทธิ์ผู้บริหาร</button>';
       }
-      body += '<button class="btn danger block mt-1" onclick="deactivateUser(\'' + u.user_id + '\')">ระงับการใช้งาน</button>';
+      body += '<button class="btn danger block mt-1" onclick="deactivateUser(\'' + u.user_id + '\')">พ้นสภาพ / ลาออก (ปิดการเข้าถึง)</button>' +
+              '<p class="subtle" style="font-size:12px;margin-top:4px">พนักงานจะเข้าใช้ระบบลางานไม่ได้อีก · ประวัติใบลาเดิมยังเก็บไว้ · รับกลับได้ภายหลัง</p>';
     } else {
       body += '<div class="alert info mt-2">ระดับ "ผู้บริหาร" แก้ไขได้เฉพาะผู้บริหารเท่านั้น</div>';
     }
   } else if (u.status === 'inactive') {
-    body += '<button class="btn primary block mt-2" onclick="activateUser(\'' + u.user_id + '\')">เปิดใช้งานอีกครั้ง</button>';
+    body += '<div class="alert info mt-2">พนักงานคนนี้พ้นสภาพแล้ว — เข้าใช้ระบบลางานไม่ได้</div>' +
+            '<button class="btn primary block mt-2" onclick="activateUser(\'' + u.user_id + '\')">รับกลับเข้าทำงาน (เปิดใช้อีกครั้ง)</button>';
   } else if (u.status === 'invited') {
     body += '<p class="subtle mt-2">รอผู้ใช้กรอกรหัส pairing แล้ว HR ตรวจอนุมัติ</p>';
   }
@@ -301,9 +304,10 @@ async function grantOwner(userId, name) {
 }
 
 async function deactivateUser(userId) {
-  if (!confirm('ระงับการใช้งาน?')) return;
+  if (!confirm('ยืนยันให้พนักงานคนนี้ "พ้นสภาพ / ลาออก"?\n\nพนักงานจะเข้าใช้ระบบลางานไม่ได้อีก (ประวัติเดิมยังเก็บไว้ · รับกลับได้ภายหลัง)')) return;
   const r = await window.api.post('setUserStatus', { lineUserId: window.state.lineUserId, user_id: userId, status: 'inactive' });
-  if (r.ok) { window.utils.showToast('ระงับแล้ว'); closeOverlay(); loadUsers(); }
+  if (r.ok) { window.utils.showToast('บันทึกพ้นสภาพแล้ว'); closeOverlay(); loadUsers(); }
+  else window.utils.showToast('ผิดพลาด: ' + (r.message || r.error));
 }
 
 async function activateUser(userId) {

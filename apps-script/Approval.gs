@@ -102,8 +102,10 @@ function approveLeave(payload) {
     if (payload.decision === 'reject') {
       // finalize as rejected
       sh.getRange(row, hdr.indexOf('final_status') + 1).setValue('rejected');
-      // rollback quota
-      rollbackQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type, Number(leaveAfterLock.days));
+      // rollback quota (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
+      if (isQuotaLeaveType_(leaveAfterLock.leave_type)) {
+        rollbackQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type, Number(leaveAfterLock.days));
+      }
 
       logInfo('approveLeave', 'rejected at stage ' + stage, { leaveId: payload.leave_id, by: approver.user_id });
       audit(payload.lineUserId, 'leave_reject_s' + stage, 'LeaveRequests', payload.leave_id, { note: payload.note });
@@ -122,6 +124,14 @@ function approveLeave(payload) {
         // ADMIN (if stage 2 passed)
         if (stage > 2) pushToAllAdmins(rejectedCard);
         // OWNER (if stage 3 passed) — n/a since stage 3 finalize
+
+        // === Report (PDF ข้อ 2): หัวหน้างานปฏิเสธตั้งแต่ชั้น 1 → HR + ผู้บริหารไม่เคยเห็นใบลานี้เลย
+        // ส่งรายงานให้ HR + ผู้บริหารรับทราบ (พร้อมเหตุผลการปฏิเสธ) ===
+        if (stage === 1) {
+          const reportCard = buildStage1RejectReportCard(leaveAfterLock, requester, approver.display_name, payload.note);
+          pushToAllAdmins(reportCard);
+          pushToAllOwners(reportCard);
+        }
       } catch (e) {
         logWarn('approveLeave reject', 'push failed: ' + e.message);
       }
@@ -137,7 +147,10 @@ function approveLeave(payload) {
     if (nextStage === null) {
       // FINAL approved
       sh.getRange(row, hdr.indexOf('final_status') + 1).setValue('approved');
-      commitQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type, Number(leaveAfterLock.days));
+      // commit quota (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
+      if (isQuotaLeaveType_(leaveAfterLock.leave_type)) {
+        commitQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type, Number(leaveAfterLock.days));
+      }
 
       logInfo('approveLeave', 'final approved', { leaveId: payload.leave_id });
 

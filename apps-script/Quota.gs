@@ -17,7 +17,33 @@
  *   - resetQuotaYearly()           cron 1 ม.ค.
  */
 
+// ประเภทลาที่ "มีโควตา" (หักจาก LeaveQuota sheet)
 const LEAVE_TYPES = ['sick', 'personal', 'vacation'];
+
+// "ลาอื่น ๆ" — ลาตามกฎหมายแรงงาน ไม่หักโควตา sick/personal/vacation
+// บังคับแค่การแจ้งล่วงหน้าตาม meta.advance (ลาคลอดยกเว้นกรณีฉุกเฉิน)
+const OTHER_LEAVE_TYPES = ['maternity', 'paternity', 'sterilization', 'military', 'training', 'ordination'];
+
+const ALL_LEAVE_TYPES = LEAVE_TYPES.concat(OTHER_LEAVE_TYPES);
+
+// นิยามกลางของทุกประเภทลา — label + วันแจ้งล่วงหน้า + อนุญาตลาย้อนหลัง(ฉุกเฉิน) + มีโควตาไหม
+// ใช้ร่วมทั้งระบบ (leaveTypeLabel_ ใน FlexCard.gs อ่านจากตัวนี้ผ่าน global scope)
+const LEAVE_TYPE_META = {
+  sick:          { label: 'ลาป่วย',                quota: true,  advance: 0,  allowRetro: true },
+  personal:      { label: 'ลากิจ',                 quota: true,  advance: 3,  allowRetro: false },
+  vacation:      { label: 'ลาพักร้อน',             quota: true,  advance: 7,  allowRetro: false },
+  maternity:     { label: 'ลาคลอด',                quota: false, advance: 3,  allowRetro: true },
+  paternity:     { label: 'ลาช่วยภรรยาดูแลบุตร',   quota: false, advance: 7,  allowRetro: false },
+  sterilization: { label: 'ลาเพื่อทำหมัน',         quota: false, advance: 7,  allowRetro: false },
+  military:      { label: 'ลาเพื่อรับราชการทหาร',  quota: false, advance: 7,  allowRetro: false },
+  training:      { label: 'ลาเพื่อรับการฝึกอบรม',  quota: false, advance: 3,  allowRetro: false },
+  ordination:    { label: 'ลาอุปสมบท',             quota: false, advance: 15, allowRetro: false },
+};
+
+/** ประเภทลานี้หักโควตาไหม (sick/personal/vacation = true) */
+function isQuotaLeaveType_(t) {
+  return LEAVE_TYPES.indexOf(t) >= 0;
+}
 
 /** payload = { lineUserId, year? } */
 function getMyQuota(payload) {

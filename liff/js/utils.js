@@ -88,7 +88,9 @@ window.utils = {
           if (err.code === 3) return reject(new Error('timeout'));
           return reject(new Error('unavailable'));
         },
-        { enableHighAccuracy: true, timeout: limit, maximumAge: 30000 }
+        // maximumAge:0 — บังคับอ่านตำแหน่งสด ๆ ทุกครั้ง ไม่ใช้ค่า cache
+        // (กันเคส iOS: เปิด Location ทีหลังแล้วกด "ลองอีกครั้ง" ยังได้ค่าเดิม/ค้าง)
+        { enableHighAccuracy: true, timeout: limit, maximumAge: 0 }
       );
     });
   },

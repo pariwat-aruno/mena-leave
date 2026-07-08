@@ -120,6 +120,14 @@ function btnUri_(label, url) {
   };
 }
 
+/** ปุ่มสีเข้ม (danger) แบบเปิด URL — ใช้กับ "ไม่อนุมัติ" ที่ต้องเปิด LIFF ไปกรอกเหตุผล */
+function btnDangerUri_(label, url) {
+  return {
+    type: 'button', style: 'primary', height: 'sm', color: flexColors_().dark,
+    action: { type: 'uri', label: label, uri: url },
+  };
+}
+
 // ========== Card builders ==========
 
 /** ADMIN ได้ flex: มีคนสมัครใหม่ */
@@ -284,13 +292,12 @@ function buildApprovalRequestCard(leave, requester, stage) {
       type: 'bubble', size: 'mega',
       header: flexHeader_(stageLabel),
       body: body,
+      // อนุมัติ = กดในแชทได้เลย · ไม่อนุมัติ = เปิด LIFF เพื่อ "บังคับระบุเหตุผล" (PDF ข้อ 2)
       footer: flexFooter_([
         btnPrimary_('✅ อนุมัติ',
           'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) +
           '&stage=' + stage + '&decision=approve'),
-        btnDanger_('❌ ไม่อนุมัติ',
-          'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) +
-          '&stage=' + stage + '&decision=reject'),
+        btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve')),
       ]),
     },
   };
@@ -358,6 +365,35 @@ function buildFinalRejectedCard(leave, requester, rejectedStage, rejectedByName,
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
           flexKV_('ปฏิเสธโดย', (stageNames[rejectedStage] || '-') + ' (' + (rejectedByName || '-') + ')'),
           note ? flexKV_('หมายเหตุ', note) : { type: 'filler' },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Report card (PDF ข้อ 2) — หัวหน้างานปฏิเสธใบลาตั้งแต่ชั้น 1
+ * ส่งให้ HR + ผู้บริหารรับทราบ (ปกติจะไม่เห็นใบลาที่ถูกปฏิเสธชั้นแรกเลย)
+ */
+function buildStage1RejectReportCard(leave, requester, rejectedByName, note) {
+  const c = flexColors_();
+  return {
+    type: 'flex', altText: 'รายงาน: หัวหน้างานปฏิเสธใบลา ' + leave.leave_id,
+    contents: {
+      type: 'bubble', size: 'mega',
+      header: flexHeader_('รายงาน: หัวหน้างานปฏิเสธใบลา', c.dark),
+      body: {
+        type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          { type: 'text', text: 'ใบลานี้ถูกปฏิเสธที่ชั้นหัวหน้างาน จึงไม่ถูกส่งต่อมายัง HR/ผู้บริหาร แจ้งเพื่อรับทราบ',
+            size: 'xs', color: c.subtle, wrap: true, margin: 'none' },
+          flexSeparator_(),
+          flexKV_('เลขที่ใบลา', leave.leave_id),
+          flexKV_('ผู้ลา', requester.display_name || requester.user_id),
+          flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
+          flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
+          flexKV_('จำนวนวัน', leave.days + ' วัน'),
+          flexKV_('ปฏิเสธโดย', 'หัวหน้างาน (' + (rejectedByName || '-') + ')'),
+          flexKV_('เหตุผลการปฏิเสธ', note || '(ไม่ได้ระบุ)'),
         ],
       },
     },
@@ -432,11 +468,11 @@ function buildQuotaSetCard(user, quota) {
 // ========== Helpers ==========
 
 function leaveTypeLabel_(t) {
-  return ({
-    sick:     'ลาป่วย',
-    personal: 'ลากิจ',
-    vacation: 'ลาพักร้อน',
-  })[t] || t;
+  // อ่านจากนิยามกลาง LEAVE_TYPE_META (Quota.gs) — รองรับทั้งประเภทมีโควตา + ลาอื่นๆ
+  if (typeof LEAVE_TYPE_META !== 'undefined' && LEAVE_TYPE_META[t] && LEAVE_TYPE_META[t].label) {
+    return LEAVE_TYPE_META[t].label;
+  }
+  return t;
 }
 
 // ========== Preview / test ==========

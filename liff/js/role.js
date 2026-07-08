@@ -46,10 +46,31 @@ window.canProxyLeave = function (role) {
 };
 
 window.LEAVE_TYPE_LABELS = {
-  sick:     'ลาป่วย',
-  personal: 'ลากิจ',
-  vacation: 'ลาพักร้อน',
+  sick:          'ลาป่วย',
+  personal:      'ลากิจ',
+  vacation:      'ลาพักร้อน',
+  // ลาอื่น ๆ (ตามกฎหมายแรงงาน — ไม่หักโควตา)
+  maternity:     'ลาคลอด',
+  paternity:     'ลาช่วยภรรยาดูแลบุตร',
+  sterilization: 'ลาเพื่อทำหมัน',
+  military:      'ลาเพื่อรับราชการทหาร',
+  training:      'ลาเพื่อรับการฝึกอบรม',
+  ordination:    'ลาอุปสมบท',
 };
+
+// ประเภทลาที่มีโควตา (หัก sick/personal/vacation)
+window.QUOTA_LEAVE_TYPES = ['sick', 'personal', 'vacation'];
+window.isQuotaLeaveType = function (t) { return window.QUOTA_LEAVE_TYPES.indexOf(t) >= 0; };
+
+// "ลาอื่น ๆ" — หัวข้อย่อย + เงื่อนไขการแจ้งล่วงหน้า (แสดงในหน้าเงื่อนไข + dropdown)
+window.OTHER_LEAVE_TYPES = [
+  { value: 'maternity',     label: 'ลาคลอด',                condition: 'เขียนใบลาล่วงหน้าอย่างน้อย 3 วัน หรือกรณีฉุกเฉินแจ้งฝ่ายบุคคลทันที' },
+  { value: 'paternity',     label: 'ลาช่วยภรรยาดูแลบุตร',   condition: 'เขียนใบลาล่วงหน้า 7 วัน' },
+  { value: 'sterilization', label: 'ลาเพื่อทำหมัน',         condition: 'เขียนใบลาล่วงหน้า 7 วัน' },
+  { value: 'military',      label: 'ลาเพื่อรับราชการทหาร',  condition: 'เขียนใบลาล่วงหน้า 7 วัน' },
+  { value: 'training',      label: 'ลาเพื่อรับการฝึกอบรม',  condition: 'เขียนใบลาล่วงหน้า 3 วัน' },
+  { value: 'ordination',    label: 'ลาอุปสมบท',             condition: 'เขียนใบลาล่วงหน้า 15 วัน' },
+];
 
 window.STATUS_LABELS = {
   pending:  'รออนุมัติ',

@@ -50,9 +50,10 @@ function submitLeave(payload) {
   }
 
   // === validate fields ===
-  if (LEAVE_TYPES.indexOf(payload.leave_type) < 0) {
+  if (ALL_LEAVE_TYPES.indexOf(payload.leave_type) < 0) {
     return { ok: false, error: 'invalid_leave_type' };
   }
+  const typeMeta = LEAVE_TYPE_META[payload.leave_type] || {};
   if (!payload.date_from || !payload.date_to) {
     return { ok: false, error: 'missing_dates' };
   }
@@ -76,31 +77,44 @@ function submitLeave(payload) {
     return { ok: false, error: 'invalid_date_range', message: 'ช่วงวันที่ไม่ถูกต้อง' };
   }
 
-  // === is_retroactive ===
+  // === is_retroactive === (ลาย้อนหลังได้เฉพาะประเภทที่ allowRetro เช่น ลาป่วย/ลาคลอดฉุกเฉิน)
   const isRetro = new Date(payload.date_from + 'T00:00:00+07:00') < new Date(todayBangkok() + 'T00:00:00+07:00');
-  if (isRetro && payload.leave_type !== 'sick') {
-    return { ok: false, error: 'retroactive_only_sick',
-      message: 'ลาย้อนหลังทำได้เฉพาะลาป่วยฉุกเฉินเท่านั้น' };
+  if (isRetro && !typeMeta.allowRetro) {
+    return { ok: false, error: 'retroactive_not_allowed',
+      message: 'ลาย้อนหลังทำได้เฉพาะลาป่วย/ลาคลอดฉุกเฉินเท่านั้น' };
   }
 
-  // === validate quota ===
-  const year = new Date(payload.date_from + 'T00:00:00+07:00').getFullYear();
-  let quota = getQuotaRow_(requester.user_id, year);
-  if (!quota) {
-    ensureQuotaRow_(requester.user_id);
-    quota = getQuotaRow_(requester.user_id, year);
-  }
-  const quotaShaped = shapeQuota_(quota);
-  const available = quotaShaped[payload.leave_type].available;
-  if (days > available) {
-    return { ok: false, error: 'quota_exceeded',
-      message: 'โควตา' + leaveTypeLabel_(payload.leave_type) + 'คงเหลือ ' + available + ' วัน ลาได้ไม่เกินนี้' };
+  // === validate quota === (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ตามกฎหมายไม่หักโควตา)
+  if (isQuotaLeaveType_(payload.leave_type)) {
+    const year = new Date(payload.date_from + 'T00:00:00+07:00').getFullYear();
+    let quota = getQuotaRow_(requester.user_id, year);
+    if (!quota) {
+      ensureQuotaRow_(requester.user_id);
+      quota = getQuotaRow_(requester.user_id, year);
+    }
+    const quotaShaped = shapeQuota_(quota);
+    const available = quotaShaped[payload.leave_type].available;
+    if (days > available) {
+      return { ok: false, error: 'quota_exceeded',
+        message: 'โควตา' + leaveTypeLabel_(payload.leave_type) + 'คงเหลือ ' + available + ' วัน ลาได้ไม่เกินนี้' };
+    }
   }
 
-  // === validate against rules ===
+  // === validate against rules === (LeaveRules sheet — sick/personal/vacation)
   const hasAttachment = !!payload.attachment_base64;
   const ruleCheck = validateAgainstRules_(payload.leave_type, payload.date_from, payload.date_to, days, hasAttachment);
   if (!ruleCheck.ok) return ruleCheck;
+
+  // === ลาอื่นๆ ตามกฎหมาย — บังคับแจ้งล่วงหน้าตาม meta (ยกเว้นประเภทฉุกเฉิน allowRetro) ===
+  if (!isQuotaLeaveType_(payload.leave_type) && Number(typeMeta.advance) > 0 && !typeMeta.allowRetro) {
+    const today0 = new Date(todayBangkok() + 'T00:00:00+07:00');
+    const start0 = new Date(payload.date_from + 'T00:00:00+07:00');
+    const diffDays = Math.floor((start0 - today0) / (24 * 3600 * 1000));
+    if (diffDays < Number(typeMeta.advance)) {
+      return { ok: false, error: 'advance_notice_violation',
+        message: typeMeta.label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + typeMeta.advance + ' วัน' };
+    }
+  }
 
   // === upload attachment ===
   let attachmentUrl = '';
@@ -178,12 +192,14 @@ function submitLeave(payload) {
     now,
   ]);
 
-  // === reserve quota ===
-  if (finalStatus === 'approved') {
-    // OWNER auto-approve → commit ทันที
-    commitQuota(requester.user_id, payload.leave_type, days);
-  } else {
-    reserveQuota(requester.user_id, payload.leave_type, days);
+  // === reserve quota === (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
+  if (isQuotaLeaveType_(payload.leave_type)) {
+    if (finalStatus === 'approved') {
+      // OWNER auto-approve → commit ทันที
+      commitQuota(requester.user_id, payload.leave_type, days);
+    } else {
+      reserveQuota(requester.user_id, payload.leave_type, days);
+    }
   }
 
   logInfo('submitLeave', 'submitted', { leaveId: leaveId, userId: requester.user_id, days: days });
