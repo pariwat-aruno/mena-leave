@@ -41,6 +41,7 @@ const SHEET_HEADERS = {
     'stage2_status', 'stage2_by', 'stage2_at', 'stage2_note',
     'stage3_status', 'stage3_by', 'stage3_at', 'stage3_note',
     'final_status', 'submitted_at',
+    'gps_missing_reason',
   ],
   'LeaveQuota': [
     'quota_id', 'user_id', 'year',
@@ -207,6 +208,13 @@ function setupDatabase() {
       console.log('สร้าง tab: ' + tabName);
     }
     const headers = SHEET_HEADERS[tabName];
+    // tab ที่สร้างไว้ก่อนหน้าอาจแคบกว่า headers ชุดใหม่ (เช่น เพิ่มคอลัมน์ทีหลัง)
+    // ต้องขยายก่อน ไม่งั้น setValues + appendRow จะ throw
+    const shortBy = headers.length - sh.getMaxColumns();
+    if (shortBy > 0) {
+      sh.insertColumnsAfter(sh.getMaxColumns(), shortBy);
+      console.log('ขยาย tab ' + tabName + ' +' + shortBy + ' คอลัมน์');
+    }
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
     sh.setFrozenRows(1);
   });

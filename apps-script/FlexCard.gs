@@ -284,6 +284,22 @@ function buildApprovalRequestCard(leave, requester, stage) {
         },
       ],
     });
+  } else {
+    // เปิด GPS ไม่ได้ — ผู้อนุมัติต้องเห็นว่าใบลานี้ไม่มีพิกัดยืนยัน พร้อมเหตุผลที่ผู้ลาแจ้ง
+    body.contents.push(flexSeparator_());
+    body.contents.push({
+      type: 'box', layout: 'vertical', margin: 'md', spacing: 'xs',
+      backgroundColor: '#fff8e6', paddingAll: '10px', cornerRadius: '6px',
+      contents: [
+        { type: 'text', text: '⚠️ ไม่มีพิกัดยืนยัน', size: 'sm', weight: 'bold', color: c.warning },
+        {
+          type: 'text', size: 'xs', color: c.subtle, wrap: true,
+          text: leave.gps_missing_reason
+            ? 'ผู้ลาแจ้งว่า: ' + leave.gps_missing_reason
+            : 'ผู้ลาไม่ได้ระบุเหตุผล',
+        },
+      ],
+    });
   }
 
   return {

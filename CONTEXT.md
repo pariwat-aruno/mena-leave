@@ -134,6 +134,7 @@
 | `stage3_note` | string | | |
 | `final_status` | enum | `pending` / `approved` / `rejected` | derived from stages |
 | `submitted_at` | datetime | ISO 8601 +07:00 | |
+| `gps_missing_reason` | string | `มือถือจับสัญญาณไม่ได้` | ว่าง = มีพิกัดปกติ · มีค่า = ผู้ลาเปิด GPS ไม่ได้ ใบลาถูกติดธง "ไม่มีพิกัดยืนยัน" |
 
 ### Sheet: `LeaveQuota` — โควตาต่อคนต่อปี
 

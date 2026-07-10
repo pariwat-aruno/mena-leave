@@ -183,9 +183,13 @@ clasp create-version "<desc>"            # สร้าง immutable version sna
 - Brand customization via Sheet `Settings`: brand_name, brand_logo_url, brand_color_primary
 
 ### GPS (project-specific override)
-- ใช้ `getGeolocation()` จาก `utils.js` — บังคับ capture ตอน submit ใบลา
+- ใช้ `getGeolocation()` จาก `utils.js` — พยายาม capture ตอน submit ใบลา
 - ห้ามบังคับเปิดกล้อง / เซลฟี่
-- ถ้า GPS ไม่ออก (deny permission / timeout) → block submission + แสดง error friendly
+- ถ้า GPS ไม่ออก (deny permission / timeout / unsupported) → **ห้าม block submission** เพราะพนักงานที่เปิด GPS ไม่ได้จริงจะลาไม่ได้เลย
+  - แสดงช่องกรอกเหตุผล → บังคับ >= `GPS_MISSING_REASON_MIN` (5) ตัวอักษร → ส่งใบลาต่อได้
+  - เก็บลงคอลัมน์ `gps_missing_reason` (ท้ายสุดของ tab `LeaveRequests`)
+  - ใบลาที่ไม่มีพิกัดต้องติดธง `⚠️ ไม่มีพิกัดยืนยัน` + เหตุผล ทั้งใน flex card และ `approve.html` — ให้ผู้อนุมัติเป็นคนตัดสินใจ ไม่ใช่ระบบตัดสินแทน
+  - `gps_required=FALSE` ใน Settings = ไม่ต้องกรอกเหตุผลด้วยซ้ำ (ปิดทั้งบริษัท)
 
 ### Attachment (project-specific override)
 - ใช้ `<input type="file" accept="image/*">` — **อนุญาตเลือก gallery** (ต่างจาก partime-checkin)

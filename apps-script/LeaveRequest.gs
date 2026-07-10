@@ -64,10 +64,16 @@ function submitLeave(payload) {
   const cfg = getConfig();
 
   // === validate GPS ===
-  if (cfg.gps_required) {
-    if (!isFinite(Number(payload.gps_lat)) || !isFinite(Number(payload.gps_lng))) {
-      return { ok: false, error: 'gps_required', message: 'กรุณาเปิด GPS เพื่อยืนยันสถานที่ตอนส่งใบลา' };
-    }
+  // เปิด GPS ไม่ได้ → ส่งใบลาได้ แต่ต้องระบุเหตุผล แล้วใบลาจะถูกติดธง
+  // "ไม่มีพิกัดยืนยัน" ให้ผู้อนุมัติเห็นชัดทั้งในการ์ด LINE และหน้าอนุมัติ
+  const hasGps = isFinite(Number(payload.gps_lat)) && isFinite(Number(payload.gps_lng));
+  const gpsMissingReason = String(payload.gps_missing_reason || '').trim();
+  if (cfg.gps_required && !hasGps && gpsMissingReason.length < GPS_MISSING_REASON_MIN) {
+    return {
+      ok: false,
+      error: 'gps_missing_reason_required',
+      message: 'เปิด GPS ไม่ได้ใช่ไหม — กรุณาระบุเหตุผลอย่างน้อย ' + GPS_MISSING_REASON_MIN + ' ตัวอักษร เพื่อส่งใบลาต่อ',
+    };
   }
 
   // === compute days ===
@@ -190,6 +196,7 @@ function submitLeave(payload) {
     stage3Status, '', requester.role === ROLES.OWNER ? now : '', requester.role === ROLES.OWNER ? 'auto-approved (OWNER)' : '',
     finalStatus,
     now,
+    hasGps ? '' : gpsMissingReason,
   ]);
 
   // === reserve quota === (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
@@ -324,6 +331,7 @@ function shapeLeavePublic_(leave, includeSensitive) {
     reason: leave.reason,
     gps_lat: includeSensitive ? leave.gps_lat : null,
     gps_lng: includeSensitive ? leave.gps_lng : null,
+    gps_missing_reason: leave.gps_missing_reason || '',
     attachment_url: leave.attachment_url,
     stage1_status: leave.stage1_status,
     stage1_by: leave.stage1_by,

@@ -496,6 +496,33 @@ p { margin: 8px 0; color: var(--text); }
 .gps-status.error { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
 .gps-status.loading { color: var(--text-subtle); }
 
+/* ธง "ไม่มีพิกัดยืนยัน" — ผู้อนุมัติเห็นในหน้า approve.html */
+.gps-missing {
+  padding: 10px 12px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* กล่องกรอกเหตุผลตอนเปิด GPS ไม่ได้ (request.html) */
+.gps-fallback {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+}
+.gps-fallback label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warning);
+  margin-bottom: 6px;
+}
+
 /* Attachment preview */
 .attachment-preview {
   position: relative;

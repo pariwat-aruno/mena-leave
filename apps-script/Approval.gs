@@ -313,6 +313,7 @@ function shapePendingItem_(leave, myStage) {
     reason: leave.reason,
     attachment_url: leave.attachment_url,
     gps_lat: leave.gps_lat, gps_lng: leave.gps_lng,
+    gps_missing_reason: leave.gps_missing_reason || '',
     submitted_at: leave.submitted_at,
     stage1_status: leave.stage1_status,
     stage2_status: leave.stage2_status,

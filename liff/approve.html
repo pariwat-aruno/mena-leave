@@ -114,7 +114,13 @@ async function loadList() {
         '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + ' (' + p.days + ' วัน)</span></div>' +
         '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>' +
         (p.attachment_url ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="' + p.attachment_url + '">ดูไฟล์แนบ</a></div>' : '') +
-        (p.gps_lat ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="https://www.google.com/maps?q=' + p.gps_lat + ',' + p.gps_lng + '">ดูตำแหน่ง GPS</a></div>' : '') +
+        (p.gps_lat
+          ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="https://www.google.com/maps?q=' + p.gps_lat + ',' + p.gps_lng + '">ดูตำแหน่ง GPS</a></div>'
+          : '<div class="gps-missing mt-1"><strong>⚠️ ไม่มีพิกัดยืนยัน</strong><div>' +
+              (p.gps_missing_reason
+                ? 'ผู้ลาแจ้งว่า: ' + window.utils.escapeHtml(p.gps_missing_reason)
+                : 'ผู้ลาไม่ได้ระบุเหตุผล') +
+            '</div></div>') +
         '<button class="btn primary block mt-2" onclick="openDecision(' + i + ')">ตัดสินใจ</button>' +
       '</div>';
     }).join('');

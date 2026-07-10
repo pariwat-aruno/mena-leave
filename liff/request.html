@@ -115,6 +115,14 @@
 
         <div id="gps-status" class="gps-status loading">รอการตรวจสอบ GPS...</div>
 
+        <!-- เปิด GPS ไม่ได้ → ส่งใบลาต่อได้ แต่ต้องบอกเหตุผล แล้วใบลาจะถูกติดธงให้ผู้อนุมัติเห็น -->
+        <div id="gps-fallback" class="gps-fallback hidden">
+          <label for="gps_missing_reason">เปิด GPS ไม่ได้? บอกเหตุผลแล้วส่งใบลาต่อได้</label>
+          <textarea id="gps_missing_reason" rows="2"
+            placeholder="เช่น มือถือจับสัญญาณไม่ได้ / อยู่ในตึกชั้นใต้ดิน / เครื่องไม่รองรับ"></textarea>
+          <p class="subtle mt-1">ใบลานี้จะถูกทำเครื่องหมาย "ไม่มีพิกัดยืนยัน" — หัวหน้างานและฝ่ายบุคคลจะเห็นเหตุผลที่คุณเขียน</p>
+        </div>
+
         <h2 class="section-title mt-2">สรุปก่อนส่ง</h2>
         <div class="card" id="summary"></div>
 
@@ -420,6 +428,7 @@ async function requestGps() {
   const status = document.getElementById('gps-status');
   status.className = 'gps-status loading';
   status.textContent = 'กำลังขอตำแหน่ง GPS...';
+  document.getElementById('gps-fallback').classList.add('hidden');
   try {
     GPS = await window.utils.getGeolocation();
     status.className = 'gps-status ok';
@@ -427,6 +436,8 @@ async function requestGps() {
   } catch (err) {
     GPS = null;
     status.className = 'gps-status error';
+    // อุปกรณ์ไม่รองรับ GPS ก็ยังลาได้ — เปิดช่องกรอกเหตุผลทุกกรณีที่อ่านพิกัดไม่สำเร็จ
+    document.getElementById('gps-fallback').classList.remove('hidden');
     let msg = 'ตำแหน่ง GPS ไม่พร้อม';
     let needReload = false;
     if (err.message === 'permission_denied') {
@@ -458,9 +469,15 @@ async function requestGps() {
   }
 }
 
+// ต้องตรงกับ GPS_MISSING_REASON_MIN ใน Config.gs
+const GPS_MISSING_REASON_MIN = 5;
+
 document.getElementById('btn-submit-leave').addEventListener('click', async () => {
-  if (!GPS) {
-    return window.utils.showAlert('#alert-msg-3', 'กรุณาเปิด GPS ก่อนส่ง', 'error');
+  const gpsMissingReason = document.getElementById('gps_missing_reason').value.trim();
+  if (!GPS && gpsMissingReason.length < GPS_MISSING_REASON_MIN) {
+    return window.utils.showAlert('#alert-msg-3',
+      'เปิด GPS ไม่ได้ใช่ไหม — กรุณาเขียนเหตุผลอย่างน้อย ' + GPS_MISSING_REASON_MIN + ' ตัวอักษร ในช่องด้านบน แล้วกดส่งอีกครั้ง',
+      'error');
   }
   const btn = document.getElementById('btn-submit-leave');
   btn.disabled = true; btn.textContent = 'กำลังส่ง...';
@@ -471,8 +488,12 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
     date_from: document.getElementById('date_from').value,
     date_to: document.getElementById('date_to').value,
     reason: document.getElementById('reason').value.trim(),
-    gps_lat: GPS.lat, gps_lng: GPS.lng, gps_accuracy: GPS.accuracy,
   };
+  if (GPS) {
+    payload.gps_lat = GPS.lat; payload.gps_lng = GPS.lng; payload.gps_accuracy = GPS.accuracy;
+  } else {
+    payload.gps_missing_reason = gpsMissingReason;
+  }
   const proxyId = getProxyTargetId();
   if (proxyId) payload.on_behalf_user_id = proxyId;
   if (ATTACHMENT) {
@@ -486,7 +507,8 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
   if (!r.ok) {
     return window.utils.showAlert('#alert-msg-3', r.message || ('ผิดพลาด: ' + r.error), 'error');
   }
-  document.getElementById('done-msg').textContent = 'เลขที่ใบลา: ' + r.leave_id + ' · ระบบส่งต่อให้ผู้อนุมัติแล้ว';
+  document.getElementById('done-msg').textContent = 'เลขที่ใบลา: ' + r.leave_id + ' · ระบบส่งต่อให้ผู้อนุมัติแล้ว' +
+    (GPS ? '' : ' (ใบลานี้ไม่มีพิกัดยืนยัน — ผู้อนุมัติจะเห็นเหตุผลที่คุณเขียน)');
   showStep(0);
 });
 </script>

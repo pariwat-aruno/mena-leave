@@ -11,6 +11,9 @@
 const CONFIG_CACHE_KEY = 'mena_leave_runtime_config';
 const CONFIG_CACHE_TTL = 300; // 5 นาที
 
+// ความยาวขั้นต่ำของเหตุผลตอนเปิด GPS ไม่ได้ (ใช้ร่วมกัน backend + request.html)
+const GPS_MISSING_REASON_MIN = 5;
+
 // ========== Role naming (I-022) ==========
 
 const ROLES = {
