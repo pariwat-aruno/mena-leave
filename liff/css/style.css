@@ -178,6 +178,124 @@ p { margin: 8px 0; color: var(--text); }
   margin-top: 4px;
 }
 
+/* ค่าพื้นฐานของช่องกรอกทุกช่อง แม้อยู่นอก .form-group
+   ไม่มีกฎนี้ = ช่องที่เขียนนอกฟอร์มจะตกไปใช้หน้าตาเริ่มต้นของเบราว์เซอร์
+   บน iOS ตัวอักษรต่ำกว่า 16px ยังทำให้จอซูมเองตอนแตะช่องด้วย */
+.app textarea,
+.app input[type="text"],
+.app input[type="search"],
+.app input[type="number"],
+.app input[type="tel"],
+.app input[type="email"],
+.app input[type="date"],
+.app select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-family: inherit;
+  background: white;
+  color: var(--text);
+}
+.app textarea { min-height: 72px; resize: vertical; }
+.app textarea:focus,
+.app input:focus,
+.app select:focus { outline: none; border-color: var(--brand-primary); }
+
+/* ช่องติ๊ก — กล่องต้องไม่ยืดเต็มบรรทัดตาม .form-group input และต้องกดโดนง่ายบนมือถือ */
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.check-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin: 0;
+  accent-color: var(--brand-primary);
+}
+.check-row span { flex: 1; }
+
+/* ตารางข้อมูล — หัวตารางต้องชิดข้างเดียวกับเนื้อในคอลัมน์นั้น */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+table.tbl th,
+table.tbl td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+table.tbl th {
+  background: var(--brand-tint);
+  color: var(--brand-primary);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+/* ชิดขวา/กึ่งกลาง ต้องแรงกว่ากฎ th ด้านบน ไม่งั้นหัวตารางเยื้องจากเนื้อ */
+table.tbl th.r, table.tbl td.r { text-align: right; }
+table.tbl th.c, table.tbl td.c { text-align: center; }
+table.tbl tbody tr:active { background: var(--brand-tint); }
+
+/* กล่องเลือกหลายคน (ผู้บริหาร) */
+.pick-list {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  max-height: 220px;
+  overflow-y: auto;
+  background: white;
+}
+.pick-list .pick-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.pick-list .pick-item:last-child { border-bottom: none; }
+.pick-list .pick-item input[type="checkbox"] {
+  width: 20px; height: 20px; min-width: 20px; margin: 0;
+  accent-color: var(--brand-primary);
+}
+.pick-list .pick-item .who { flex: 1; min-width: 0; }
+.pick-list .pick-item .who .name { font-weight: 500; }
+.pick-list .pick-item .who .meta { font-size: 12px; color: var(--text-faint); }
+
+/* แถบเครื่องมือบนหน้า (ค้นหา / ตัวกรอง) */
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.toolbar input[type="search"],
+.toolbar input[type="text"],
+.toolbar select {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-family: inherit;
+  background: white;
+  color: var(--text);
+}
+
 /* Buttons */
 .btn {
   display: inline-block;
@@ -226,6 +344,9 @@ p { margin: 8px 0; color: var(--text); }
 .badge.approved { background: var(--success-bg); color: var(--success); }
 .badge.rejected { background: var(--danger-bg); color: var(--danger); }
 .badge.skipped { background: #eeeeee; color: #888888; }
+.badge.withdrawn { background: #eeeeee; color: #777777; }
+.badge.cancelled { background: #ede7f6; color: #5e35b1; }
+.badge.emergency { background: #fdeaea; color: #b3261e; }
 .badge.role-owner { background: #fef6e0; color: #8a6500; }
 .badge.role-admin { background: var(--brand-tint); color: var(--brand-primary); }
 .badge.role-user { background: #e6f0ff; color: #1f51b8; }

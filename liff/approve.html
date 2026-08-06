@@ -103,6 +103,7 @@ async function loadList() {
   list.innerHTML = '<h2 class="section-title">มี ' + r.pending.length + ' รายการรออนุมัติ</h2>' +
     r.pending.map((p, i) => {
       const stageLabel = ({ 1: 'ชั้น 1 (หัวหน้างาน)', 2: 'ชั้น 2 (HR)', 3: 'ชั้น 3 (ผู้บริหาร)' })[p.my_stage];
+      const isCancel = p.record_type === 'cancel';
       return '<div class="card mb-1">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<div><strong>' + window.utils.escapeHtml(p.requester_name || '-') + '</strong>' +
@@ -110,11 +111,24 @@ async function loadList() {
           '</div>' +
           '<span class="badge pending">' + stageLabel + '</span>' +
         '</div>' +
-        '<div class="card-row mt-1"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + (p.is_retroactive ? ' (ย้อนหลัง)' : '') + '</span></div>' +
+        (isCancel
+          ? '<div class="alert info mt-1">ใบขอยกเลิกวันลาที่อนุมัติไปแล้ว (ใบ ' +
+            window.utils.escapeHtml(p.parent_leave_id || '-') + ') — อนุมัติแล้วจะคืนโควตาให้ผู้ลา</div>'
+          : '') +
+        (p.is_emergency
+          ? '<div class="alert warning mt-1"><strong>แจ้งไม่ทันกำหนด — ระบุว่าเป็นกรณีฉุกเฉิน</strong><div>' +
+            window.utils.escapeHtml(p.emergency_reason || 'ไม่ได้ระบุเหตุผล') + '</div></div>'
+          : '') +
+        (Number(p.reminder_count) > 0
+          ? '<div class="alert error mt-1">ใบนี้ถูกเตือนไปแล้ว ' + Number(p.reminder_count) + ' ครั้ง</div>'
+          : '') +
+        '<div class="card-row mt-1"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + (p.is_retroactive && !isCancel ? ' (ย้อนหลัง)' : '') + '</span></div>' +
         '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + ' (' + p.days + ' วัน)</span></div>' +
         '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>' +
         (p.attachment_url ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="' + p.attachment_url + '">ดูไฟล์แนบ</a></div>' : '') +
-        (p.gps_lat
+        // ใบขอยกเลิกไม่ได้เก็บพิกัด — ไม่ต้องขึ้นธง "ไม่มีพิกัดยืนยัน" ให้เข้าใจผิด
+        (isCancel ? ''
+        : p.gps_lat
           ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="https://www.google.com/maps?q=' + p.gps_lat + ',' + p.gps_lng + '">ดูตำแหน่ง GPS</a></div>'
           : '<div class="gps-missing mt-1"><strong>⚠️ ไม่มีพิกัดยืนยัน</strong><div>' +
               (p.gps_missing_reason
@@ -132,8 +146,14 @@ function openDecision(idx) {
   const p = window._pending[idx];
   CURRENT_LEAVE = p;
   CURRENT_STAGE = p.my_stage;
-  document.getElementById('decision-title').textContent = 'ตัดสินใจชั้น ' + p.my_stage + ': ' + (p.requester_name || '');
+  const isCancel = p.record_type === 'cancel';
+  document.getElementById('decision-title').textContent =
+    (isCancel ? 'ตัดสินใจใบขอยกเลิก ชั้น ' : 'ตัดสินใจชั้น ') + p.my_stage + ': ' + (p.requester_name || '');
   document.getElementById('decision-body').innerHTML =
+    (isCancel ? '<div class="alert info">อนุมัติแล้ววันลาใบ ' + window.utils.escapeHtml(p.parent_leave_id || '-') +
+      ' จะถูกยกเลิกและคืนโควตา ' + p.days + ' วันให้ผู้ลา</div>' : '') +
+    (p.is_emergency ? '<div class="alert warning">แจ้งไม่ทันกำหนด — ฉุกเฉิน: ' +
+      window.utils.escapeHtml(p.emergency_reason || '-') + '</div>' : '') +
     '<div class="card-row"><span class="label">เลขที่</span><span class="value">' + p.leave_id + '</span></div>' +
     '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + '</span></div>' +
     '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + '</span></div>' +

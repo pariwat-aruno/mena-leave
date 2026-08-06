@@ -62,19 +62,40 @@ window.LEAVE_TYPE_LABELS = {
 window.QUOTA_LEAVE_TYPES = ['sick', 'personal', 'vacation'];
 window.isQuotaLeaveType = function (t) { return window.QUOTA_LEAVE_TYPES.indexOf(t) >= 0; };
 
-// "ลาอื่น ๆ" — หัวข้อย่อย + เงื่อนไขการแจ้งล่วงหน้า (แสดงในหน้าเงื่อนไข + dropdown)
+// "ลาอื่น ๆ" — หัวข้อย่อยใน dropdown
+// ⚠️ ห้ามเขียนจำนวนวันแจ้งล่วงหน้าไว้ที่นี่ — ค่าจริงอยู่ที่ Sheet LeaveRules (HR แก้เองได้)
+//    หน้าจอต้องอ่านจาก getRules() เสมอ ไม่งั้นป้ายบอก 7 วัน แต่ระบบเช็ค 3 วัน
 window.OTHER_LEAVE_TYPES = [
-  { value: 'maternity',     label: 'ลาคลอด',                condition: 'เขียนใบลาล่วงหน้าอย่างน้อย 3 วัน หรือกรณีฉุกเฉินแจ้งฝ่ายบุคคลทันที' },
-  { value: 'paternity',     label: 'ลาช่วยภรรยาดูแลบุตร',   condition: 'เขียนใบลาล่วงหน้า 7 วัน' },
-  { value: 'sterilization', label: 'ลาเพื่อทำหมัน',         condition: 'เขียนใบลาล่วงหน้า 7 วัน' },
-  { value: 'military',      label: 'ลาเพื่อรับราชการทหาร',  condition: 'เขียนใบลาล่วงหน้า 7 วัน' },
-  { value: 'training',      label: 'ลาเพื่อรับการฝึกอบรม',  condition: 'เขียนใบลาล่วงหน้า 3 วัน' },
-  { value: 'ordination',    label: 'ลาอุปสมบท',             condition: 'เขียนใบลาล่วงหน้า 15 วัน' },
+  { value: 'maternity',     label: 'ลาคลอด' },
+  { value: 'paternity',     label: 'ลาช่วยภรรยาดูแลบุตร' },
+  { value: 'sterilization', label: 'ลาเพื่อทำหมัน' },
+  { value: 'military',      label: 'ลาเพื่อรับราชการทหาร' },
+  { value: 'training',      label: 'ลาเพื่อรับการฝึกอบรม' },
+  { value: 'ordination',    label: 'ลาอุปสมบท' },
 ];
 
 window.STATUS_LABELS = {
-  pending:  'รออนุมัติ',
-  approved: 'อนุมัติแล้ว',
-  rejected: 'ปฏิเสธ',
-  skipped:  'ข้าม',
+  pending:   'รออนุมัติ',
+  approved:  'อนุมัติแล้ว',
+  rejected:  'ปฏิเสธ',
+  skipped:   'ข้าม',
+  withdrawn: 'ถอนแล้ว',
+  cancelled: 'ยกเลิกแล้ว',
+};
+
+/** ข้อความเงื่อนไขของประเภทลา — สร้างจากกฎจริงที่ backend ส่งมา ไม่ใช่ข้อความตายในหน้าจอ */
+window.ruleConditionText = function (rule) {
+  if (!rule) return '';
+  const parts = [];
+  const advance = Number(rule.advance_notice_days || 0);
+  if (advance > 0) {
+    parts.push('เขียนใบลาล่วงหน้าอย่างน้อย ' + advance + ' วัน');
+    const allowEmergency = !(rule.allow_emergency === false || rule.allow_emergency === 'FALSE');
+    if (allowEmergency) parts.push('ถ้าไม่ทันให้ติ๊ก "เป็นกรณีฉุกเฉิน" พร้อมระบุเหตุผล');
+  }
+  const maxConsec = Number(rule.max_consecutive_days || 0);
+  if (maxConsec > 0) parts.push('ลาติดกันได้ไม่เกิน ' + maxConsec + ' วัน');
+  const docAbove = Number(rule.doc_required_above_days || 0);
+  if (docAbove > 0) parts.push('ลาตั้งแต่ ' + docAbove + ' วันขึ้นไปต้องแนบเอกสาร');
+  return parts.join(' · ');
 };

@@ -49,6 +49,9 @@ function getApprovalConditions(payload) {
     ok: true,
     quota: quotaRes.quota,
     rules: rulesRes.rules,
+    // หน้าจอต้องใช้ค่าเดียวกับที่ backend ตรวจ — ห้ามเขียนเลขตายไว้ในหน้าจอ
+    emergency_reason_min: Number(getConfig().emergency_reason_min || 10),
+    gps_missing_reason_min: GPS_MISSING_REASON_MIN,
   };
 }
 
@@ -97,6 +100,9 @@ function applyUpsertRule_(data, actor) {
           if (isFinite(data.doc_required_above_days)) sh.getRange(rowNum, hdr.indexOf('doc_required_above_days') + 1).setValue(Number(data.doc_required_above_days));
           if (data.note != null)             sh.getRange(rowNum, hdr.indexOf('note') + 1).setValue(data.note);
           if (data.is_active != null)        sh.getRange(rowNum, hdr.indexOf('is_active') + 1).setValue(!!data.is_active);
+          if (data.allow_emergency != null && hdr.indexOf('allow_emergency') >= 0) {
+            sh.getRange(rowNum, hdr.indexOf('allow_emergency') + 1).setValue(!!data.allow_emergency);
+          }
           sh.getRange(rowNum, hdr.indexOf('updated_at') + 1).setValue(nowBangkok());
           sh.getRange(rowNum, hdr.indexOf('updated_by') + 1).setValue(actor ? actor.user_id : '');
           break;
@@ -116,6 +122,7 @@ function applyUpsertRule_(data, actor) {
       data.is_active === false ? false : true,
       nowBangkok(),
       actor ? actor.user_id : '',
+      data.allow_emergency === false ? false : true,
     ]);
   }
 
@@ -139,30 +146,82 @@ function nextRuleId_() {
   return 'R-' + padLeft_(maxN + 1, 4);
 }
 
-/** validate ใบลาตาม rule + return { ok, error?, warning? } */
-function validateAgainstRules_(leaveType, dateFrom, dateTo, days, hasAttachment) {
-  const rulesRes = getRules();
-  const rules = rulesRes.rules || [];
-  // หา rule ของ leaveType ก่อน fallback to 'all'
-  const rule = rules.filter(function (r) { return r.leave_type === leaveType; })[0] ||
-               rules.filter(function (r) { return r.leave_type === 'all'; })[0];
-  if (!rule) return { ok: true };
+/** หา rule ของประเภทลานี้ — ไม่มีก็ใช้ rule กลาง 'all' */
+function findRuleFor_(leaveType) {
+  const rules = (getRules().rules) || [];
+  return rules.filter(function (r) { return r.leave_type === leaveType; })[0] ||
+         rules.filter(function (r) { return r.leave_type === 'all'; })[0] ||
+         null;
+}
 
-  // advance_notice_days
-  const advance = Number(rule.advance_notice_days || 0);
-  if (advance > 0) {
-    const today = new Date(todayBangkok() + 'T00:00:00+07:00');
-    const start = new Date(dateFrom + 'T00:00:00+07:00');
-    const diffDays = Math.floor((start - today) / (24 * 3600 * 1000));
-    if (diffDays < advance) {
-      // อนุญาตยังไง: sick ลาย้อนหลังได้ — backend ตรวจอีกชั้นใน LeaveRequest
-      // ที่นี่แค่ enforce กฎ advance สำหรับ personal/vacation
-      if (leaveType !== 'sick') {
-        return { ok: false, error: 'advance_notice_violation',
-          message: 'ลาประเภทนี้ต้องแจ้งล่วงหน้าอย่างน้อย ' + advance + ' วัน' };
-      }
-    }
+/** จำนวนวันที่ต้องแจ้งล่วงหน้าของประเภทลานี้ (หน้าจัดการแก้ได้ ไม่มีค่าตายในโค้ด) */
+function advanceNoticeDaysFor_(leaveType) {
+  const rule = findRuleFor_(leaveType);
+  if (rule && rule.advance_notice_days !== '' && isFinite(Number(rule.advance_notice_days))) {
+    return Number(rule.advance_notice_days);
   }
+  const meta = LEAVE_TYPE_META[leaveType] || {};
+  return Number(meta.advance || 0);
+}
+
+/** ประเภทนี้ยื่นไม่ทันแล้วติ๊ก "ฉุกเฉิน" เพื่อส่งต่อได้ไหม (default: ได้) */
+function allowsEmergencyFor_(leaveType) {
+  const rule = findRuleFor_(leaveType);
+  if (!rule) return true;
+  const v = rule.allow_emergency;
+  if (v === '' || v === null || typeof v === 'undefined') return true;
+  return !(v === false || v === 'FALSE' || v === 'false');
+}
+
+/**
+ * ตรวจกำหนดแจ้งล่วงหน้า — จุดเดียวของทั้งระบบ
+ *
+ * ยื่นไม่ทัน ไม่ได้แปลว่าห้ามลา:
+ *   ติ๊ก "เป็นกรณีฉุกเฉิน" + ระบุเหตุผล → ส่งได้ แล้วใบลาติดธงให้ผู้อนุมัติเห็นว่าเป็นเคสเร่งด่วน
+ *   (เว้นแต่ประเภทนั้นตั้ง allow_emergency = FALSE ไว้)
+ *
+ * return { ok, emergency, advance_notice_days?, days_notice?, error?, message? }
+ */
+function checkAdvanceNotice_(leaveType, dateFrom, isEmergency, emergencyReason) {
+  const advance = advanceNoticeDaysFor_(leaveType);
+  if (advance <= 0) return { ok: true, emergency: false };
+
+  const today0 = new Date(todayBangkok() + 'T00:00:00+07:00');
+  const start0 = new Date(dateFrom + 'T00:00:00+07:00');
+  const daysNotice = Math.floor((start0 - today0) / (24 * 3600 * 1000));
+  if (daysNotice >= advance) return { ok: true, emergency: false };
+
+  const meta = LEAVE_TYPE_META[leaveType] || {};
+  const label = meta.label || leaveType;
+
+  if (!allowsEmergencyFor_(leaveType)) {
+    return { ok: false, error: 'advance_notice_violation',
+      message: label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + advance + ' วัน' };
+  }
+
+  if (!(isEmergency === true || isEmergency === 'TRUE')) {
+    return { ok: false, error: 'emergency_required',
+      message: label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + advance + ' วัน — ถ้าจำเป็นเร่งด่วนจริง ให้ติ๊ก "เป็นกรณีฉุกเฉิน" แล้วระบุเหตุผล',
+      advance_notice_days: advance, days_notice: daysNotice };
+  }
+
+  const minLen = Number(getConfig().emergency_reason_min || 10);
+  if (String(emergencyReason || '').trim().length < minLen) {
+    return { ok: false, error: 'emergency_reason_too_short',
+      message: 'กรุณาระบุเหตุผลที่ต้องลาเร่งด่วน อย่างน้อย ' + minLen + ' ตัวอักษร',
+      advance_notice_days: advance };
+  }
+
+  return { ok: true, emergency: true, advance_notice_days: advance, days_notice: daysNotice };
+}
+
+/**
+ * validate ใบลาตาม rule ที่เหลือ (จำนวนวันติดกัน + เอกสารแนบ)
+ * กำหนดแจ้งล่วงหน้าไม่อยู่ที่นี่แล้ว — ดู checkAdvanceNotice_
+ */
+function validateAgainstRules_(leaveType, dateFrom, dateTo, days, hasAttachment) {
+  const rule = findRuleFor_(leaveType);
+  if (!rule) return { ok: true };
 
   // max_consecutive_days
   const maxConsec = Number(rule.max_consecutive_days || 0);

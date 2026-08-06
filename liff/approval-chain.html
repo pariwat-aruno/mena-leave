@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ผังอำนาจอนุมัติ — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">ผังอำนาจอนุมัติ</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-allowed" class="hidden">
+      <div class="alert error">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
+      <p class="subtle">เฉพาะพนักงานที่ลงทะเบียนแล้วเท่านั้น</p>
+      <a class="btn primary block mt-2" href="./myid.html">กลับ</a>
+    </div>
+
+    <!-- ===== สายงานของฉัน (ทุกคนที่เป็นหัวหน้า/ผู้บริหารเห็น) ===== -->
+    <div id="my-line" class="hidden">
+      <h2 class="section-title">สายงานของฉัน</h2>
+      <div id="my-line-body"></div>
+    </div>
+
+    <!-- ===== ตั้งผังอำนาจ (HR / ผู้บริหาร) ===== -->
+    <div id="editor" class="hidden">
+      <h2 class="section-title mt-2">ตั้งสายอนุมัติให้พนักงาน</h2>
+
+      <div class="form-group">
+        <label>เลือกพนักงาน <span class="required">*</span></label>
+        <select id="pick-employee"><option value="">— เลือก —</option></select>
+        <div class="hint" id="employee-hint"></div>
+      </div>
+
+      <div id="chain-form" class="hidden">
+        <div class="form-group">
+          <label>หัวหน้างาน (ผู้อนุมัติชั้น 1)</label>
+          <select id="pick-supervisor"><option value="">ไม่มี — ใบลาเข้า HR โดยตรง</option></select>
+          <div class="hint">พนักงาน 1 คนมีหัวหน้างานได้ 1 คน</div>
+        </div>
+
+        <div class="form-group">
+          <label>ผู้บริหาร (ผู้อนุมัติชั้น 3)</label>
+          <div class="pick-list" id="pick-executives"></div>
+          <div class="hint">เลือกได้หลายคน — ใบลาชั้น 3 จะเข้าเฉพาะคนที่ติ๊กไว้ ใครกดก่อนถือว่าจบ</div>
+        </div>
+
+        <div id="alert-msg" class="hidden"></div>
+
+        <div class="card soft mt-2" id="preview"></div>
+
+        <div class="btn-row">
+          <button class="btn ghost" id="btn-reset">ยกเลิกการแก้</button>
+          <button class="btn primary" id="btn-save">บันทึกสายอนุมัติ</button>
+        </div>
+      </div>
+
+      <a class="btn ghost block mt-2" href="./employees.html">ไปหน้าฐานข้อมูลพนักงาน</a>
+      <a class="btn ghost block mt-1" href="./admin.html">กลับหน้าจัดการระบบ</a>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+let DIR = null;       // ฐานข้อมูลพนักงาน + ตัวเลือก (เฉพาะ HR/ผู้บริหาร)
+let CURRENT = null;   // พนักงานที่กำลังแก้อยู่
+let CAN_EDIT = false;
+
+(async function () {
+  try { await window.auth.init(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">' + err.message + '</div>';
+    return;
+  }
+
+  const line = await window.api.post('getMyOrgLine', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+
+  if (!line.ok) {
+    document.getElementById('not-allowed').classList.remove('hidden');
+    return;
+  }
+
+  renderMyLine(line);
+
+  // HR / ผู้บริหาร เท่านั้นที่แก้ผังได้ — คนอื่นเห็นแค่สายงานของตัวเอง
+  const dir = await window.api.post('getEmployeeDirectory', { lineUserId: window.state.lineUserId });
+  if (dir.ok) {
+    CAN_EDIT = true;
+    DIR = dir;
+    setupEditor();
+    document.getElementById('editor').classList.remove('hidden');
+
+    // มาจากหน้าฐานข้อมูลพนักงาน พร้อมรหัสที่จะแก้
+    const preset = new URLSearchParams(window.location.search).get('user_id');
+    if (preset) {
+      document.getElementById('pick-employee').value = preset;
+      onPickEmployee();
+    }
+  }
+})();
+
+function renderMyLine(line) {
+  const box = document.getElementById('my-line');
+  const body = document.getElementById('my-line-body');
+  const esc = window.utils.escapeHtml;
+
+  const block = (title, arr, emptyText) => {
+    if (!arr.length) return '<div class="card muted"><strong>' + title + '</strong>' +
+      '<div class="subtle mt-1">' + emptyText + '</div></div>';
+    return '<div class="card"><div class="mb-1"><strong>' + title + ' (' + arr.length + ' คน)</strong></div>' +
+      arr.map(u => '<div class="list-row"><div class="info">' +
+        '<div class="name">' + esc(u.display_name || u.user_id) + '</div>' +
+        '<div class="meta">' + esc([u.department, u.position].filter(Boolean).join(' · ') || u.user_id) +
+        (u.supervisor_name ? ' · หัวหน้า: ' + esc(u.supervisor_name) : '') + '</div>' +
+      '</div><span class="badge skipped">' + esc(u.role_label) + '</span></div>').join('') +
+    '</div>';
+  };
+
+  let html = '<div class="card soft mb-2">' +
+    '<div class="card-row"><span class="label">คุณคือ</span><span class="value">' +
+      esc(line.me.display_name || line.me.user_id) + ' · ' + esc(line.me.role_label) + '</span></div></div>';
+
+  const isExec = line.me.role === window.ROLES.OWNER;
+  const isSup = line.as_supervisor.length > 0;
+
+  if (isSup) html += block('ลูกน้องที่คุณเป็นหัวหน้างาน', line.as_supervisor, '');
+  if (isExec) {
+    html += block('พนักงานในสายที่คุณอนุมัติชั้น 3', line.as_executive,
+      'ยังไม่มีใครถูกผูกกับคุณ — ใบลาชั้น 3 จะกระจายให้ผู้บริหารทุกคนไปก่อน');
+    if (line.unassigned.length) {
+      html += '<div class="alert warning mt-2">มีพนักงาน ' + line.unassigned.length +
+        ' คนที่ยังไม่ได้ผูกผู้บริหาร — ใบลาของคนกลุ่มนี้จะส่งให้ผู้บริหารทุกคนพร้อมกัน</div>';
+    }
+  }
+
+  if (!isSup && !isExec) {
+    html += '<div class="card muted"><div class="subtle">คุณยังไม่ได้เป็นผู้อนุมัติของใคร</div></div>';
+  }
+
+  body.innerHTML = html;
+  box.classList.remove('hidden');
+}
+
+let EDITOR_BOUND = false;
+
+function setupEditor() {
+  renderEditorOptions();
+  if (EDITOR_BOUND) return;
+  EDITOR_BOUND = true;
+  // ผูก event ครั้งเดียว — เรียก setupEditor ซ้ำหลังบันทึกแล้วผูกซ้ำ จะยิงซ้อนกันหลายรอบ
+  document.getElementById('pick-employee').addEventListener('change', onPickEmployee);
+  document.getElementById('pick-executives').addEventListener('change', renderPreview);
+  document.getElementById('pick-supervisor').addEventListener('change', renderPreview);
+  document.getElementById('btn-reset').onclick = onPickEmployee;
+  document.getElementById('btn-save').onclick = save;
+}
+
+function renderEditorOptions() {
+  const esc = window.utils.escapeHtml;
+  document.getElementById('pick-employee').innerHTML =
+    '<option value="">— เลือก —</option>' +
+    DIR.employees.map(e => '<option value="' + e.user_id + '">' +
+      esc((e.emp_code || e.user_id) + ' · ' + (e.display_name || '')) + '</option>').join('');
+
+  document.getElementById('pick-supervisor').innerHTML =
+    '<option value="">ไม่มี — ใบลาเข้า HR โดยตรง</option>' +
+    DIR.supervisor_options.map(u => '<option value="' + u.user_id + '">' +
+      esc(u.display_name || u.user_id) + ' (' + esc(u.role_label) + ')' + '</option>').join('');
+
+  const execBox = document.getElementById('pick-executives');
+  if (!DIR.executive_options.length) {
+    execBox.innerHTML = '<div class="pick-item"><div class="who"><div class="meta">' +
+      'ยังไม่มีใครเป็นระดับผู้บริหาร — ตั้งระดับให้ก่อนที่หน้าจัดการระบบ</div></div></div>';
+  } else {
+    execBox.innerHTML = DIR.executive_options.map(u =>
+      '<label class="pick-item">' +
+        '<input type="checkbox" class="exec-check" value="' + u.user_id + '">' +
+        '<span class="who"><span class="name">' + esc(u.display_name || u.user_id) + '</span>' +
+        '<span class="meta">' + esc(u.user_id) + '</span></span>' +
+      '</label>').join('');
+  }
+}
+
+function onPickEmployee() {
+  window.utils.clearAlert('#alert-msg');
+  const userId = document.getElementById('pick-employee').value;
+  const form = document.getElementById('chain-form');
+  const hint = document.getElementById('employee-hint');
+
+  if (!userId) {
+    form.classList.add('hidden');
+    hint.textContent = '';
+    CURRENT = null;
+    return;
+  }
+
+  CURRENT = DIR.employees.filter(e => e.user_id === userId)[0];
+  if (!CURRENT) {
+    form.classList.add('hidden');
+    hint.textContent = 'ไม่พบพนักงานคนนี้';
+    return;
+  }
+
+  hint.textContent = CURRENT.role_label +
+    (CURRENT.department ? ' · ' + CURRENT.department : '') +
+    (CURRENT.has_line ? '' : ' · ยังไม่ผูกไลน์');
+
+  document.getElementById('pick-supervisor').value = CURRENT.supervisor_user_id || '';
+  document.querySelectorAll('.exec-check').forEach(chk => {
+    chk.checked = CURRENT.executive_user_ids.indexOf(chk.value) >= 0;
+  });
+
+  form.classList.remove('hidden');
+  renderPreview();
+}
+
+function selectedExecIds() {
+  return Array.from(document.querySelectorAll('.exec-check:checked')).map(c => c.value);
+}
+
+function nameOf(userId) {
+  const e = DIR.employees.filter(x => x.user_id === userId)[0];
+  return e ? (e.display_name || userId) : userId;
+}
+
+function renderPreview() {
+  if (!CURRENT) return;
+  const esc = window.utils.escapeHtml;
+  const supId = document.getElementById('pick-supervisor').value;
+  const execIds = selectedExecIds();
+
+  document.getElementById('preview').innerHTML =
+    '<div class="card-row"><span class="label">ชั้น 1 หัวหน้างาน</span><span class="value">' +
+      (supId ? esc(nameOf(supId)) : 'ไม่มี (ข้ามไปชั้น HR)') + '</span></div>' +
+    '<div class="card-row"><span class="label">ชั้น 2 HR</span><span class="value">HR ทุกคน</span></div>' +
+    '<div class="card-row"><span class="label">ชั้น 3 ผู้บริหาร</span><span class="value">' +
+      (execIds.length ? esc(execIds.map(nameOf).join(', ')) : 'ยังไม่กำหนด — จะส่งให้ผู้บริหารทุกคน') + '</span></div>';
+}
+
+async function save() {
+  if (!CURRENT) return;
+  window.utils.clearAlert('#alert-msg');
+
+  const supId = document.getElementById('pick-supervisor').value;
+  const execIds = selectedExecIds();
+
+  if (supId && supId === CURRENT.user_id) {
+    return window.utils.showAlert('#alert-msg', 'ตั้งตัวเองเป็นหัวหน้างานของตัวเองไม่ได้', 'error');
+  }
+  if (execIds.indexOf(CURRENT.user_id) >= 0) {
+    return window.utils.showAlert('#alert-msg', 'ตั้งตัวเองเป็นผู้บริหารของตัวเองไม่ได้', 'error');
+  }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  const r = await window.api.post('setApprovalChain', {
+    lineUserId: window.state.lineUserId,
+    user_id: CURRENT.user_id,
+    supervisor_user_id: supId,
+    executive_user_ids: execIds,
+  });
+
+  btn.disabled = false; btn.textContent = 'บันทึกสายอนุมัติ';
+
+  if (!r.ok) {
+    return window.utils.showAlert('#alert-msg', r.message || ('บันทึกไม่สำเร็จ: ' + r.error), 'error');
+  }
+
+  // อ่านค่าใหม่จากเซิร์ฟเวอร์ ไม่ใช่เดาเองว่าบันทึกสำเร็จแล้วค่าเป็นตามที่ส่งไป
+  const dir = await window.api.post('getEmployeeDirectory', { lineUserId: window.state.lineUserId });
+  if (dir.ok) {
+    DIR = dir;
+    const keep = CURRENT.user_id;
+    renderEditorOptions();
+    document.getElementById('pick-employee').value = keep;
+    onPickEmployee();
+  }
+  window.utils.showAlert('#alert-msg', 'บันทึกสายอนุมัติเรียบร้อย', 'success');
+}
+</script>
+</body>
+</html>

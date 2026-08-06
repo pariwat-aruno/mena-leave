@@ -35,8 +35,9 @@ function approveLeave(payload) {
 
   const leave = findLeaveById_(payload.leave_id);
   if (!leave) return { ok: false, error: 'leave_not_found' };
-  if (leave.final_status === 'approved' || leave.final_status === 'rejected') {
-    return { ok: false, error: 'already_decided', message: 'ใบลานี้ตัดสินเรียบร้อยแล้ว' };
+  if (['approved', 'rejected', 'withdrawn', 'cancelled'].indexOf(leave.final_status) >= 0) {
+    return { ok: false, error: 'already_decided',
+      message: leave.final_status === 'withdrawn' ? 'ผู้ลาถอนใบลานี้ไปแล้ว' : 'ใบลานี้ตัดสินเรียบร้อยแล้ว' };
   }
 
   // === Permission check per stage ===
@@ -61,6 +62,12 @@ function approveLeave(payload) {
     }
     if (approver.role !== ROLES.OWNER) {
       return { ok: false, error: 'forbidden', message: 'เฉพาะผู้บริหารเท่านั้น' };
+    }
+    // ผู้บริหารอนุมัติได้เฉพาะคนในสายงานตัวเอง
+    // (พนักงานที่ยังไม่ถูกผูกสาย → getExecutivesFor คืนผู้บริหารทุกคน ใบลาจะได้ไม่ค้างตาย)
+    if (!isExecutiveOf_(approver.user_id, leave.user_id)) {
+      return { ok: false, error: 'forbidden',
+        message: 'ใบลานี้ไม่ได้อยู่ในสายงานของคุณ — ผู้บริหารที่ดูแลสายนี้เป็นผู้อนุมัติ' };
     }
   }
 
@@ -96,19 +103,42 @@ function approveLeave(payload) {
       sh.getRange(row, hdr.indexOf('stage' + stage + '_note') + 1).setValue(payload.note);
     }
 
+    // ชั้นนี้มีคนกดแล้ว → เริ่มนับเวลาเงียบของชั้นถัดไปใหม่ ไม่งั้นชั้นถัดไปโดนเตือนทันทีที่รับใบ
+    if (hdr.indexOf('last_reminded_at') >= 0) {
+      sh.getRange(row, hdr.indexOf('last_reminded_at') + 1).setValue('');
+      sh.getRange(row, hdr.indexOf('reminder_count') + 1).setValue(0);
+    }
+
     // === Determine next action ===
     const requester = findUserByUserId_(leaveAfterLock.user_id);
+
+    const recordType = leaveAfterLock.record_type || 'leave';
 
     if (payload.decision === 'reject') {
       // finalize as rejected
       sh.getRange(row, hdr.indexOf('final_status') + 1).setValue('rejected');
       // rollback quota (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
-      if (isQuotaLeaveType_(leaveAfterLock.leave_type)) {
-        rollbackQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type, Number(leaveAfterLock.days));
+      // ใบขอยกเลิกไม่เคยจองโควตาไว้ ถ้าเผลอ rollback = โควตาเด้งเพิ่มฟรี ๆ
+      if (recordType === 'leave' && isQuotaLeaveType_(leaveAfterLock.leave_type)) {
+        rollbackQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type,
+          Number(leaveAfterLock.days), quotaYearOf_(leaveAfterLock));
       }
 
       logInfo('approveLeave', 'rejected at stage ' + stage, { leaveId: payload.leave_id, by: approver.user_id });
       audit(payload.lineUserId, 'leave_reject_s' + stage, 'LeaveRequests', payload.leave_id, { note: payload.note });
+
+      // ใบขอยกเลิกถูกปฏิเสธ = ใบลาเดิมยังอยู่ตามเดิม ต้องบอกให้ชัด ไม่ใช่ขึ้นว่า "ใบลาถูกปฏิเสธ"
+      if (recordType === 'cancel') {
+        try {
+          const parentLeave = findLeaveById_(leaveAfterLock.parent_leave_id);
+          const card = buildCancelResultCard(leaveAfterLock, parentLeave, requester, false, approver.display_name, payload.note);
+          if (requester.line_user_id) pushMessage(requester.line_user_id, card);
+          pushToAllAdmins(card);
+        } catch (e) {
+          logWarn('approveLeave reject cancel', 'push failed: ' + e.message);
+        }
+        return { ok: true, decision: 'reject', final_status: 'rejected', record_type: 'cancel' };
+      }
 
       // notify ทุกคนที่เกี่ยวข้อง
       try {
@@ -130,7 +160,7 @@ function approveLeave(payload) {
         if (stage === 1) {
           const reportCard = buildStage1RejectReportCard(leaveAfterLock, requester, approver.display_name, payload.note);
           pushToAllAdmins(reportCard);
-          pushToAllOwners(reportCard);
+          pushToExecutivesOf_(leaveAfterLock.user_id, reportCard);
         }
       } catch (e) {
         logWarn('approveLeave reject', 'push failed: ' + e.message);
@@ -147,9 +177,19 @@ function approveLeave(payload) {
     if (nextStage === null) {
       // FINAL approved
       sh.getRange(row, hdr.indexOf('final_status') + 1).setValue('approved');
+
+      if (recordType === 'cancel') {
+        // ใบขอยกเลิกผ่านครบ → ปิดใบลาต้นทาง + คืนโควตาที่หักไปแล้ว (ข้างในแจ้งผู้ลา + HR เอง)
+        const finalCancel = findLeaveById_(payload.leave_id);
+        applyCancelToParent_(finalCancel);
+        logInfo('approveLeave', 'cancel approved', { cancelId: payload.leave_id, parent: leaveAfterLock.parent_leave_id });
+        return { ok: true, decision: 'approve', final_status: 'approved', record_type: 'cancel' };
+      }
+
       // commit quota (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
       if (isQuotaLeaveType_(leaveAfterLock.leave_type)) {
-        commitQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type, Number(leaveAfterLock.days));
+        commitQuota(leaveAfterLock.user_id, leaveAfterLock.leave_type,
+          Number(leaveAfterLock.days), quotaYearOf_(leaveAfterLock));
       }
 
       logInfo('approveLeave', 'final approved', { leaveId: payload.leave_id });
@@ -196,6 +236,44 @@ function approveLeave(payload) {
 }
 
 /**
+ * ตั้งต้นสายอนุมัติของคนคนหนึ่ง — ใช้ร่วมกันทั้งใบลาและใบขอยกเลิก
+ * แยกออกมาเพื่อไม่ให้สองเส้นทางนี้ใช้กติกาคนละชุดโดยไม่ตั้งใจ
+ *
+ * return { stage1Required, stage1Status, stage2Status, stage3Status, firstApprovalStage, finalStatus }
+ *   firstApprovalStage 0 = อนุมัติอัตโนมัติ (ผู้บริหารทำรายการเอง)
+ */
+function computeInitialStages_(requester) {
+  if (requester.role === ROLES.OWNER) {
+    return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'skipped',
+             stage3Status: 'approved', firstApprovalStage: 0, finalStatus: 'approved' };
+  }
+  if (requester.role === ROLES.ADMIN) {
+    return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'skipped',
+             stage3Status: 'pending', firstApprovalStage: 3, finalStatus: 'pending' };
+  }
+  if (isSupervisorUser_(requester)) {
+    return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'pending',
+             stage3Status: 'pending', firstApprovalStage: 2, finalStatus: 'pending' };
+  }
+  // พนักงานทั่วไป — หัวหน้างานต้องยังใช้งานได้จริง ไม่งั้นข้ามไปให้ HR
+  const supervisor = resolveStage1Approver_(requester.user_id);
+  if (!supervisor) {
+    return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'pending',
+             stage3Status: 'pending', firstApprovalStage: 2, finalStatus: 'pending' };
+  }
+  return { stage1Required: true, stage1Status: 'pending', stage2Status: 'pending',
+           stage3Status: 'pending', firstApprovalStage: 1, finalStatus: 'pending' };
+}
+
+/** ป้ายบอกว่าใบนี้รอใครอยู่ */
+function stageWaitingLabel_(stage) {
+  return stage === 0 ? 'อนุมัติอัตโนมัติ (ผู้บริหารทำรายการเอง)' :
+         stage === 1 ? 'รอหัวหน้างานตรวจ' :
+         stage === 2 ? 'รอ HR ตรวจ' :
+                       'รอผู้บริหารตรวจ';
+}
+
+/**
  * compute stage ถัดไปที่ status=pending — หรือ null ถ้าจบ
  * รอง: ถ้า stage ถัดไป=skipped ให้ skip ไป stage ถัดไป
  */
@@ -220,23 +298,36 @@ function sendApprovalRequestStage_(leave, requester, stage) {
     const card = buildApprovalRequestCard(leave, requester, stage);
 
     if (stage === 1) {
-      const supId = getSupervisorFor(leave.user_id);
-      if (!supId) {
+      const sup = resolveStage1Approver_(leave.user_id);
+      if (!sup) {
         logWarn('sendApprovalRequestStage_', 'no supervisor for ' + leave.user_id);
         return;
       }
-      const sup = findUserByUserId_(supId);
-      if (sup && sup.line_user_id) {
-        pushMessage(sup.line_user_id, card);
-      }
+      if (sup.line_user_id) pushMessage(sup.line_user_id, card);
     } else if (stage === 2) {
       pushToAllAdmins(card);
     } else if (stage === 3) {
-      pushToAllOwners(card);
+      // เฉพาะผู้บริหารในสายงานของผู้ลา — ไม่ใช่ผู้บริหารทุกคนเหมือนเดิม
+      const res = getExecutivesFor(leave.user_id);
+      if (res.fallback) {
+        logWarn('sendApprovalRequestStage_', 'ยังไม่ได้ผูกผู้บริหารให้พนักงานคนนี้ — ส่งให้ผู้บริหารทุกคนแทน',
+          { leaveId: leave.leave_id, userId: leave.user_id });
+      }
+      res.users.forEach(function (u) {
+        if (u.line_user_id) pushMessage(u.line_user_id, card);
+      });
     }
   } catch (e) {
     logError('sendApprovalRequestStage_', 'push failed: ' + e.message, { leaveId: leave.leave_id, stage: stage });
   }
+}
+
+/** push การ์ดหาผู้บริหารในสายงานของพนักงานคนนี้ (แทน pushToAllOwners เดิม) */
+function pushToExecutivesOf_(userId, messages) {
+  const res = getExecutivesFor(userId);
+  res.users.forEach(function (u) {
+    if (u.line_user_id) pushMessage(u.line_user_id, messages);
+  });
 }
 
 /**
@@ -251,12 +342,33 @@ function getPendingForMe(payload) {
   payload = payload || {};
   if (!isUser(payload.lineUserId)) return { ok: false, error: 'not_registered' };
 
-  const user = findUserByLineId_(payload.lineUserId);
+  const idx = loadUsersIndex_();
+  const user = idx.byLine[payload.lineUserId];
   const isSup = isSupervisorUser_(user);
 
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
   if (sh.getLastRow() < 2) return { ok: true, pending: [] };
+
+  // อ่านผังอำนาจครั้งเดียว — เดิมวน getSupervisorFor ทีละใบ = อ่าน sheet ซ้ำเป็นสิบรอบ
+  const chain = readApprovers_().rows.filter(function (r) { return !r.valid_to; });
+  const supOf = {};
+  const execOf = {};
+  chain.forEach(function (r) {
+    if (Number(r.level) === APPROVER_LEVEL_SUPERVISOR) supOf[r.user_id] = r.approver_user_id;
+    else if (Number(r.level) === APPROVER_LEVEL_EXECUTIVE) {
+      if (!execOf[r.user_id]) execOf[r.user_id] = [];
+      execOf[r.user_id].push(r.approver_user_id);
+    }
+  });
+  // ผู้บริหารที่ยังใช้งานได้ ของพนักงานคนหนึ่ง — ว่าง = ยังไม่ผูกสาย → ผู้บริหารทุกคนรับได้
+  const executivesOf = function (uid) {
+    const live = (execOf[uid] || []).filter(function (id) {
+      const u = idx.byId[id];
+      return u && u.status === 'active' && u.role === ROLES.OWNER;
+    });
+    return live;
+  };
 
   const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
   const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
@@ -265,13 +377,13 @@ function getPendingForMe(payload) {
   data.forEach(function (row) {
     const obj = {};
     hdr.forEach(function (h, j) { obj[h] = row[j]; });
-    if (obj.final_status === 'approved' || obj.final_status === 'rejected') return;
+    if (obj.final_status === 'approved' || obj.final_status === 'rejected' ||
+        obj.final_status === 'withdrawn' || obj.final_status === 'cancelled') return;
 
     // stage 1
     if (isSup && obj.stage1_status === 'pending') {
-      const supId = getSupervisorFor(obj.user_id);
-      if (supId === user.user_id) {
-        pending.push(shapePendingItem_(obj, 1));
+      if (supOf[obj.user_id] === user.user_id) {
+        pending.push(shapePendingItem_(obj, 1, idx));
       }
     }
     // stage 2
@@ -279,13 +391,15 @@ function getPendingForMe(payload) {
       // คือผ่าน stage 1 (approved/skipped) แล้ว เหลือ stage 2 pending
       // exclude case where requester is the admin themselves
       if (obj.user_id !== user.user_id) {
-        pending.push(shapePendingItem_(obj, 2));
+        pending.push(shapePendingItem_(obj, 2, idx));
       }
     }
-    // stage 3
+    // stage 3 — เฉพาะใบลาในสายงานของผู้บริหารคนนี้
     if (user.role === ROLES.OWNER && obj.stage3_status === 'pending' && obj.stage2_status !== 'pending') {
-      if (obj.user_id !== user.user_id) {
-        pending.push(shapePendingItem_(obj, 3));
+      const live = executivesOf(obj.user_id);
+      const mine = live.length ? live.indexOf(user.user_id) >= 0 : true;
+      if (obj.user_id !== user.user_id && mine) {
+        pending.push(shapePendingItem_(obj, 3, idx));
       }
     }
   });
@@ -296,11 +410,16 @@ function getPendingForMe(payload) {
   return { ok: true, pending: pending };
 }
 
-function shapePendingItem_(leave, myStage) {
-  const requester = findUserByUserId_(leave.user_id) || {};
+function shapePendingItem_(leave, myStage, usersIndex) {
+  const requester = (usersIndex ? usersIndex.byId[leave.user_id] : findUserByUserId_(leave.user_id)) || {};
   return {
     leave_id: leave.leave_id,
     my_stage: myStage,
+    record_type: leave.record_type || 'leave',
+    parent_leave_id: leave.parent_leave_id || '',
+    is_emergency: leave.is_emergency === true || leave.is_emergency === 'TRUE',
+    emergency_reason: leave.emergency_reason || '',
+    reminder_count: Number(leave.reminder_count || 0),
     requester_name: requester.display_name,
     requester_dept: requester.department,
     requester_position: requester.position,

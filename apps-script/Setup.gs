@@ -29,8 +29,17 @@ const SHEET_HEADERS = {
     'phone', 'email', 'department', 'position', 'is_supervisor',
     'status', 'invited_by', 'created_at', 'approved_at', 'approved_by',
   ],
+  // legacy — ผังอำนาจอนุมัติย้ายไป tab `Approvers` แล้ว (เก็บไว้อ่านย้อนหลัง/กู้ข้อมูล)
   'Supervisors': [
     'pair_id', 'user_id', 'supervisor_user_id',
+    'valid_from', 'valid_to', 'created_by',
+  ],
+  // ผังอำนาจอนุมัติ — 1 แถว = ผู้อนุมัติ 1 คน ของพนักงาน 1 คน ในชั้นหนึ่ง
+  //   level 1 = หัวหน้างาน (1 คนต่อพนักงาน)
+  //   level 3 = ผู้บริหาร (หลายคนต่อพนักงานได้)
+  //   level 2 = HR ไม่เก็บที่นี่ (HR ทุกคนเห็นทุกใบอยู่แล้ว)
+  'Approvers': [
+    'chain_id', 'user_id', 'approver_user_id', 'level',
     'valid_from', 'valid_to', 'created_by',
   ],
   'LeaveRequests': [
@@ -42,6 +51,12 @@ const SHEET_HEADERS = {
     'stage3_status', 'stage3_by', 'stage3_at', 'stage3_note',
     'final_status', 'submitted_at',
     'gps_missing_reason',
+    // ยื่นไม่ทันกำหนดแจ้งล่วงหน้า → ติ๊กฉุกเฉิน + เหตุผล (แทนการบล็อกไม่ให้ส่ง)
+    'is_emergency', 'emergency_reason',
+    // ใบยกเลิกเป็นเรคคอร์ดของตัวเอง วิ่งสายอนุมัติเดิม — ชี้กลับใบต้นทางด้วย parent_leave_id
+    'record_type', 'parent_leave_id',
+    // เตือนซ้ำเมื่อผู้อนุมัติเงียบ (นับเฉพาะเวลาทำงาน)
+    'last_reminded_at', 'reminder_count',
   ],
   'LeaveQuota': [
     'quota_id', 'user_id', 'year',
@@ -50,10 +65,12 @@ const SHEET_HEADERS = {
     'vacation_total', 'vacation_used', 'vacation_reserved',
     'updated_at',
   ],
+  // allow_emergency ต่อท้าย — ห้ามแทรกกลาง เพราะแถวเดิมอ้างตำแหน่งคอลัมน์
   'LeaveRules': [
     'rule_id', 'leave_type',
     'advance_notice_days', 'max_consecutive_days', 'doc_required_above_days',
     'note', 'is_active', 'updated_at', 'updated_by',
+    'allow_emergency',
   ],
   'Pairing_Codes': [
     'code_id', 'code', 'for_user_id', 'created_by',
@@ -96,16 +113,31 @@ const SETTINGS_DEFAULTS = [
   ['attachment_required_above_days', '3',               'ลาเกินกี่วันต้องแนบไฟล์ (override per type)'],
   ['support_line_id',               '@966nnfkr',        'สำหรับ manual.html'],
   ['support_phone',                 '',                 ''],
+  // เวลาทำงาน — ใช้นับ "เงียบกี่ชั่วโมง" ของผู้อนุมัติ (ไม่นับนอกเวลางาน)
+  ['work_start',                    '08:30',            'เวลาเริ่มงาน (HH:mm)'],
+  ['work_end',                      '17:30',            'เวลาเลิกงาน (HH:mm)'],
+  ['work_days',                     '1,2,3,4,5,6',      'วันทำงาน 1=จันทร์ ... 7=อาทิตย์'],
+  ['reminder_hours',                '4',                'ผู้อนุมัติเงียบกี่ชั่วโมงทำงานถึงเตือนซ้ำ'],
+  ['reminder_enabled',              'TRUE',             'เปิด/ปิดการเตือนซ้ำทั้งระบบ'],
+  ['emergency_reason_min',          '10',               'เหตุผลตอนติ๊กฉุกเฉิน ขั้นต่ำกี่ตัวอักษร'],
 ];
 
 /**
- * กฎเริ่มต้น 3 type
+ * กฎเริ่มต้นครบทุกประเภทลา
+ * advance_notice_days = ต้องเขียนใบลาล่วงหน้ากี่วัน
+ * allow_emergency     = ยื่นไม่ทันแล้วติ๊ก "ฉุกเฉิน" + เหตุผล เพื่อส่งต่อได้ไหม
  */
 const RULES_DEFAULTS = [
-  // [leave_type, advance_notice_days, max_consecutive_days, doc_required_above_days, note]
-  ['sick',     0, 0, 3, 'ลาป่วยฉุกเฉินได้ ส่งใบรับรองแพทย์เมื่อกลับมาทำงาน หากลาเกิน 3 วันต้องแนบใบรับรองแพทย์'],
-  ['personal', 3, 0, 0, 'ลากิจต้องแจ้งล่วงหน้าอย่างน้อย 3 วัน'],
-  ['vacation', 7, 0, 0, 'ลาพักร้อนต้องแจ้งล่วงหน้าอย่างน้อย 7 วัน'],
+  // [leave_type, advance_notice_days, max_consecutive_days, doc_required_above_days, note, allow_emergency]
+  ['sick',          1, 0, 3, 'ลาป่วยล่วงหน้าอย่างน้อย 1 วัน — ป่วยกะทันหันให้ติ๊ก "ฉุกเฉิน" พร้อมเหตุผล · ลาเกิน 3 วันต้องแนบใบรับรองแพทย์', true],
+  ['personal',      3, 0, 0, 'ลากิจต้องแจ้งล่วงหน้าอย่างน้อย 3 วัน — ไม่ทันให้ติ๊ก "ฉุกเฉิน" พร้อมเหตุผล', true],
+  ['vacation',      7, 0, 0, 'ลาพักร้อนต้องแจ้งล่วงหน้าอย่างน้อย 7 วัน', true],
+  ['maternity',     3, 0, 0, 'ลาคลอดแจ้งล่วงหน้าอย่างน้อย 3 วัน — คลอดก่อนกำหนดให้ติ๊ก "ฉุกเฉิน"', true],
+  ['paternity',     7, 0, 0, 'ลาช่วยภรรยาดูแลบุตรแจ้งล่วงหน้าอย่างน้อย 7 วัน', true],
+  ['sterilization', 7, 0, 0, 'ลาเพื่อทำหมันแจ้งล่วงหน้าอย่างน้อย 7 วัน', true],
+  ['military',      7, 0, 0, 'ลาเพื่อรับราชการทหารแจ้งล่วงหน้าอย่างน้อย 7 วัน', true],
+  ['training',      3, 0, 0, 'ลาเพื่อฝึกอบรมต้องแจ้งล่วงหน้าอย่างน้อย 3 วัน พร้อมระบุเหตุผล — น้อยกว่า 3 วันให้ติ๊ก "ฉุกเฉิน" พร้อมเหตุผล', true],
+  ['ordination',   15, 0, 0, 'ลาอุปสมบทแจ้งล่วงหน้าอย่างน้อย 15 วัน', true],
 ];
 
 /**
@@ -225,6 +257,13 @@ function setupDatabase() {
     ss.deleteSheet(sh1);
   }
 
+  // ย้ายคู่หัวหน้างานเดิม (tab Supervisors) เข้าผังอำนาจอนุมัติ tab ใหม่ — รันซ้ำได้
+  try {
+    migrateSupervisorsToApprovers_(ss);
+  } catch (err) {
+    console.log('⚠️ migrateSupervisorsToApprovers_ ไม่สำเร็จ: ' + err.message);
+  }
+
   console.log('✓ setupDatabase เสร็จ — SHEET_ID = ' + sheetId);
   return sheetId;
 }
@@ -276,12 +315,50 @@ function seedDefaultRules() {
         ruleId, leaveType,
         rule[1], rule[2], rule[3], rule[4],
         true, now, '(system)',
+        rule[5] !== false,
       ]);
       added++;
     }
   });
 
   console.log('✓ seedDefaultRules — เพิ่ม ' + added + ' rule (skip ที่มีอยู่)');
+
+  migrateLeaveRulesEmergency_();
+}
+
+/**
+ * เติมค่า allow_emergency ให้แถวที่สร้างไว้ก่อนมีคอลัมน์นี้ (ค่าว่าง = ยังไม่เคยตั้ง)
+ * และดัน advance ของ "ลาป่วย" จาก 0 → 1 เพื่อให้ป่วยกะทันหันเข้าเส้นทาง "ติ๊กฉุกเฉิน"
+ * แตะเฉพาะแถวที่ยังไม่เคยถูกตั้งค่าใหม่ — ค่าที่พี่แก้เองแล้วจะไม่ถูกทับ
+ */
+function migrateLeaveRulesEmergency_() {
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRules');
+  if (sh.getLastRow() < 2) return;
+
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const iType = hdr.indexOf('leave_type');
+  const iAdvance = hdr.indexOf('advance_notice_days');
+  const iAllow = hdr.indexOf('allow_emergency');
+  if (iAllow < 0) return;
+
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  let touched = 0;
+  rows.forEach(function (row, i) {
+    const rowNum = i + 2;
+    const neverSet = row[iAllow] === '' || row[iAllow] === null;
+    if (!neverSet) return;
+
+    sh.getRange(rowNum, iAllow + 1).setValue(true);
+    // ลาป่วยที่ยัง advance=0 → ไม่มีทางเป็น "ฉุกเฉิน" ได้เลย เพราะไม่เคยผิดกำหนด
+    if (row[iType] === 'sick' && Number(row[iAdvance]) === 0) {
+      sh.getRange(rowNum, iAdvance + 1).setValue(1);
+      console.log('migrate: sick.advance_notice_days 0 → 1');
+    }
+    touched++;
+  });
+
+  if (touched) console.log('✓ migrateLeaveRulesEmergency_ — เติม allow_emergency ' + touched + ' แถว');
 }
 
 /**

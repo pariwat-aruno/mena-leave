@@ -92,6 +92,18 @@
           <textarea id="reason" maxlength="200" placeholder="เช่น ปวดหัวรุนแรงต้องพักผ่อน"></textarea>
         </div>
 
+        <!-- แจ้งไม่ทันกำหนดล่วงหน้า → ติ๊กฉุกเฉิน + เหตุผล แล้วส่งต่อได้ (ไม่บล็อกให้ส่งไม่ได้เลย) -->
+        <div class="form-group hidden" id="emergency-group">
+          <div class="alert warning" id="emergency-notice"></div>
+          <label class="check-row">
+            <input type="checkbox" id="is_emergency">
+            <span>เป็นกรณีฉุกเฉิน จำเป็นต้องลาทั้งที่แจ้งไม่ทันกำหนด</span>
+          </label>
+          <textarea id="emergency_reason" rows="2" class="mt-1"
+            placeholder="เช่น ป่วยกะทันหันตั้งแต่เมื่อคืน / บริษัทเพิ่งแจ้งวันอบรมเมื่อวาน"></textarea>
+          <div class="hint" id="emergency-hint"></div>
+        </div>
+
         <div class="form-group">
           <label>แนบไฟล์ (รูปภาพ)</label>
           <input type="file" id="attachment" accept="image/*">
@@ -159,6 +171,9 @@ let GPS = null;         // { lat, lng, accuracy }
 let ATTACHMENT = null;  // { base64, filename }
 let ME = null;          // current user (สำหรับเช็คสิทธิ์ลาแทน)
 let PROXY_TARGETS = []; // รายชื่อพนักงานที่ลาแทนได้
+// ค่าขั้นต่ำมาจาก Settings ฝั่ง backend — ตัวเลขข้างล่างเป็นแค่ค่าสำรองตอนโหลดไม่ทัน
+let EMERGENCY_REASON_MIN = 10;
+let GPS_MISSING_REASON_MIN = 5;
 
 (async function () {
   try { await window.auth.init(); }
@@ -188,6 +203,8 @@ let PROXY_TARGETS = []; // รายชื่อพนักงานที่�
     return;
   }
   CONDITIONS = cond;
+  if (Number(cond.emergency_reason_min) > 0) EMERGENCY_REASON_MIN = Number(cond.emergency_reason_min);
+  if (Number(cond.gps_missing_reason_min) > 0) GPS_MISSING_REASON_MIN = Number(cond.gps_missing_reason_min);
   renderConditions(cond);
 
   // โหมดลาแทน — เฉพาะพนักงานพิเศษ / HR / ผู้บริหาร
@@ -244,36 +261,99 @@ function renderConditions(cond) {
     '</div>';
   }).join('');
 
-  // rules
+  // เงื่อนไขทุกประเภท — สร้างจากกฎจริงที่ backend ส่งมา (ห้ามเขียนจำนวนวันตายไว้ในหน้าจอ)
   const rulesList = document.getElementById('rules-list');
-  if (!cond.rules.length) {
-    rulesList.innerHTML = '<p class="subtle">ยังไม่ได้กำหนดเงื่อนไข</p>';
-  } else {
-    rulesList.innerHTML = cond.rules.map(r => {
-      const label = ({ sick: 'ลาป่วย', personal: 'ลากิจ', vacation: 'ลาพักร้อน', all: 'ทุกประเภท' })[r.leave_type] || r.leave_type;
-      const parts = [];
-      if (Number(r.advance_notice_days) > 0) parts.push('แจ้งล่วงหน้า ' + r.advance_notice_days + ' วัน');
-      if (Number(r.max_consecutive_days) > 0) parts.push('ลาติดกันได้ไม่เกิน ' + r.max_consecutive_days + ' วัน');
-      if (Number(r.doc_required_above_days) > 0) parts.push('ลาเกิน ' + r.doc_required_above_days + ' วัน ต้องแนบเอกสาร');
-      return '<div class="card muted">' +
-        '<div><strong>' + label + '</strong></div>' +
-        (parts.length ? '<div class="subtle mt-1">' + parts.join(' · ') + '</div>' : '') +
-        (r.note ? '<div class="mt-1">' + window.utils.escapeHtml(r.note) + '</div>' : '') +
+  const quotaKeys = ['sick', 'personal', 'vacation'];
+  const otherKeys = (window.OTHER_LEAVE_TYPES || []).map(o => o.value);
+
+  const cardFor = (leaveType) => {
+    const r = ruleFor(leaveType);
+    const label = window.LEAVE_TYPE_LABELS[leaveType] || leaveType;
+    const cond = window.ruleConditionText(r);
+    return '<div class="card muted">' +
+      '<div><strong>' + window.utils.escapeHtml(label) + '</strong></div>' +
+      (cond ? '<div class="subtle mt-1">' + window.utils.escapeHtml(cond) + '</div>' : '') +
+      (r && r.note ? '<div class="mt-1">' + window.utils.escapeHtml(r.note) + '</div>' : '') +
+    '</div>';
+  };
+
+  let html = quotaKeys.map(cardFor).join('');
+  html += '<div class="section-title mt-2" style="font-size:14px">ลาอื่น ๆ (ตามกฎหมาย · ไม่หักโควตา)</div>';
+  html += otherKeys.map(cardFor).join('');
+
+  // กฎกลางที่ตั้งเป็น leave_type = all (ถ้ามี)
+  const allRule = (cond.rules || []).filter(r => r.leave_type === 'all')[0];
+  if (allRule) {
+    const t = window.ruleConditionText(allRule);
+    html += '<div class="card muted"><div><strong>ทุกประเภท</strong></div>' +
+      (t ? '<div class="subtle mt-1">' + window.utils.escapeHtml(t) + '</div>' : '') +
+      (allRule.note ? '<div class="mt-1">' + window.utils.escapeHtml(allRule.note) + '</div>' : '') +
       '</div>';
-    }).join('');
   }
 
-  // ลาอื่น ๆ (ตามกฎหมาย) — เงื่อนไขการแจ้งล่วงหน้า (ไม่หักโควตา)
-  const others = window.OTHER_LEAVE_TYPES || [];
-  if (others.length) {
-    rulesList.innerHTML += '<div class="section-title mt-2" style="font-size:14px">ลาอื่น ๆ (ตามกฎหมาย · ไม่หักโควตา)</div>' +
-      others.map(function (o) {
-        return '<div class="card muted">' +
-          '<div><strong>' + window.utils.escapeHtml(o.label) + '</strong></div>' +
-          '<div class="subtle mt-1">' + window.utils.escapeHtml(o.condition) + '</div>' +
-        '</div>';
-      }).join('');
+  rulesList.innerHTML = html;
+}
+
+/** กฎของประเภทลานี้จากที่ backend ส่งมา — ไม่มีก็ใช้กฎกลาง 'all' */
+function ruleFor(leaveType) {
+  if (!CONDITIONS || !CONDITIONS.rules) return null;
+  return CONDITIONS.rules.filter(r => r.leave_type === leaveType)[0] ||
+         CONDITIONS.rules.filter(r => r.leave_type === 'all')[0] || null;
+}
+
+/**
+ * แจ้งล่วงหน้าทันกำหนดไหม — คำนวณแบบเดียวกับ checkAdvanceNotice_ ฝั่ง backend
+ * (หน้าจอทำเพื่อ "บอกล่วงหน้า" เท่านั้น ตัวตัดสินจริงคือ backend)
+ */
+function advanceCheckLocal() {
+  const lt = getLeaveType();
+  const f = document.getElementById('date_from').value;
+  if (!lt || !f) return { needed: false };
+
+  const r = ruleFor(lt);
+  const advance = r ? Number(r.advance_notice_days || 0) : 0;
+  if (advance <= 0) return { needed: false };
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(f + 'T00:00:00');
+  const daysNotice = Math.floor((start - today) / (24 * 3600 * 1000));
+  if (daysNotice >= advance) return { needed: false, advance: advance };
+
+  const allowEmergency = r ? !(r.allow_emergency === false || r.allow_emergency === 'FALSE') : true;
+  return { needed: true, advance: advance, daysNotice: daysNotice, allowEmergency: allowEmergency,
+           label: window.LEAVE_TYPE_LABELS[lt] || lt };
+}
+
+/** โชว์/ซ่อนกล่องฉุกเฉินตามประเภท+วันที่ที่เลือกอยู่ */
+function updateEmergencyBox() {
+  const chk = advanceCheckLocal();
+  const group = document.getElementById('emergency-group');
+  const notice = document.getElementById('emergency-notice');
+  const hint = document.getElementById('emergency-hint');
+
+  if (!chk.needed) {
+    group.classList.add('hidden');
+    document.getElementById('is_emergency').checked = false;
+    document.getElementById('emergency_reason').value = '';
+    return;
   }
+
+  group.classList.remove('hidden');
+  if (!chk.allowEmergency) {
+    notice.textContent = chk.label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + chk.advance +
+      ' วัน และประเภทนี้ไม่เปิดให้ยื่นกรณีฉุกเฉิน กรุณาเลือกวันที่ใหม่';
+    document.getElementById('is_emergency').disabled = true;
+    document.getElementById('emergency_reason').disabled = true;
+    hint.textContent = '';
+    return;
+  }
+
+  document.getElementById('is_emergency').disabled = false;
+  document.getElementById('emergency_reason').disabled = false;
+  notice.textContent = chk.label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + chk.advance + ' วัน ' +
+    'แต่วันที่เลือกไว้เหลืออีก ' + (chk.daysNotice < 0 ? 'ย้อนหลัง ' + Math.abs(chk.daysNotice) : chk.daysNotice) + ' วัน';
+  hint.textContent = 'ระบุเหตุผลอย่างน้อย ' + EMERGENCY_REASON_MIN + ' ตัวอักษร — ' +
+    'ใบลาจะถูกทำเครื่องหมาย "แจ้งไม่ทันกำหนด" ให้ผู้อนุมัติเห็น';
 }
 
 // === step navigation ===
@@ -292,8 +372,8 @@ document.getElementById('btn-to-step2').onclick = () => showStep(2);
 document.getElementById('btn-back-step2').onclick = () => showStep(1);
 
 document.getElementById('leave_type').addEventListener('change', onLeaveTypeChange);
-document.getElementById('leave_subtype').addEventListener('change', updateQuotaHint);
-document.getElementById('date_from').addEventListener('change', updateDateHints);
+document.getElementById('leave_subtype').addEventListener('change', () => { updateQuotaHint(); updateEmergencyBox(); });
+document.getElementById('date_from').addEventListener('change', () => { updateDateHints(); updateEmergencyBox(); });
 document.getElementById('date_to').addEventListener('change', updateDateHints);
 
 function onLeaveTypeChange() {
@@ -301,6 +381,7 @@ function onLeaveTypeChange() {
   document.getElementById('subtype-group').classList.toggle('hidden', !isOther);
   if (!isOther) document.getElementById('leave_subtype').value = '';
   updateQuotaHint();
+  updateEmergencyBox();
 }
 
 function updateQuotaHint() {
@@ -309,12 +390,14 @@ function updateQuotaHint() {
   const subHint = document.getElementById('subtype-hint');
   subHint.textContent = '';
 
-  // ลาอื่น ๆ — ไม่มีโควตา แสดงเงื่อนไขการแจ้งล่วงหน้าแทน
+  // ลาอื่น ๆ — ไม่มีโควตา แสดงเงื่อนไขจากกฎจริงแทน
   if (mainSel === 'other') {
     quotaHint.textContent = 'ลาตามกฎหมาย — ไม่หักโควตาวันลาปกติ';
     const sub = document.getElementById('leave_subtype').value;
-    const meta = (window.OTHER_LEAVE_TYPES || []).filter(function (o) { return o.value === sub; })[0];
-    if (meta) subHint.textContent = 'เงื่อนไข: ' + meta.condition;
+    if (sub) {
+      const text = window.ruleConditionText(ruleFor(sub));
+      subHint.textContent = text ? 'เงื่อนไข: ' + text : '';
+    }
     return;
   }
 
@@ -324,7 +407,9 @@ function updateQuotaHint() {
     return;
   }
   const q = CONDITIONS.quota[lt];
-  quotaHint.textContent = 'คงเหลือ ' + q.available + ' วัน (จากทั้งหมด ' + q.total + ' วัน)';
+  const cond = window.ruleConditionText(ruleFor(lt));
+  quotaHint.textContent = 'คงเหลือ ' + q.available + ' วัน (จากทั้งหมด ' + q.total + ' วัน)' +
+    (cond ? ' · ' + cond : '');
 }
 
 function updateDateHints() {
@@ -396,6 +481,25 @@ document.getElementById('btn-to-step3').onclick = () => {
     return window.utils.showAlert('#alert-msg', 'ลาย้อนหลังทำได้เฉพาะลาป่วย/ลาคลอดฉุกเฉินเท่านั้น', 'error');
   }
 
+  // แจ้งไม่ทันกำหนด → ต้องติ๊กฉุกเฉิน + เขียนเหตุผล
+  updateEmergencyBox();
+  const adv = advanceCheckLocal();
+  if (adv.needed) {
+    if (!adv.allowEmergency) {
+      return window.utils.showAlert('#alert-msg',
+        adv.label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + adv.advance + ' วัน', 'error');
+    }
+    if (!document.getElementById('is_emergency').checked) {
+      return window.utils.showAlert('#alert-msg',
+        adv.label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + adv.advance +
+        ' วัน — ถ้าจำเป็นเร่งด่วนจริง ให้ติ๊ก "เป็นกรณีฉุกเฉิน" แล้วระบุเหตุผล', 'error');
+    }
+    if (document.getElementById('emergency_reason').value.trim().length < EMERGENCY_REASON_MIN) {
+      return window.utils.showAlert('#alert-msg',
+        'กรุณาระบุเหตุผลที่ต้องลาเร่งด่วน อย่างน้อย ' + EMERGENCY_REASON_MIN + ' ตัวอักษร', 'error');
+    }
+  }
+
   renderSummary();
   showStep(3);
   requestGps();
@@ -419,6 +523,10 @@ function renderSummary() {
     '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(f) + ' - ' + window.utils.formatThaiDateShort(t) + '</span></div>',
     '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + days + ' วัน</span></div>',
     '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(reason) + '</span></div>',
+    document.getElementById('is_emergency').checked
+      ? '<div class="card-row"><span class="label">กรณีฉุกเฉิน</span><span class="value">' +
+        window.utils.escapeHtml(document.getElementById('emergency_reason').value.trim()) + '</span></div>'
+      : '',
     '<div class="card-row"><span class="label">ไฟล์แนบ</span><span class="value">' + (ATTACHMENT ? 'มี' : 'ไม่มี') + '</span></div>',
   ].join('');
   document.getElementById('summary').innerHTML = html;
@@ -469,9 +577,6 @@ async function requestGps() {
   }
 }
 
-// ต้องตรงกับ GPS_MISSING_REASON_MIN ใน Config.gs
-const GPS_MISSING_REASON_MIN = 5;
-
 document.getElementById('btn-submit-leave').addEventListener('click', async () => {
   const gpsMissingReason = document.getElementById('gps_missing_reason').value.trim();
   if (!GPS && gpsMissingReason.length < GPS_MISSING_REASON_MIN) {
@@ -489,6 +594,10 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
     date_to: document.getElementById('date_to').value,
     reason: document.getElementById('reason').value.trim(),
   };
+  if (document.getElementById('is_emergency').checked) {
+    payload.is_emergency = true;
+    payload.emergency_reason = document.getElementById('emergency_reason').value.trim();
+  }
   if (GPS) {
     payload.gps_lat = GPS.lat; payload.gps_lng = GPS.lng; payload.gps_accuracy = GPS.accuracy;
   } else {

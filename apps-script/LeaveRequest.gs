@@ -106,21 +106,21 @@ function submitLeave(payload) {
     }
   }
 
-  // === validate against rules === (LeaveRules sheet — sick/personal/vacation)
+  // === validate against rules === (จำนวนวันติดกัน + เอกสารแนบ)
   const hasAttachment = !!payload.attachment_base64;
   const ruleCheck = validateAgainstRules_(payload.leave_type, payload.date_from, payload.date_to, days, hasAttachment);
   if (!ruleCheck.ok) return ruleCheck;
 
-  // === ลาอื่นๆ ตามกฎหมาย — บังคับแจ้งล่วงหน้าตาม meta (ยกเว้นประเภทฉุกเฉิน allowRetro) ===
-  if (!isQuotaLeaveType_(payload.leave_type) && Number(typeMeta.advance) > 0 && !typeMeta.allowRetro) {
-    const today0 = new Date(todayBangkok() + 'T00:00:00+07:00');
-    const start0 = new Date(payload.date_from + 'T00:00:00+07:00');
-    const diffDays = Math.floor((start0 - today0) / (24 * 3600 * 1000));
-    if (diffDays < Number(typeMeta.advance)) {
-      return { ok: false, error: 'advance_notice_violation',
-        message: typeMeta.label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + typeMeta.advance + ' วัน' };
-    }
-  }
+  // === แจ้งล่วงหน้าไม่ทัน → ให้ติ๊ก "เป็นกรณีฉุกเฉิน" พร้อมเหตุผล แทนการบล็อกไม่ให้ส่ง ===
+  const emergencyReason = String(payload.emergency_reason || '').trim();
+  const advanceCheck = checkAdvanceNotice_(
+    payload.leave_type,
+    payload.date_from,
+    payload.is_emergency === true || payload.is_emergency === 'TRUE',
+    emergencyReason
+  );
+  if (!advanceCheck.ok) return advanceCheck;
+  const isEmergency = advanceCheck.emergency === true;
 
   // === upload attachment ===
   let attachmentUrl = '';
@@ -135,38 +135,14 @@ function submitLeave(payload) {
     }
   }
 
-  // === determine stage flow ===
-  const isSupervisor = isSupervisorUser_(requester);
-  let stage1Required, stage1Status, stage2Status, stage3Status;
-  let firstApprovalStage;
-
-  if (requester.role === ROLES.OWNER) {
-    // auto-approve
-    stage1Required = false; stage1Status = 'skipped';
-    stage2Status = 'skipped'; stage3Status = 'approved';
-    firstApprovalStage = 0;  // auto
-  } else if (requester.role === ROLES.ADMIN) {
-    stage1Required = false; stage1Status = 'skipped';
-    stage2Status = 'skipped'; stage3Status = 'pending';
-    firstApprovalStage = 3;
-  } else if (isSupervisor) {
-    stage1Required = false; stage1Status = 'skipped';
-    stage2Status = 'pending'; stage3Status = 'pending';
-    firstApprovalStage = 2;
-  } else {
-    // ปกติ: USER
-    const supervisorId = getSupervisorFor(requester.user_id);
-    if (!supervisorId) {
-      // ไม่มี supervisor → skip stage 1 ตรงไป stage 2
-      stage1Required = false; stage1Status = 'skipped';
-      stage2Status = 'pending'; stage3Status = 'pending';
-      firstApprovalStage = 2;
-    } else {
-      stage1Required = true; stage1Status = 'pending';
-      stage2Status = 'pending'; stage3Status = 'pending';
-      firstApprovalStage = 1;
-    }
-  }
+  // === determine stage flow === (กติกาเดียวกับใบขอยกเลิก ดู computeInitialStages_)
+  const flow = computeInitialStages_(requester);
+  const stage1Required = flow.stage1Required;
+  const stage1Status = flow.stage1Status;
+  const stage2Status = flow.stage2Status;
+  const stage3Status = flow.stage3Status;
+  const firstApprovalStage = flow.firstApprovalStage;
+  const finalStatus = flow.finalStatus;
 
   // === insert row ===
   const leaveId = nextLeaveId();
@@ -174,38 +150,46 @@ function submitLeave(payload) {
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
 
-  let finalStatus = 'pending';
-  if (requester.role === ROLES.OWNER) finalStatus = 'approved';
-
-  sh.appendRow([
-    leaveId,
-    requester.user_id,
-    payload.leave_type,
-    payload.date_from,
-    payload.date_to,
-    days,
-    isRetro,
-    payload.reason + proxyNote,
-    Number(payload.gps_lat || 0) || '',
-    Number(payload.gps_lng || 0) || '',
-    Number(payload.gps_accuracy || 0) || '',
-    attachmentUrl,
-    stage1Required,
-    stage1Status, '', stage1Status === 'skipped' ? now : '', '',
-    stage2Status, '', stage2Status === 'skipped' ? now : '', '',
-    stage3Status, '', requester.role === ROLES.OWNER ? now : '', requester.role === ROLES.OWNER ? 'auto-approved (OWNER)' : '',
-    finalStatus,
-    now,
-    hasGps ? '' : gpsMissingReason,
-  ]);
+  appendRowByHeader_(sh, {
+    leave_id: leaveId,
+    user_id: requester.user_id,
+    leave_type: payload.leave_type,
+    date_from: payload.date_from,
+    date_to: payload.date_to,
+    days: days,
+    is_retroactive: isRetro,
+    reason: payload.reason + proxyNote,
+    gps_lat: Number(payload.gps_lat || 0) || '',
+    gps_lng: Number(payload.gps_lng || 0) || '',
+    gps_accuracy: Number(payload.gps_accuracy || 0) || '',
+    attachment_url: attachmentUrl,
+    stage1_required: stage1Required,
+    stage1_status: stage1Status,
+    stage1_at: stage1Status === 'skipped' ? now : '',
+    stage2_status: stage2Status,
+    stage2_at: stage2Status === 'skipped' ? now : '',
+    stage3_status: stage3Status,
+    stage3_at: requester.role === ROLES.OWNER ? now : '',
+    stage3_note: requester.role === ROLES.OWNER ? 'auto-approved (OWNER)' : '',
+    final_status: finalStatus,
+    submitted_at: now,
+    gps_missing_reason: hasGps ? '' : gpsMissingReason,
+    is_emergency: isEmergency,
+    emergency_reason: isEmergency ? emergencyReason : '',
+    record_type: 'leave',
+    parent_leave_id: '',
+    last_reminded_at: '',
+    reminder_count: 0,
+  });
 
   // === reserve quota === (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
   if (isQuotaLeaveType_(payload.leave_type)) {
+    const quotaYear = quotaYearOf_({ date_from: payload.date_from });
     if (finalStatus === 'approved') {
       // OWNER auto-approve → commit ทันที
-      commitQuota(requester.user_id, payload.leave_type, days);
+      commitQuota(requester.user_id, payload.leave_type, days, quotaYear);
     } else {
-      reserveQuota(requester.user_id, payload.leave_type, days);
+      reserveQuota(requester.user_id, payload.leave_type, days, quotaYear);
     }
   }
 
@@ -219,10 +203,7 @@ function submitLeave(payload) {
 
   // confirm card → ผู้ที่กดส่ง (operator) + ผู้ลา (ถ้าลาแทน)
   try {
-    const nextStageLabel = firstApprovalStage === 0 ? 'อนุมัติอัตโนมัติ (ผู้บริหารลาเอง)' :
-                           firstApprovalStage === 1 ? 'หัวหน้างานตรวจ' :
-                           firstApprovalStage === 2 ? 'HR ตรวจ' :
-                                                       'ผู้บริหารตรวจ';
+    const nextStageLabel = stageWaitingLabel_(firstApprovalStage);
     pushMessage(payload.lineUserId, buildLeaveSubmittedCard(leave, nextStageLabel));
     // ลาแทน → แจ้งผู้ลาด้วย (ถ้าผูก LINE ไว้)
     if (proxyNote && requester.line_user_id && requester.line_user_id !== payload.lineUserId) {
@@ -235,6 +216,15 @@ function submitLeave(payload) {
   // trigger first approval stage
   if (firstApprovalStage === 1) {
     sendApprovalRequestStage_(leave, requester, 1);
+
+    // cc HR ให้รู้ตั้งแต่ต้นว่ามีใบลาเข้ามา รอหัวหน้าคนไหนอยู่
+    // (ชั้น 2 ขึ้นไป HR ได้การ์ดขออนุมัติอยู่แล้ว ไม่ต้อง cc ซ้ำ)
+    try {
+      const sup = resolveStage1Approver_(requester.user_id);
+      pushToAllAdmins(buildHrNoticeCard(leave, requester, sup, 'รอหัวหน้างานตรวจ'));
+    } catch (e) {
+      logWarn('submitLeave', 'cc HR failed: ' + e.message);
+    }
   } else if (firstApprovalStage === 2) {
     sendApprovalRequestStage_(leave, requester, 2);
   } else if (firstApprovalStage === 3) {
@@ -332,6 +322,11 @@ function shapeLeavePublic_(leave, includeSensitive) {
     gps_lat: includeSensitive ? leave.gps_lat : null,
     gps_lng: includeSensitive ? leave.gps_lng : null,
     gps_missing_reason: leave.gps_missing_reason || '',
+    is_emergency: leave.is_emergency === true || leave.is_emergency === 'TRUE',
+    emergency_reason: leave.emergency_reason || '',
+    record_type: leave.record_type || 'leave',
+    parent_leave_id: leave.parent_leave_id || '',
+    reminder_count: Number(leave.reminder_count || 0),
     attachment_url: leave.attachment_url,
     stage1_status: leave.stage1_status,
     stage1_by: leave.stage1_by,

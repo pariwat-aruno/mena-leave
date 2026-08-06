@@ -146,28 +146,56 @@ function applySetQuota_(data, actor) {
 
 // ========== Helpers (called by LeaveRequest + Approval) ==========
 
-function reserveQuota(userId, leaveType, days) {
-  return adjustQuota_(userId, leaveType, { reserved: days });
+/**
+ * ทุกตัวรับ year ของ "วันลา" ได้ — ไม่ส่งมาจะใช้ปีปัจจุบัน
+ * ยื่นเดือนธันวาคมเพื่อลาเดือนมกราคม ต้องหักโควตาปีหน้า ไม่ใช่ปีที่กดส่ง
+ */
+function reserveQuota(userId, leaveType, days, year) {
+  return adjustQuota_(userId, leaveType, { reserved: days }, year);
 }
 
-function commitQuota(userId, leaveType, days) {
-  return adjustQuota_(userId, leaveType, { used: days, reserved: -days });
+function commitQuota(userId, leaveType, days, year) {
+  return adjustQuota_(userId, leaveType, { used: days, reserved: -days }, year);
 }
 
-function rollbackQuota(userId, leaveType, days) {
-  return adjustQuota_(userId, leaveType, { reserved: -days });
+function rollbackQuota(userId, leaveType, days, year) {
+  return adjustQuota_(userId, leaveType, { reserved: -days }, year);
 }
 
-function adjustQuota_(userId, leaveType, deltas) {
+/** ปีของโควตาที่ใบลาใบนี้ต้องไปหัก — อิงวันเริ่มลา */
+function quotaYearOf_(leave) {
+  const from = leave && leave.date_from;
+  if (!from) return new Date().getFullYear();
+  const ymd = (from instanceof Date)
+    ? Utilities.formatDate(from, 'Asia/Bangkok', 'yyyy-MM-dd')
+    : String(from).slice(0, 10);
+  const y = new Date(ymd + 'T00:00:00+07:00').getFullYear();
+  return isFinite(y) ? y : new Date().getFullYear();
+}
+
+/**
+ * คืนวันลาที่ "หักไปแล้ว" (used) — ใช้ตอนยกเลิกใบลาที่อนุมัติครบแล้ว
+ * ต้องส่ง year ของใบลามาด้วย ไม่งั้นยกเลิกใบของปีที่แล้วจะไปคืนโควตาปีนี้
+ */
+function uncommitQuota(userId, leaveType, days, year) {
+  return adjustQuota_(userId, leaveType, { used: -days }, year);
+}
+
+function adjustQuota_(userId, leaveType, deltas, forYear) {
   if (LEAVE_TYPES.indexOf(leaveType) < 0) {
     throw new Error('invalid leave_type: ' + leaveType);
   }
-  const year = new Date().getFullYear();
+  const year = Number(forYear) || new Date().getFullYear();
   let quota = getQuotaRow_(userId, year);
   if (!quota) {
     // ensure row exists with defaults
     ensureQuotaRow_(userId);
     quota = getQuotaRow_(userId, year);
+  }
+  if (!quota) {
+    // ปีเก่าที่ไม่มีแถวโควตาแล้ว — ปรับไม่ได้ ต้องดังไว้ใน log ไม่ใช่เงียบแล้วเลขเพี้ยน
+    logError('adjustQuota_', 'ไม่มีแถวโควตาให้ปรับ', { userId: userId, leaveType: leaveType, year: year, deltas: deltas });
+    return;
   }
 
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');

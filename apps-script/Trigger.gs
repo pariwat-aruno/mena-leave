@@ -7,11 +7,11 @@
  *     - resetQuotaYearly() (จะ self-check ว่าวันนี้คือวันรีเซ็ตหรือไม่)
  */
 function setupTriggers() {
-  // ลบ trigger เดิมที่เกี่ยวกับ function เดียวกัน
+  // ลบ trigger เดิมที่เกี่ยวกับ function เดียวกัน (รันซ้ำแล้วไม่ได้ trigger ซ้อน)
+  const managed = ['dailyTick', 'hourlyReminderTick'];
   const all = ScriptApp.getProjectTriggers();
   all.forEach(function (t) {
-    const fn = t.getHandlerFunction();
-    if (fn === 'dailyTick') {
+    if (managed.indexOf(t.getHandlerFunction()) >= 0) {
       ScriptApp.deleteTrigger(t);
     }
   });
@@ -20,7 +20,12 @@ function setupTriggers() {
     .timeBased().atHour(0).inTimezone('Asia/Bangkok').everyDays(1)
     .create();
 
-  console.log('✓ setupTriggers — dailyTick scheduled 00:00 (Asia/Bangkok) daily');
+  // เตือนผู้อนุมัติที่เงียบ — ตัวฟังก์ชันเช็คเองว่าอยู่ในเวลาทำงานไหม
+  ScriptApp.newTrigger('hourlyReminderTick')
+    .timeBased().everyHours(1)
+    .create();
+
+  console.log('✓ setupTriggers — dailyTick 00:00 (Asia/Bangkok) + hourlyReminderTick ทุกชั่วโมง');
 }
 
 function dailyTick() {

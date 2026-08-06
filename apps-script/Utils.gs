@@ -154,6 +154,40 @@ function countLeaveDays(from, to, countWeekends) {
   return days;
 }
 
+/**
+ * เพิ่มแถวโดยอ้าง "ชื่อคอลัมน์" ไม่ใช่ลำดับ
+ *
+ * ตารางที่มีสามสิบกว่าคอลัมน์ ถ้าเขียน appendRow([...]) เรียงมือ
+ * วันไหนแทรกคอลัมน์เพิ่ม ค่าจะเลื่อนไปลงผิดช่องทั้งแถวโดยไม่มี error ให้เห็น
+ *
+ * @param {Sheet} sh
+ * @param {Object} obj  { ชื่อคอลัมน์: ค่า } — คอลัมน์ที่ไม่ได้ส่งมาจะเป็นค่าว่าง
+ * @return {number} เลขแถวที่เพิ่ง append
+ */
+function appendRowByHeader_(sh, obj) {
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const unknown = Object.keys(obj).filter(function (k) { return hdr.indexOf(k) < 0; });
+  if (unknown.length) {
+    // เขียนลงคอลัมน์ที่ยังไม่มีในหัวตาราง = ค่าหายเงียบ ต้องดังไว้ก่อน
+    throw new Error('ไม่มีคอลัมน์ ' + unknown.join(', ') + ' ใน tab ' + sh.getName() + ' — รัน setupDatabase() ก่อน');
+  }
+  const row = hdr.map(function (h) {
+    return Object.prototype.hasOwnProperty.call(obj, h) ? obj[h] : '';
+  });
+  sh.appendRow(row);
+  return sh.getLastRow();
+}
+
+/** แก้หลายคอลัมน์ในแถวเดียว โดยอ้างชื่อคอลัมน์ */
+function updateRowByHeader_(sh, rowNumber, obj) {
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  Object.keys(obj).forEach(function (k) {
+    const i = hdr.indexOf(k);
+    if (i < 0) throw new Error('ไม่มีคอลัมน์ ' + k + ' ใน tab ' + sh.getName());
+    sh.getRange(rowNumber, i + 1).setValue(obj[k]);
+  });
+}
+
 /** สุ่ม 6-digit code (0-prefixed) */
 function generate6DigitCode() {
   const n = Math.floor(Math.random() * 1000000);

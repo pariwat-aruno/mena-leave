@@ -185,29 +185,29 @@ function setUserStatus(payload) {
   const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
   sh.getRange(user._rowNumber, hdr.indexOf('status') + 1).setValue(payload.status);
 
-  // ถ้า inactivate และเป็น supervisor → invalidate Supervisors pair
-  if (payload.status === 'inactive' && (user.is_supervisor === true || user.is_supervisor === 'TRUE')) {
-    invalidateSupervisorPairsOf_(payload.user_id);
+  // ปิดบัญชีแล้ว "ไม่" ลบผังอำนาจทิ้ง — เปิดกลับมาจะได้ไม่ต้องตั้งสายใหม่ทั้งบริษัท
+  // ระบบข้ามผู้อนุมัติที่ปิดบัญชีให้เองตอน routing (resolveStage1Approver_ / getExecutivesFor)
+  if (payload.status === 'inactive') {
+    const stillApproves = readApprovers_().rows.filter(function (r) {
+      return !r.valid_to && r.approver_user_id === payload.user_id;
+    }).length;
+    if (stillApproves) {
+      logWarn('setUserStatus', 'ปิดบัญชีคนที่ยังเป็นผู้อนุมัติอยู่ ' + stillApproves + ' สาย — ใบลาจะข้ามไปชั้นถัดไป',
+        { userId: payload.user_id });
+    }
   }
 
   audit(payload.lineUserId, 'set_user_status', 'Users', payload.user_id, { status: payload.status });
   return { ok: true };
 }
 
+/**
+ * ถอดคนนี้ออกจากตำแหน่ง "หัวหน้างาน" ในผังอำนาจอนุมัติ
+ * ใช้ตอนลดระดับเท่านั้น — ไม่ใช้ตอนปิดบัญชีชั่วคราว เพราะผังจะหายถาวรแล้วต้องตั้งใหม่ทั้งหมด
+ * (คนที่ถูกปิดบัญชีจะถูกข้ามตอน routing อยู่แล้ว ดู resolveStage1Approver_)
+ */
 function invalidateSupervisorPairsOf_(supervisorUserId) {
-  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
-  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Supervisors');
-  if (sh.getLastRow() < 2) return;
-  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  const iSup = hdr.indexOf('supervisor_user_id');
-  const iValidTo = hdr.indexOf('valid_to');
-  const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
-  const now = nowBangkok();
-  for (let i = 0; i < data.length; i++) {
-    if (data[i][iSup] === supervisorUserId && !data[i][iValidTo]) {
-      sh.getRange(i + 2, iValidTo + 1).setValue(now);
-    }
-  }
+  return invalidateApproverLinksOf_(supervisorUserId, APPROVER_LEVEL_SUPERVISOR);
 }
 
 /**
@@ -256,6 +256,12 @@ function setUserRole(payload) {
       // ลดจากหัวหน้างาน → ยกเลิก pair ที่เคยเป็นหัวหน้าของคนอื่น
       invalidateSupervisorPairsOf_(target.user_id);
     }
+  }
+
+  // ลดระดับจากผู้บริหาร → ถอดออกจากสายอนุมัติชั้น 3 ของทุกคน
+  // ไม่ถอด = ผังโชว์ชื่อเขาเป็นผู้บริหารต่อ แต่กดอนุมัติไม่ได้ (ด่านชั้น 3 เช็ค role)
+  if (target.role === ROLES.OWNER && payload.role !== ROLES.OWNER) {
+    invalidateApproverLinksOf_(target.user_id, APPROVER_LEVEL_EXECUTIVE);
   }
 
   audit(payload.lineUserId, 'set_user_role', 'Users', target.user_id, { role: payload.role, from: target.role });

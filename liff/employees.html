@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ฐานข้อมูลพนักงาน — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">ฐานข้อมูลพนักงาน</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-allowed" class="hidden">
+      <div class="alert error">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
+      <p class="subtle">เฉพาะ HR / ผู้บริหาร เท่านั้น</p>
+      <a class="btn primary block mt-2" href="./myid.html">กลับ</a>
+    </div>
+
+    <div id="content" class="hidden">
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="ค้นหา รหัส / ชื่อ / แผนก">
+        <select id="filter-line" style="flex:0 0 auto;max-width:46%">
+          <option value="">ทุกคน</option>
+          <option value="no-sup">ยังไม่มีหัวหน้างาน</option>
+          <option value="no-exec">ยังไม่มีผู้บริหาร</option>
+          <option value="no-line">ยังไม่ผูกไลน์</option>
+        </select>
+      </div>
+
+      <div id="summary" class="card soft mb-2"></div>
+
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>รหัสพนักงาน</th>
+              <th>ชื่อพนักงาน</th>
+              <th>หัวหน้างาน</th>
+              <th>ผู้บริหาร</th>
+              <th class="c">ระดับ</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <p class="subtle mt-2">แตะแถวเพื่อแก้สายอนุมัติของพนักงานคนนั้น</p>
+      <a class="btn ghost block mt-2" href="./approval-chain.html">ไปหน้าผังอำนาจอนุมัติ</a>
+      <a class="btn ghost block mt-1" href="./admin.html">กลับหน้าจัดการระบบ</a>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+let DIR = null;
+
+(async function () {
+  try { await window.auth.init(); }
+  catch (err) {
+    document.getElementById('loading').innerHTML = '<div class="alert error">' + err.message + '</div>';
+    return;
+  }
+
+  const r = await window.api.post('getEmployeeDirectory', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+
+  if (!r.ok) {
+    document.getElementById('not-allowed').classList.remove('hidden');
+    return;
+  }
+
+  DIR = r;
+  document.getElementById('content').classList.remove('hidden');
+  render();
+})();
+
+document.getElementById('q').addEventListener('input', render);
+document.getElementById('filter-line').addEventListener('change', render);
+
+function render() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const filter = document.getElementById('filter-line').value;
+
+  let list = DIR.employees.slice();
+  if (q) {
+    list = list.filter(e =>
+      String(e.user_id).toLowerCase().includes(q) ||
+      String(e.emp_code).toLowerCase().includes(q) ||
+      String(e.display_name).toLowerCase().includes(q) ||
+      String(e.department).toLowerCase().includes(q));
+  }
+  if (filter === 'no-sup') list = list.filter(e => !e.supervisor_user_id);
+  else if (filter === 'no-exec') list = list.filter(e => !e.executive_user_ids.length);
+  else if (filter === 'no-line') list = list.filter(e => !e.has_line);
+
+  const noSup = DIR.employees.filter(e => !e.supervisor_user_id).length;
+  const noExec = DIR.employees.filter(e => !e.executive_user_ids.length).length;
+  document.getElementById('summary').innerHTML =
+    '<div class="card-row"><span class="label">พนักงานทั้งหมด</span><span class="value">' + DIR.employees.length + ' คน</span></div>' +
+    '<div class="card-row"><span class="label">ยังไม่มีหัวหน้างาน</span><span class="value">' + noSup + ' คน</span></div>' +
+    '<div class="card-row"><span class="label">ยังไม่มีผู้บริหาร</span><span class="value">' + noExec + ' คน</span></div>';
+
+  const tbody = document.getElementById('rows');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty">ไม่พบพนักงานตามเงื่อนไข</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(e => {
+    const esc = window.utils.escapeHtml;
+    const supCell = e.supervisor_name
+      ? esc(e.supervisor_name)
+      : '<span class="subtle">ยังไม่กำหนด</span>';
+    const execCell = e.executive_names.length
+      ? esc(e.executive_names.join(', '))
+      : '<span class="subtle">ยังไม่กำหนด</span>';
+    return '<tr onclick="goEdit(\'' + e.user_id + '\')">' +
+      '<td>' + esc(e.emp_code || e.user_id) + '</td>' +
+      '<td>' + esc(e.display_name || '-') +
+        (e.department ? '<div class="subtle" style="font-size:12px">' + esc(e.department) + '</div>' : '') +
+        (e.has_line ? '' : '<div class="subtle" style="font-size:12px">ยังไม่ผูกไลน์</div>') +
+      '</td>' +
+      '<td>' + supCell + '</td>' +
+      '<td>' + execCell + '</td>' +
+      '<td class="c"><span class="badge ' + window.getRoleBadgeClass(e.role, e.is_supervisor) + '">' +
+        esc(e.role_label) + '</span></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function goEdit(userId) {
+  window.location.href = './approval-chain.html?user_id=' + encodeURIComponent(userId);
+}
+</script>
+</body>
+</html>

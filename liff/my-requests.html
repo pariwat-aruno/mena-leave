@@ -84,12 +84,15 @@ async function loadList() {
     const fStr = window.utils.formatThaiDateShort(req.date_from);
     const tStr = window.utils.formatThaiDateShort(req.date_to);
     const dateStr = fStr === tStr ? fStr : (fStr + ' - ' + tStr);
+    const isCancel = req.record_type === 'cancel';
+    const statusLabel = window.STATUS_LABELS[req.final_status] || req.final_status;
     return '<div class="list-row" onclick="showDetail(\'' + req.leave_id + '\')">' +
       '<div class="info">' +
-        '<div class="name">' + ltLabel + ' · ' + req.days + ' วัน</div>' +
-        '<div class="meta">' + dateStr + '</div>' +
+        '<div class="name">' + (isCancel ? 'ขอยกเลิก · ' : '') + ltLabel + ' · ' + req.days + ' วัน</div>' +
+        '<div class="meta">' + dateStr +
+          (req.is_emergency ? ' · แจ้งไม่ทันกำหนด' : '') + '</div>' +
       '</div>' +
-      '<span class="badge ' + req.final_status + '">' + window.STATUS_LABELS[req.final_status] + '</span>' +
+      '<span class="badge ' + req.final_status + '">' + statusLabel + '</span>' +
     '</div>';
   }).join('');
 }
@@ -109,16 +112,22 @@ async function showDetail(leaveId) {
     { n: 3, label: 'ผู้บริหาร', status: l.stage3_status, at: l.stage3_at, note: l.stage3_note },
   ];
 
+  const isCancel = l.record_type === 'cancel';
+
   body.innerHTML =
+    (isCancel ? '<div class="alert info">ใบขอยกเลิกวันลา (ของใบ ' + window.utils.escapeHtml(l.parent_leave_id || '-') + ')</div>' : '') +
+    (l.is_emergency ? '<div class="alert warning">แจ้งไม่ทันกำหนด — ระบุว่าเป็นกรณีฉุกเฉิน: ' +
+      window.utils.escapeHtml(l.emergency_reason || '-') + '</div>' : '') +
     '<div class="card">' +
       '<div class="card-row"><span class="label">เลขที่</span><span class="value">' + l.leave_id + '</span></div>' +
-      '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[l.leave_type] || l.leave_type) + (l.is_retroactive ? ' (ย้อนหลัง)' : '') + '</span></div>' +
+      '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[l.leave_type] || l.leave_type) + (l.is_retroactive && !isCancel ? ' (ย้อนหลัง)' : '') + '</span></div>' +
       '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(l.date_from) + ' - ' + window.utils.formatThaiDateShort(l.date_to) + '</span></div>' +
       '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + l.days + ' วัน</span></div>' +
       '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(l.reason || '-') + '</span></div>' +
-      '<div class="card-row"><span class="label">สถานะ</span><span class="badge ' + l.final_status + '">' + window.STATUS_LABELS[l.final_status] + '</span></div>' +
+      '<div class="card-row"><span class="label">สถานะ</span><span class="badge ' + l.final_status + '">' + (window.STATUS_LABELS[l.final_status] || l.final_status) + '</span></div>' +
     '</div>' +
     (l.attachment_url ? '<div class="mt-2 text-center"><a href="' + l.attachment_url + '" target="_blank" class="btn ghost sm">ดูไฟล์แนบ</a></div>' : '') +
+    buildActions(l) +
     '<h2 class="section-title">ลำดับการอนุมัติ</h2>' +
     '<div class="timeline">' +
       stages.map(s => {
@@ -132,7 +141,77 @@ async function showDetail(leaveId) {
       }).join('') +
     '</div>';
 
+  bindActionButton();
   document.getElementById('detail-overlay').classList.remove('hidden');
+}
+
+/**
+ * ปุ่มถอน / ขอยกเลิก
+ *   ยังไม่มีใครกด  → ถอนเองได้เลย
+ *   อนุมัติครบแล้ว → ต้องขออนุมัติยกเลิกตามสายเดิม
+ * ใบขอยกเลิกเองไม่ต้องมีปุ่มพวกนี้ (ยกเลิกใบยกเลิกซ้อนกันไปเรื่อย ๆ ไม่มีประโยชน์)
+ */
+function buildActions(l) {
+  if (l.record_type === 'cancel') return '';
+
+  // ห้ามใช้ prompt() — LINE webview บางเครื่องบล็อกเงียบ ผู้ใช้จะกดแล้วไม่มีอะไรเกิดขึ้น
+  if (l.final_status === 'pending') {
+    return '<div class="card soft mt-2" id="action-box">' +
+      '<p class="subtle">ยังไม่มีผู้อนุมัติคนไหนกด — ถอนใบลานี้เองได้ทันที โควตาที่จองไว้จะคืนให้</p>' +
+      '<textarea id="action-reason" rows="2" class="mt-1" placeholder="เหตุผลที่ถอน (ไม่บังคับ)"></textarea>' +
+      '<div id="action-alert" class="hidden"></div>' +
+      '<button class="btn ghost block mt-1" id="btn-action" data-mode="withdraw" data-leave="' + l.leave_id + '">ถอนใบลานี้</button>' +
+    '</div>';
+  }
+
+  if (l.final_status === 'approved') {
+    return '<div class="card soft mt-2" id="action-box">' +
+      '<p class="subtle">ต้องการยกเลิกวันลาที่อนุมัติแล้ว? ระบบจะส่งใบขอยกเลิกให้ผู้อนุมัติชุดเดิมพิจารณาอีกครั้ง</p>' +
+      '<textarea id="action-reason" rows="2" class="mt-1" placeholder="เหตุผลที่ขอยกเลิก (อย่างน้อย 5 ตัวอักษร)"></textarea>' +
+      '<div id="action-alert" class="hidden"></div>' +
+      '<button class="btn ghost block mt-1" id="btn-action" data-mode="cancel" data-leave="' + l.leave_id + '">ขอยกเลิกวันลา</button>' +
+    '</div>';
+  }
+
+  return '';
+}
+
+/** ผูกปุ่มหลังวาด detail เสร็จ (ปุ่มเพิ่งถูกสร้างใหม่ทุกครั้งที่เปิด) */
+function bindActionButton() {
+  const btn = document.getElementById('btn-action');
+  if (!btn) return;
+  btn.onclick = async () => {
+    const mode = btn.dataset.mode;
+    const leaveId = btn.dataset.leave;
+    const reason = (document.getElementById('action-reason').value || '').trim();
+
+    window.utils.clearAlert('#action-alert');
+    if (mode === 'cancel' && reason.length < 5) {
+      return window.utils.showAlert('#action-alert', 'กรุณาระบุเหตุผลอย่างน้อย 5 ตัวอักษร', 'error');
+    }
+
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+
+    const r = mode === 'withdraw'
+      ? await window.api.post('withdrawLeave', {
+          lineUserId: window.state.lineUserId, leave_id: leaveId, reason: reason })
+      : await window.api.post('requestCancelLeave', {
+          lineUserId: window.state.lineUserId, leave_id: leaveId, reason: reason });
+
+    btn.disabled = false; btn.textContent = label;
+
+    if (!r.ok) {
+      return window.utils.showAlert('#action-alert', r.message || ('ไม่สำเร็จ: ' + r.error), 'error');
+    }
+
+    window.utils.showToast(
+      mode === 'withdraw' ? 'ถอนใบลาเรียบร้อย'
+      : r.final_status === 'approved' ? 'ยกเลิกวันลาเรียบร้อย'
+      : 'ส่งใบขอยกเลิกแล้ว รอผู้อนุมัติพิจารณา');
+    document.getElementById('detail-overlay').classList.add('hidden');
+    await loadList();
+  };
 }
 
 document.getElementById('btn-close-detail').onclick = () => {

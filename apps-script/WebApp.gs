@@ -79,6 +79,10 @@ function routeAction_(action, payload) {
     'getMyHistory':            function (p) { return getMyHistory(p); },
     'getOneRequest':           function (p) { return getOneRequest(p); },
 
+    // ถอน / ยกเลิกวันลา
+    'withdrawLeave':           function (p) { return withdrawLeave(p); },
+    'requestCancelLeave':      function (p) { return requestCancelLeave(p); },
+
     // approval
     'getPendingForMe':         function (p) { return getPendingForMe(p); },
     'approveLeave':            function (p) { return approveLeave(p); },
@@ -92,6 +96,12 @@ function routeAction_(action, payload) {
     'getProxyTargets':         function (p) { return getProxyTargets(p); },
     'inviteUser':              function (p) { return inviteUser(p); },
     'inviteOwner':             function (p) { return inviteOwner(p); },
+
+    // ฐานข้อมูลพนักงาน + ผังอำนาจอนุมัติ
+    'getEmployeeDirectory':    function (p) { return getEmployeeDirectory(p); },
+    'getApprovalChain':        function (p) { return getApprovalChain(p); },
+    'setApprovalChain':        function (p) { return setApprovalChain(p); },
+    'getMyOrgLine':            function (p) { return getMyOrgLine(p); },
 
     'pairSupervisor':          function (p) { return pairSupervisor(p); },
     'unpairSupervisor':        function (p) { return unpairSupervisor(p); },

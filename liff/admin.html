@@ -28,6 +28,11 @@
     <div id="content" class="hidden">
       <div id="role-badge" class="card soft mb-2"></div>
 
+      <div class="btn-row mb-2">
+        <a class="btn secondary" href="./employees.html">ฐานข้อมูลพนักงาน</a>
+        <a class="btn secondary" href="./approval-chain.html">ผังอำนาจอนุมัติ</a>
+      </div>
+
       <!-- Dashboard summary -->
       <div id="dashboard" class="card mb-2"></div>
 
@@ -476,35 +481,60 @@ async function loadRules() {
   const list = document.getElementById('rules-list');
   if (!r.ok || !r.rules.length) { list.innerHTML = '<div class="empty">ยังไม่มีกฎ</div>'; return; }
   list.innerHTML = r.rules.map(rule => {
-    const lt = ({ sick: 'ลาป่วย', personal: 'ลากิจ', vacation: 'ลาพักร้อน', all: 'ทุกประเภท' })[rule.leave_type] || rule.leave_type;
+    const lt = ruleTypeLabel(rule.leave_type);
+    const allowEmergency = !(rule.allow_emergency === false || rule.allow_emergency === 'FALSE');
     return '<div class="card">' +
-      '<div><strong>' + lt + '</strong></div>' +
+      '<div><strong>' + window.utils.escapeHtml(lt) + '</strong></div>' +
       '<div class="subtle mt-1">แจ้งล่วงหน้า: ' + (rule.advance_notice_days || 0) + ' วัน · ลาติดกันได้: ' + (rule.max_consecutive_days || '∞') + ' วัน · เอกสารถ้าเกิน: ' + (rule.doc_required_above_days || '∞') + ' วัน</div>' +
+      '<div class="subtle mt-1">ยื่นไม่ทันแล้วติ๊กฉุกเฉินได้: ' + (allowEmergency ? 'ได้' : 'ไม่ได้') + '</div>' +
       (rule.note ? '<div class="mt-1">' + window.utils.escapeHtml(rule.note) + '</div>' : '') +
       '<button class="btn ghost sm mt-1" onclick="openRule(\'' + rule.rule_id + '\')">แก้ไข</button>' +
     '</div>';
   }).join('');
 }
 
+/** รายชื่อประเภทลาทั้งหมด — ดึงจาก role.js เพื่อไม่ให้หน้าจอกับ backend รู้จักประเภทไม่ตรงกัน */
+function ruleTypeOptions() {
+  const opts = [
+    { v: 'sick', lab: window.LEAVE_TYPE_LABELS.sick },
+    { v: 'personal', lab: window.LEAVE_TYPE_LABELS.personal },
+    { v: 'vacation', lab: window.LEAVE_TYPE_LABELS.vacation },
+  ];
+  (window.OTHER_LEAVE_TYPES || []).forEach(o => opts.push({ v: o.value, lab: o.label }));
+  opts.push({ v: 'all', lab: 'ทุกประเภท' });
+  return opts;
+}
+
+function ruleTypeLabel(v) {
+  const hit = ruleTypeOptions().filter(o => o.v === v)[0];
+  return hit ? hit.lab : v;
+}
+
 async function openRule(ruleId) {
-  let rule = { leave_type: 'sick', advance_notice_days: 0, max_consecutive_days: 0, doc_required_above_days: 0, note: '', is_active: true };
+  let rule = { leave_type: 'sick', advance_notice_days: 0, max_consecutive_days: 0,
+               doc_required_above_days: 0, note: '', is_active: true, allow_emergency: true };
   if (ruleId) {
     const r = await window.api.post('getRules', {});
     if (r.ok) rule = r.rules.find(x => x.rule_id === ruleId) || rule;
   }
+  const allowEmergency = !(rule.allow_emergency === false || rule.allow_emergency === 'FALSE');
   document.getElementById('overlay-title').textContent = ruleId ? 'แก้ไขกฎ' : 'เพิ่มกฎ';
   document.getElementById('overlay-body').innerHTML =
     '<input type="hidden" id="rule-id" value="' + (ruleId || '') + '">' +
     '<div class="form-group"><label>ประเภทการลา</label><select id="rule-type">' +
-      ['sick:ลาป่วย','personal:ลากิจ','vacation:ลาพักร้อน','all:ทุกประเภท'].map(o => {
-        const [v, lab] = o.split(':');
-        return '<option value="' + v + '"' + (rule.leave_type === v ? ' selected' : '') + '>' + lab + '</option>';
-      }).join('') + '</select></div>' +
-    '<div class="form-group"><label>แจ้งล่วงหน้า (วัน)</label><input type="number" id="rule-advance" value="' + (rule.advance_notice_days || 0) + '"></div>' +
+      ruleTypeOptions().map(o =>
+        '<option value="' + o.v + '"' + (rule.leave_type === o.v ? ' selected' : '') + '>' +
+        window.utils.escapeHtml(o.lab) + '</option>').join('') + '</select></div>' +
+    '<div class="form-group"><label>แจ้งล่วงหน้า (วัน)</label><input type="number" id="rule-advance" value="' + (rule.advance_notice_days || 0) + '">' +
+      '<div class="hint">0 = ไม่บังคับล่วงหน้า · ลาป่วยแนะนำ 1 วัน เพื่อให้ป่วยกะทันหันเข้าเส้นทาง "ติ๊กฉุกเฉิน"</div></div>' +
     '<div class="form-group"><label>ลาติดกันได้สูงสุด (วัน, 0=ไม่จำกัด)</label><input type="number" id="rule-maxcon" value="' + (rule.max_consecutive_days || 0) + '"></div>' +
     '<div class="form-group"><label>ต้องแนบเอกสารถ้าลาเกิน (วัน, 0=ไม่บังคับ)</label><input type="number" id="rule-doc" value="' + (rule.doc_required_above_days || 0) + '"></div>' +
+    '<div class="form-group">' +
+      '<label class="check-row"><input type="checkbox" id="rule-emergency" ' + (allowEmergency ? 'checked' : '') + '>' +
+      '<span>ยื่นไม่ทันกำหนดแล้วติ๊ก "เป็นกรณีฉุกเฉิน" พร้อมเหตุผล เพื่อส่งใบลาต่อได้</span></label>' +
+      '<div class="hint">ไม่ติ๊ก = ยื่นไม่ทันคือส่งไม่ได้เลย</div></div>' +
     '<div class="form-group"><label>หมายเหตุ (แสดงในหน้าลา)</label><textarea id="rule-note">' + window.utils.escapeHtml(rule.note || '') + '</textarea></div>' +
-    '<div class="form-group"><label><input type="checkbox" id="rule-active" ' + (rule.is_active !== false ? 'checked' : '') + '> ใช้งาน</label></div>' +
+    '<div class="form-group"><label class="check-row"><input type="checkbox" id="rule-active" ' + (rule.is_active !== false ? 'checked' : '') + '><span>ใช้งาน</span></label></div>' +
     (ME.role === window.ROLES.ADMIN ? '<div class="alert warning">การเปลี่ยนแปลงต้องรอผู้บริหารอนุมัติ</div>' : '') +
     '<button class="btn primary block" onclick="saveRule()">บันทึก</button>';
   document.getElementById('overlay').classList.remove('hidden');
@@ -520,6 +550,7 @@ async function saveRule() {
     doc_required_above_days: Number(document.getElementById('rule-doc').value || 0),
     note: document.getElementById('rule-note').value,
     is_active: document.getElementById('rule-active').checked,
+    allow_emergency: document.getElementById('rule-emergency').checked,
   };
   const r = await window.api.post('upsertRule', payload);
   if (r.ok) {
