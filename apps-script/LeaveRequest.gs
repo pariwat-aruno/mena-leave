@@ -92,7 +92,7 @@ function submitLeave(payload) {
 
   // === validate quota === (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ตามกฎหมายไม่หักโควตา)
   if (isQuotaLeaveType_(payload.leave_type)) {
-    const year = new Date(payload.date_from + 'T00:00:00+07:00').getFullYear();
+    const year = yearOfYmd_(payload.date_from);
     let quota = getQuotaRow_(requester.user_id, year);
     if (!quota) {
       ensureQuotaRow_(requester.user_id);

@@ -132,24 +132,63 @@ function formatThaiDateShort(d) {
 }
 
 /**
+ * ปี ค.ศ. ปัจจุบันตามเวลาไทย
+ *
+ * ⭐ ห้ามใช้ new Date().getFullYear() ตรง ๆ — getFullYear/getDay/getDate อ่านค่า
+ * ตาม timezone ของ "โปรเจกต์ Apps Script" (ตั้งใน appsscript.json) ไม่ใช่เวลาไทย
+ * ถ้าโปรเจกต์ถูกตั้งเป็นโซนอื่น เลขจะเพี้ยนเงียบ ๆ โดยไม่มี error ให้เห็น
+ */
+function currentYearBangkok_() {
+  return Number(todayBangkok().slice(0, 4));
+}
+
+/**
+ * แปลง 'yyyy-MM-dd' เป็น Date ที่ตรึงไว้ที่เที่ยงคืน UTC
+ * ใช้คู่กับ getUTC* เท่านั้น เพื่อให้การคำนวณ "วันในปฏิทิน" ไม่ขึ้นกับ timezone ใด ๆ
+ *
+ * @param {string} ymd
+ * @return {Date|null} null ถ้ารูปแบบไม่ใช่ yyyy-MM-dd
+ */
+function ymdToUtcDate_(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || '').slice(0, 10));
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** ปี ค.ศ. ของวันที่ 'yyyy-MM-dd' — ไม่ขึ้นกับ timezone ของโปรเจกต์ */
+function yearOfYmd_(ymd) {
+  const d = ymdToUtcDate_(ymd);
+  return d ? d.getUTCFullYear() : currentYearBangkok_();
+}
+
+/**
  * นับจำนวนวันลา ระหว่าง date_from กับ date_to (inclusive)
+ *
+ * ⭐ ตรึงวันที่เป็นเที่ยงคืน UTC แล้วอ่านด้วย getUTCDay()
+ * เดิมใช้ '+07:00' คู่กับ getDay() → getDay() แปลงกลับเป็น timezone ของโปรเจกต์
+ * ตอนโปรเจกต์เป็น America/New_York เที่ยงคืนไทยคือ "บ่ายเมื่อวาน" ที่นิวยอร์ก
+ * วันจันทร์เลยถูกมองเป็นวันอาทิตย์ → นับได้ 0 วัน → ส่งใบลาวันจันทร์ไม่ได้ทั้งปี
+ * และวันเสาร์ถูกมองเป็นวันศุกร์ → โดนหักโควตาทั้งที่เป็นวันหยุด
+ * ห้ามผสม '+07:00' กับ getUTC* หรือ 'Z' กับ getDay() เด็ดขาด
+ *
  * @param {string} from yyyy-MM-dd
  * @param {string} to   yyyy-MM-dd
  * @param {boolean} countWeekends true=นับ ส-อา / false=ข้าม
  * @return {number}
  */
 function countLeaveDays(from, to, countWeekends) {
-  const d1 = new Date(from + 'T00:00:00+07:00');
-  const d2 = new Date(to + 'T00:00:00+07:00');
-  if (d2 < d1) return 0;
+  const d1 = ymdToUtcDate_(from);
+  const d2 = ymdToUtcDate_(to);
+  if (!d1 || !d2 || d2 < d1) return 0;
   let days = 0;
-  const cur = new Date(d1);
+  const cur = new Date(d1.getTime());
   while (cur <= d2) {
-    const dow = cur.getDay(); // 0 = Sun, 6 = Sat
+    const dow = cur.getUTCDay(); // 0 = Sun, 6 = Sat
     if (countWeekends || (dow !== 0 && dow !== 6)) {
       days++;
     }
-    cur.setDate(cur.getDate() + 1);
+    cur.setUTCDate(cur.getUTCDate() + 1);
   }
   return days;
 }

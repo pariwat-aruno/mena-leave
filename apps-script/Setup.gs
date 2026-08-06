@@ -539,7 +539,7 @@ function bootstrapFirstOwner(lineUserId) {
   ]);
 
   // สร้าง LeaveQuota row ปี current
-  const year = new Date().getFullYear();
+  const year = currentYearBangkok_();
   const quotaSh = ss.getSheetByName('LeaveQuota');
   const settings = readSettings_();
   quotaSh.appendRow([

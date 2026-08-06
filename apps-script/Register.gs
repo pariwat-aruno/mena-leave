@@ -182,7 +182,7 @@ function publicUser_(user) {
 
 /** create LeaveQuota row ตาม default (idempotent) — ใช้ทั้งใน approveRegister + bootstrapFirstOwner */
 function ensureQuotaRow_(userId) {
-  const year = new Date().getFullYear();
+  const year = currentYearBangkok_();
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveQuota');
   const quotaId = 'Q-' + year + '-' + userId;

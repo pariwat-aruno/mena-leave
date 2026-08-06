@@ -52,7 +52,7 @@ function getMyQuota(payload) {
   const user = findUserByLineId_(payload.lineUserId);
   if (!user) return { ok: false, error: 'not_registered' };
 
-  const year = payload.year || new Date().getFullYear();
+  const year = payload.year || currentYearBangkok_();
   const quota = getQuotaRow_(user.user_id, year);
   if (!quota) return { ok: false, error: 'no_quota_row' };
 
@@ -68,7 +68,7 @@ function setQuota(payload) {
   if (!isAdmin(payload.lineUserId)) return { ok: false, error: 'forbidden' };
   if (!payload.user_id) return { ok: false, error: 'missing_user_id' };
 
-  const year = payload.year || new Date().getFullYear();
+  const year = payload.year || currentYearBangkok_();
   const actor = findUserByLineId_(payload.lineUserId);
 
   // ADMIN (ไม่ใช่ OWNER) → ผ่าน Pending_Changes
@@ -165,12 +165,11 @@ function rollbackQuota(userId, leaveType, days, year) {
 /** ปีของโควตาที่ใบลาใบนี้ต้องไปหัก — อิงวันเริ่มลา */
 function quotaYearOf_(leave) {
   const from = leave && leave.date_from;
-  if (!from) return new Date().getFullYear();
+  if (!from) return currentYearBangkok_();
   const ymd = (from instanceof Date)
     ? Utilities.formatDate(from, 'Asia/Bangkok', 'yyyy-MM-dd')
     : String(from).slice(0, 10);
-  const y = new Date(ymd + 'T00:00:00+07:00').getFullYear();
-  return isFinite(y) ? y : new Date().getFullYear();
+  return yearOfYmd_(ymd);
 }
 
 /**
@@ -185,7 +184,7 @@ function adjustQuota_(userId, leaveType, deltas, forYear) {
   if (LEAVE_TYPES.indexOf(leaveType) < 0) {
     throw new Error('invalid leave_type: ' + leaveType);
   }
-  const year = Number(forYear) || new Date().getFullYear();
+  const year = Number(forYear) || currentYearBangkok_();
   let quota = getQuotaRow_(userId, year);
   if (!quota) {
     // ensure row exists with defaults
@@ -265,12 +264,15 @@ function shapeQuota_(quota) {
 
 /** cron 1 ม.ค. — สร้าง row ปีใหม่จาก default Settings (ไม่ carry vacation by default) */
 function resetQuotaYearly() {
-  const today = new Date();
+  // ⭐ อ่านวันที่ตามเวลาไทยเสมอ — trigger ยิงเที่ยงคืนไทย ถ้าอ่านด้วย today.getDate()
+  // จะได้วันตาม timezone ของโปรเจกต์ ซึ่งอาจยังเป็น "เมื่อวาน" → เงื่อนไขไม่มีวันตรง
+  // = reset โควตาปีใหม่ไม่ทำงานเลย แบบเงียบ ๆ (log บอกว่า skip ทุกวัน)
+  const todayYmd = todayBangkok();
   const cfg = getConfig();
   const resetMonth = Number(cfg.quota_reset_month || 1);
   const resetDay = Number(cfg.quota_reset_day || 1);
 
-  if (today.getMonth() + 1 !== resetMonth || today.getDate() !== resetDay) {
+  if (Number(todayYmd.slice(5, 7)) !== resetMonth || Number(todayYmd.slice(8, 10)) !== resetDay) {
     logInfo('resetQuotaYearly', 'not reset day — skip');
     return { ok: true, skipped: true };
   }
@@ -279,7 +281,7 @@ function resetQuotaYearly() {
   const ss = SpreadsheetApp.openById(sheetId);
   const usersSh = ss.getSheetByName('Users');
   const quotaSh = ss.getSheetByName('LeaveQuota');
-  const year = today.getFullYear();
+  const year = Number(todayYmd.slice(0, 4));
 
   if (usersSh.getLastRow() < 2) return { ok: true, created: 0 };
 
