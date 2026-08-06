@@ -163,6 +163,24 @@ function yearOfYmd_(ymd) {
 }
 
 /**
+ * วันทำงานของบริษัท เป็นเลข ISO (1=จันทร์ ... 7=อาทิตย์) อ่านจาก Settings `work_days`
+ *
+ * ⭐ ใช้ตัวเดียวกับที่ Reminder.gs ใช้นับเวลาทำงาน — "วันทำงาน" ต้องมีนิยามเดียว
+ * ทั้งระบบ ไม่งั้นแก้วันทำงานในหน้าตั้งค่าแล้วการนับวันลาไม่ขยับตาม
+ * ค่าตั้งต้น จ.-ส. (มีนา คอสเมติกส์ ทำงานวันเสาร์)
+ *
+ * @param {Object} cfg ผลจาก getConfig() — ไม่ส่งมาจะอ่านเอง
+ * @return {number[]}
+ */
+function workDaysIso_(cfg) {
+  const raw = String(((cfg || getConfig()) || {}).work_days || '1,2,3,4,5,6');
+  const days = raw.split(',')
+    .map(function (s) { return Number(String(s).trim()); })
+    .filter(function (n) { return n >= 1 && n <= 7; });
+  return days.length ? days : [1, 2, 3, 4, 5, 6];
+}
+
+/**
  * นับจำนวนวันลา ระหว่าง date_from กับ date_to (inclusive)
  *
  * ⭐ ตรึงวันที่เป็นเที่ยงคืน UTC แล้วอ่านด้วย getUTCDay()
@@ -172,20 +190,26 @@ function yearOfYmd_(ymd) {
  * และวันเสาร์ถูกมองเป็นวันศุกร์ → โดนหักโควตาทั้งที่เป็นวันหยุด
  * ห้ามผสม '+07:00' กับ getUTC* หรือ 'Z' กับ getDay() เด็ดขาด
  *
+ * ⭐ วันหยุดอ่านจาก Settings `work_days` ไม่ใช่ฝัง "เสาร์-อาทิตย์" ไว้ในโค้ด
+ * บริษัทที่ทำงานวันเสาร์ ถ้าฝังไว้จะยื่นลาวันเสาร์ไม่ได้เลยทั้งปี
+ *
  * @param {string} from yyyy-MM-dd
  * @param {string} to   yyyy-MM-dd
- * @param {boolean} countWeekends true=นับ ส-อา / false=ข้าม
+ * @param {boolean} countAllDays true=นับทุกวันรวมวันหยุด (Settings count_weekends_as_leave)
+ * @param {number[]} workDays วันทำงาน ISO 1=จันทร์..7=อาทิตย์ — ไม่ส่งมาจะอ่านจาก Settings
  * @return {number}
  */
-function countLeaveDays(from, to, countWeekends) {
+function countLeaveDays(from, to, countAllDays, workDays) {
   const d1 = ymdToUtcDate_(from);
   const d2 = ymdToUtcDate_(to);
   if (!d1 || !d2 || d2 < d1) return 0;
+  const work = (workDays && workDays.length) ? workDays : workDaysIso_();
   let days = 0;
   const cur = new Date(d1.getTime());
   while (cur <= d2) {
-    const dow = cur.getUTCDay(); // 0 = Sun, 6 = Sat
-    if (countWeekends || (dow !== 0 && dow !== 6)) {
+    const dow = cur.getUTCDay();          // 0 = Sun, 6 = Sat
+    const iso = dow === 0 ? 7 : dow;      // 1 = Mon ... 7 = Sun
+    if (countAllDays || work.indexOf(iso) >= 0) {
       days++;
     }
     cur.setUTCDate(cur.getUTCDate() + 1);

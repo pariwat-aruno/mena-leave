@@ -145,17 +145,34 @@ window.utils = {
     return Math.floor((d2 - d1) / (24 * 3600 * 1000)) + 1;
   },
 
-  countWeekdaysBetween(from, to) {
+  /**
+   * นับวันลาให้ตรงกับ countLeaveDays ฝั่ง backend เป๊ะ ๆ
+   *
+   * ⭐ วันทำงานส่งมาจาก backend (getApprovalConditions.work_days) ห้ามฝัง "ส-อา" ไว้ที่นี่
+   * ตัวเลขบนสรุปก่อนส่งกับตัวเลขที่ระบบหักโควตาจริง ต้องมาจากปฏิทินชุดเดียวกัน
+   * ⭐ ตรึงเป็นเที่ยงคืน UTC + getUTCDay() เพื่อไม่ให้โซนเวลาของเครื่องผู้ใช้มีผล
+   *
+   * @param {string} from yyyy-MM-dd
+   * @param {string} to yyyy-MM-dd
+   * @param {number[]} workDays ISO 1=จันทร์..7=อาทิตย์ (default จ.-ส.)
+   * @param {boolean} countAllDays true=นับทุกวันรวมวันหยุด
+   */
+  countWeekdaysBetween(from, to, workDays, countAllDays) {
     if (!from || !to) return 0;
-    const d1 = new Date(from + 'T00:00:00');
-    const d2 = new Date(to + 'T00:00:00');
+    const m1 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(from).slice(0, 10));
+    const m2 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(to).slice(0, 10));
+    if (!m1 || !m2) return 0;
+    const d1 = new Date(Date.UTC(+m1[1], +m1[2] - 1, +m1[3]));
+    const d2 = new Date(Date.UTC(+m2[1], +m2[2] - 1, +m2[3]));
     if (d2 < d1) return 0;
+    const work = (Array.isArray(workDays) && workDays.length) ? workDays : [1, 2, 3, 4, 5, 6];
     let days = 0;
-    const cur = new Date(d1);
+    const cur = new Date(d1.getTime());
     while (cur <= d2) {
-      const dow = cur.getDay();
-      if (dow !== 0 && dow !== 6) days++;
-      cur.setDate(cur.getDate() + 1);
+      const dow = cur.getUTCDay();
+      const iso = dow === 0 ? 7 : dow;
+      if (countAllDays || work.indexOf(iso) >= 0) days++;
+      cur.setUTCDate(cur.getUTCDate() + 1);
     }
     return days;
   },

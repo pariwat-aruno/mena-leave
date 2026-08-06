@@ -44,14 +44,19 @@ function getApprovalConditions(payload) {
 
   const quotaRes = getMyQuota(payload);
   const rulesRes = getRules(payload);
+  const cfg = getConfig();
 
   return {
     ok: true,
     quota: quotaRes.quota,
     rules: rulesRes.rules,
     // หน้าจอต้องใช้ค่าเดียวกับที่ backend ตรวจ — ห้ามเขียนเลขตายไว้ในหน้าจอ
-    emergency_reason_min: Number(getConfig().emergency_reason_min || 10),
+    emergency_reason_min: Number(cfg.emergency_reason_min || 10),
     gps_missing_reason_min: GPS_MISSING_REASON_MIN,
+    // วันทำงานของบริษัท — หน้าจอต้องนับวันลาด้วยปฏิทินชุดเดียวกับ backend
+    // ไม่งั้นสรุปก่อนส่งบอก 1 วัน แต่ระบบหักจริงคนละเลข
+    work_days: workDaysIso_(cfg),
+    count_weekends_as_leave: cfg.count_weekends_as_leave === true || cfg.count_weekends_as_leave === 'TRUE',
   };
 }
 

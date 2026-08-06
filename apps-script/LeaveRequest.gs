@@ -78,9 +78,17 @@ function submitLeave(payload) {
 
   // === compute days ===
   const countWeekends = cfg.count_weekends_as_leave === true || cfg.count_weekends_as_leave === 'TRUE';
-  const days = countLeaveDays(payload.date_from, payload.date_to, countWeekends);
+  const workDays = workDaysIso_(cfg);
+  const days = countLeaveDays(payload.date_from, payload.date_to, countWeekends, workDays);
   if (days <= 0) {
-    return { ok: false, error: 'invalid_date_range', message: 'ช่วงวันที่ไม่ถูกต้อง' };
+    // แยกสองสาเหตุให้ชัด — "วันหยุดทั้งช่วง" ไม่ใช่ "กรอกวันที่ผิด"
+    // ข้อความเดียวคลุมทั้งสองแบบ ทำให้คนอ่านแล้วไปนั่งแก้วันที่ทั้งที่วันที่ถูกอยู่แล้ว
+    const validRange = !!ymdToUtcDate_(payload.date_from) && !!ymdToUtcDate_(payload.date_to) &&
+                       ymdToUtcDate_(payload.date_to) >= ymdToUtcDate_(payload.date_from);
+    return validRange
+      ? { ok: false, error: 'all_days_non_working',
+          message: 'วันที่เลือกเป็นวันหยุดของบริษัททั้งช่วง จึงไม่ต้องยื่นใบลา — ถ้าวันหยุดตั้งไว้ไม่ตรงกับจริง แจ้ง HR แก้ในหน้าจัดการได้' }
+      : { ok: false, error: 'invalid_date_range', message: 'ช่วงวันที่ไม่ถูกต้อง' };
   }
 
   // === is_retroactive === (ลาย้อนหลังได้เฉพาะประเภทที่ allowRetro เช่น ลาป่วย/ลาคลอดฉุกเฉิน)

@@ -420,8 +420,31 @@ function updateDateHints() {
     return;
   }
   const all = window.utils.countDaysBetween(f, t);
-  const wd = window.utils.countWeekdaysBetween(f, t);
-  document.getElementById('days-hint').textContent = 'รวม ' + all + ' วัน (ไม่นับ ส-อา: ' + wd + ' วัน)';
+  const wd = leaveDaysBetween(f, t);
+  document.getElementById('days-hint').textContent = (all === wd)
+    ? 'รวม ' + all + ' วัน'
+    : 'รวม ' + all + ' วัน (นับเป็นวันลา ' + wd + ' วัน — ' + offDaysLabel() + 'ไม่นับ)';
+}
+
+/**
+ * นับวันลาด้วยปฏิทินวันทำงานที่ backend ส่งมา
+ * ⭐ ห้ามนับเองคนละสูตรกับ backend — เลขบนสรุปก่อนส่งต้องเท่ากับเลขที่หักโควตาจริง
+ */
+function leaveDaysBetween(f, t) {
+  return window.utils.countWeekdaysBetween(
+    f, t,
+    CONDITIONS && CONDITIONS.work_days,
+    !!(CONDITIONS && CONDITIONS.count_weekends_as_leave)
+  );
+}
+
+/** ชื่อวันหยุดของบริษัทตามค่าที่ตั้งไว้จริง — ห้ามเขียน "ส-อา" ตายไว้ในหน้าจอ */
+function offDaysLabel() {
+  const names = ['', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+  const work = (CONDITIONS && CONDITIONS.work_days) || [1, 2, 3, 4, 5, 6];
+  const off = [1, 2, 3, 4, 5, 6, 7].filter(d => work.indexOf(d) < 0);
+  if (!off.length) return 'วันหยุด';
+  return 'วัน' + off.map(d => names[d]).join('/');
 }
 
 document.getElementById('attachment').addEventListener('change', async (e) => {
@@ -462,7 +485,7 @@ document.getElementById('btn-to-step3').onclick = () => {
   if (new Date(t) < new Date(f)) return window.utils.showAlert('#alert-msg', 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม', 'error');
   if (reason.length < 3) return window.utils.showAlert('#alert-msg', 'กรุณาระบุเหตุผลอย่างน้อย 3 ตัวอักษร', 'error');
 
-  const days = window.utils.countWeekdaysBetween(f, t);
+  const days = leaveDaysBetween(f, t);
   const isQuotaType = window.isQuotaLeaveType(lt);
 
   // check quota client-side — เฉพาะประเภทมีโควตา + ไม่ใช่ลาแทน (โควตาเป็นของอีกคน ให้ backend ตรวจ)
@@ -513,7 +536,7 @@ function renderSummary() {
   const ltLabel = window.LEAVE_TYPE_LABELS[lt] || lt;
   const f = document.getElementById('date_from').value;
   const t = document.getElementById('date_to').value;
-  const days = window.utils.countWeekdaysBetween(f, t);
+  const days = leaveDaysBetween(f, t);
   const reason = document.getElementById('reason').value.trim();
   const proxyId = getProxyTargetId();
   const proxyTarget = proxyId ? PROXY_TARGETS.find(u => u.user_id === proxyId) : null;
