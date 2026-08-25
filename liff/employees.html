@@ -38,6 +38,8 @@
 
       <div id="summary" class="card soft mb-2"></div>
 
+      <div id="code-result" class="card mb-2 hidden"></div>
+
       <div class="table-wrap">
         <table class="tbl">
           <thead>
@@ -47,6 +49,7 @@
               <th>หัวหน้างาน</th>
               <th>ผู้บริหาร</th>
               <th class="c">ระดับ</th>
+              <th class="c">รหัสจับคู่</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -112,14 +115,16 @@ function render() {
 
   const noSup = DIR.employees.filter(e => !e.supervisor_user_id).length;
   const noExec = DIR.employees.filter(e => !e.executive_user_ids.length).length;
+  const noLine = DIR.employees.filter(e => !e.has_line).length;
   document.getElementById('summary').innerHTML =
     '<div class="card-row"><span class="label">พนักงานทั้งหมด</span><span class="value">' + DIR.employees.length + ' คน</span></div>' +
+    '<div class="card-row"><span class="label">ยังไม่ผูกไลน์</span><span class="value">' + noLine + ' คน</span></div>' +
     '<div class="card-row"><span class="label">ยังไม่มีหัวหน้างาน</span><span class="value">' + noSup + ' คน</span></div>' +
     '<div class="card-row"><span class="label">ยังไม่มีผู้บริหาร</span><span class="value">' + noExec + ' คน</span></div>';
 
   const tbody = document.getElementById('rows');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty">ไม่พบพนักงานตามเงื่อนไข</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty">ไม่พบพนักงานตามเงื่อนไข</div></td></tr>';
     return;
   }
 
@@ -141,8 +146,63 @@ function render() {
       '<td>' + execCell + '</td>' +
       '<td class="c"><span class="badge ' + window.getRoleBadgeClass(e.role, e.is_supervisor) + '">' +
         esc(e.role_label) + '</span></td>' +
+      '<td class="c">' + (e.has_line
+        ? '<span class="subtle">ผูกแล้ว</span>'
+        : '<button type="button" class="btn sm secondary" onclick="event.stopPropagation();issueCode(\'' +
+          e.user_id + '\',this)">ออกรหัส</button>') + '</td>' +
     '</tr>';
   }).join('');
+}
+
+/**
+ * ออกรหัสจับคู่ให้พนักงานที่นำเข้ามาแต่ยังไม่ผูกไลน์
+ * รหัสมีอายุจำกัด จึงออกทีละคนตอนพาเข้าระบบจริง ไม่ออกยกบริษัทพร้อมกัน
+ */
+async function issueCode(userId, btn) {
+  const box = document.getElementById('code-result');
+  btn.disabled = true;
+  btn.textContent = 'กำลังออก...';
+  try {
+    const r = await window.api.post('issuePairingCode', {
+      lineUserId: window.state.lineUserId,
+      user_id: userId,
+    });
+    box.classList.remove('hidden');
+    if (!r.ok) {
+      box.innerHTML = '<div class="alert error">' +
+        window.utils.escapeHtml(r.message || r.error || 'ออกรหัสไม่สำเร็จ') + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'ออกรหัส';
+      return;
+    }
+    box.innerHTML =
+      '<div class="card-row"><span class="label">รหัสจับคู่ของ</span>' +
+        '<span class="value">' + window.utils.escapeHtml(r.display_name || userId) + '</span></div>' +
+      '<div class="id-display">' + window.utils.escapeHtml(r.pairing_code) + '</div>' +
+      '<div class="subtle mt-1">ใช้ได้ถึง ' + window.utils.escapeHtml(String(r.expires_at || '')) + '</div>' +
+      '<pre style="white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:6px;font-size:13px;margin-top:8px">' +
+        window.utils.escapeHtml(r.invite_text || '') + '</pre>' +
+      '<button type="button" class="btn ghost block mt-1" onclick="copyInvite(this)">คัดลอกข้อความเชิญ</button>';
+    window._inviteText = r.invite_text || '';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    btn.textContent = 'ออกรหัสใหม่';
+    btn.disabled = false;
+  } catch (err) {
+    box.classList.remove('hidden');
+    box.innerHTML = '<div class="alert error">' + window.utils.escapeHtml(err.message) + '</div>';
+    btn.disabled = false;
+    btn.textContent = 'ออกรหัส';
+  }
+}
+
+async function copyInvite(btn) {
+  try {
+    await navigator.clipboard.writeText(window._inviteText || '');
+    btn.textContent = 'คัดลอกแล้ว';
+    setTimeout(function () { btn.textContent = 'คัดลอกข้อความเชิญ'; }, 1500);
+  } catch (e) {
+    btn.textContent = 'คัดลอกไม่ได้ ให้กดค้างที่ข้อความแล้วคัดลอกเอง';
+  }
 }
 
 function goEdit(userId) {

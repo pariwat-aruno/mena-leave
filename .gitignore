@@ -13,3 +13,11 @@ apps-script/node_modules/
 # Secrets
 *-credentials.json
 *-key.json
+
+# ข้อมูลพนักงานจริง — repo นี้เป็น public (ต้อง public เพราะ GitHub Pages)
+# ห้ามให้ชื่อ/ตำแหน่ง/ผังสายงานของคนจริงหลุดขึ้นไป
+scripts/mena_import_payload.json
+scripts/import.local.json
+*.xlsx
+*.xls
+*.csv

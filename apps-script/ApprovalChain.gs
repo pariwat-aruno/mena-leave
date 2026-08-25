@@ -213,9 +213,12 @@ function getEmployeeDirectory(payload) {
     return u ? (u.display_name || id) : '';
   };
 
+  // ⭐ ซ่อนเฉพาะบัญชีที่ "ปิด" เท่านั้น — invited/pending คือพนักงานจริงที่ยังรอพาเข้าระบบ
+  //    เดิมกรอง status==='active' ทำให้คนที่นำเข้ามาทั้งบริษัทหายจากหน้าจอ
+  //    รวมถึงปุ่มออกรหัสจับคู่ = ไม่มีทางพาใครเข้าระบบได้เลย
   const includeInactive = payload.include_inactive === true;
   const employees = idx.list
-    .filter(function (u) { return includeInactive || u.status === 'active'; })
+    .filter(function (u) { return includeInactive || u.status !== 'inactive'; })
     .map(function (u) {
       const execIds = execOf[u.user_id] || [];
       return {
@@ -239,11 +242,11 @@ function getEmployeeDirectory(payload) {
 
   // ตัวเลือกสำหรับ dropdown ในหน้าจอ
   const supervisorOptions = idx.list
-    .filter(function (u) { return u.status === 'active' && (isSupervisorUser_(u) || hasRole(u.role, ROLES.SUPERVISOR)); })
+    .filter(function (u) { return u.status !== 'inactive' && (isSupervisorUser_(u) || hasRole(u.role, ROLES.SUPERVISOR)); })
     .map(function (u) { return { user_id: u.user_id, display_name: u.display_name, role_label: getRoleLabelTh(u.role) }; });
 
   const executiveOptions = idx.list
-    .filter(function (u) { return u.status === 'active' && u.role === ROLES.OWNER; })
+    .filter(function (u) { return u.status !== 'inactive' && u.role === ROLES.OWNER; })
     .map(function (u) { return { user_id: u.user_id, display_name: u.display_name, role_label: getRoleLabelTh(u.role) }; });
 
   return {
@@ -306,7 +309,9 @@ function setApprovalChain(payload) {
     }
     const sup = idx.byId[supId];
     if (!sup) return { ok: false, error: 'supervisor_not_found', message: 'ไม่พบพนักงานที่จะตั้งเป็นหัวหน้างาน' };
-    if (sup.status !== 'active') {
+    // ตั้งหัวหน้าที่ยังไม่ผูกไลน์ได้ (คนที่เพิ่งนำเข้า) — ตอนมีใบลาจริง resolveStage1Approver_
+    // จะข้ามไปให้ HR เองถ้าหัวหน้ายังใช้งานไม่ได้ ห้ามเฉพาะบัญชีที่ "ปิด" เท่านั้น
+    if (sup.status === 'inactive') {
       return { ok: false, error: 'supervisor_inactive', message: 'คนที่จะตั้งเป็นหัวหน้างานถูกปิดบัญชีอยู่' };
     }
   }
@@ -319,7 +324,7 @@ function setApprovalChain(payload) {
     for (let i = 0; i < execIds.length; i++) {
       const ex = idx.byId[execIds[i]];
       if (!ex) return { ok: false, error: 'executive_not_found', message: 'ไม่พบผู้บริหารรหัส ' + execIds[i] };
-      if (ex.status !== 'active') {
+      if (ex.status === 'inactive') {
         return { ok: false, error: 'executive_inactive', message: (ex.display_name || execIds[i]) + ' ถูกปิดบัญชีอยู่' };
       }
       // ต้องเป็นผู้บริหารจริง ไม่งั้นตั้งไว้แล้วกดอนุมัติไม่ได้ (ด่านชั้น 3 เช็ค role)

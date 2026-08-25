@@ -96,6 +96,10 @@ function routeAction_(action, payload) {
     'getProxyTargets':         function (p) { return getProxyTargets(p); },
     'inviteUser':              function (p) { return inviteUser(p); },
     'inviteOwner':             function (p) { return inviteOwner(p); },
+    // ออกรหัสจับคู่ให้คนที่มีแถวอยู่แล้ว (นำเข้าเป็นชุด / รหัสเดิมหมดอายุ)
+    'issuePairingCode':        function (p) { return issuePairingCode(p); },
+    // นำเข้าทะเบียนพนักงานทั้งบริษัทจากไฟล์ลูกค้า — ผู้บริหารเท่านั้น
+    'importEmployees':         function (p) { return importEmployees(p); },
 
     // ฐานข้อมูลพนักงาน + ผังอำนาจอนุมัติ
     'getEmployeeDirectory':    function (p) { return getEmployeeDirectory(p); },

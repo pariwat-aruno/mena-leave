@@ -1,0 +1,682 @@
+{
+ "rows": [
+  {
+   "emp_code": "EXEC-01",
+   "display_name": "ผู้บริหาร ก",
+   "position": "ผู้บริหาร",
+   "department": "ผู้บริหาร",
+   "role": "OWNER",
+   "supervisor_emp_code": "",
+   "executive_emp_codes": []
+  },
+  {
+   "emp_code": "EXEC-02",
+   "display_name": "ผู้บริหาร ข",
+   "position": "ผู้บริหาร",
+   "department": "ผู้บริหาร",
+   "role": "OWNER",
+   "supervisor_emp_code": "",
+   "executive_emp_codes": []
+  },
+  {
+   "emp_code": "5502",
+   "display_name": "พนักงานทดสอบ 1",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "SUPERVISOR",
+   "supervisor_emp_code": "EXEC-01",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "5901",
+   "display_name": "พนักงานทดสอบ 2",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "5902",
+   "display_name": "พนักงานทดสอบ 3",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "5903",
+   "display_name": "พนักงานทดสอบ 4",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6002",
+   "display_name": "พนักงานทดสอบ 5",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6101",
+   "display_name": "พนักงานทดสอบ 6",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6303",
+   "display_name": "พนักงานทดสอบ 7",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6506",
+   "display_name": "พนักงานทดสอบ 8",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6509",
+   "display_name": "พนักงานทดสอบ 9",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6511",
+   "display_name": "พนักงานทดสอบ 10",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6512",
+   "display_name": "พนักงานทดสอบ 11",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6514",
+   "display_name": "พนักงานทดสอบ 12",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6515",
+   "display_name": "พนักงานทดสอบ 13",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6602",
+   "display_name": "พนักงานทดสอบ 14",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6611",
+   "display_name": "พนักงานทดสอบ 15",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6618",
+   "display_name": "พนักงานทดสอบ 16",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6619",
+   "display_name": "พนักงานทดสอบ 17",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6620",
+   "display_name": "พนักงานทดสอบ 18",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6630",
+   "display_name": "พนักงานทดสอบ 19",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "SUPERVISOR",
+   "supervisor_emp_code": "EXEC-01",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6632",
+   "display_name": "พนักงานทดสอบ 20",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6708",
+   "display_name": "พนักงานทดสอบ 21",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6723",
+   "display_name": "พนักงานทดสอบ 22",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6724",
+   "display_name": "พนักงานทดสอบ 23",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6804",
+   "display_name": "พนักงานทดสอบ 24",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6725",
+   "display_name": "พนักงานทดสอบ 25",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6806",
+   "display_name": "พนักงานทดสอบ 26",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6818",
+   "display_name": "พนักงานทดสอบ 27",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "SUPERVISOR",
+   "supervisor_emp_code": "EXEC-01",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6726",
+   "display_name": "พนักงานทดสอบ 28",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6826",
+   "display_name": "พนักงานทดสอบ 29",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6833",
+   "display_name": "พนักงานทดสอบ 30",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6902",
+   "display_name": "พนักงานทดสอบ 31",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6903",
+   "display_name": "พนักงานทดสอบ 32",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6904",
+   "display_name": "พนักงานทดสอบ 33",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6905",
+   "display_name": "พนักงานทดสอบ 34",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6907",
+   "display_name": "พนักงานทดสอบ 35",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6909",
+   "display_name": "พนักงานทดสอบ 36",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "SUPERVISOR",
+   "supervisor_emp_code": "EXEC-01",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6910",
+   "display_name": "พนักงานทดสอบ 37",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6911",
+   "display_name": "พนักงานทดสอบ 38",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6913",
+   "display_name": "พนักงานทดสอบ 39",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6916",
+   "display_name": "พนักงานทดสอบ 40",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6917",
+   "display_name": "พนักงานทดสอบ 41",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6920",
+   "display_name": "พนักงานทดสอบ 42",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6922",
+   "display_name": "พนักงานทดสอบ 43",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6923",
+   "display_name": "พนักงานทดสอบ 44",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6924",
+   "display_name": "พนักงานทดสอบ 45",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6927",
+   "display_name": "พนักงานทดสอบ 46",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "SUPERVISOR",
+   "supervisor_emp_code": "EXEC-01",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6930",
+   "display_name": "พนักงานทดสอบ 47",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6931",
+   "display_name": "พนักงานทดสอบ 48",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6934",
+   "display_name": "พนักงานทดสอบ 49",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6938",
+   "display_name": "พนักงานทดสอบ 50",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6939",
+   "display_name": "พนักงานทดสอบ 51",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "5502",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6943",
+   "display_name": "พนักงานทดสอบ 52",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6630",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6945",
+   "display_name": "พนักงานทดสอบ 53",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6909",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6947",
+   "display_name": "พนักงานทดสอบ 54",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6927",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  },
+  {
+   "emp_code": "6948",
+   "display_name": "พนักงานทดสอบ 55",
+   "position": "ตำแหน่งทดสอบ",
+   "department": "แผนกทดสอบ",
+   "role": "USER",
+   "supervisor_emp_code": "6818",
+   "executive_emp_codes": [
+    "EXEC-01",
+    "EXEC-02"
+   ]
+  }
+ ]
+}
