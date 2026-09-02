@@ -1,0 +1,275 @@
+<title>คู่มือผูกบัญชีเข้าระบบลางาน — MENA COSMETICS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f3f5f8; --surface:#ffffff; --surface-2:#f8fafc;
+  --ink:#161d2b; --ink-2:#586374; --ink-3:#8592a3;
+  --line:#e0e5ec; --line-2:#eef1f5;
+  --brand:#a01560;
+  --ok:#0e7062; --ok-bg:#e6f4f1;
+  --warn:#a4590a; --warn-bg:#fdf1e0;
+  --crit:#bd2f28; --crit-bg:#fceceb;
+  --block:#5b4a94; --block-bg:#efecf8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+    --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+    --line:#2b313d; --line-2:#232935;
+    --brand:#b9c3e2;
+    --ok:#4ecfb4; --ok-bg:#12302c;
+    --warn:#e9a94f; --warn-bg:#33270f;
+    --crit:#f0837a; --crit-bg:#361a19;
+    --block:#a99ae0; --block-bg:#25203a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+  --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+  --line:#2b313d; --line-2:#232935;
+  --brand:#b9c3e2;
+  --ok:#4ecfb4; --ok-bg:#12302c;
+  --warn:#e9a94f; --warn-bg:#33270f;
+  --crit:#f0837a; --crit-bg:#361a19;
+  --block:#a99ae0; --block-bg:#25203a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  font-size:15.5px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px 100px}
+h1,h2,h3,.disp{font-family:"Sarabun",system-ui,sans-serif;text-wrap:balance}
+code,.mono,.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ── หัวเรื่อง ── */
+header.top{padding:56px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+h1{font-size:clamp(30px,4.4vw,44px);line-height:1.2;font-weight:700;margin:10px 0 8px;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0}
+.stamp{margin-top:18px;font-size:13px;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+/* ── แถบตัวเลข ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:28px 0 0}
+.tile{background:var(--surface);padding:16px 18px}
+.tile .k{font-size:11.5px;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+.tile .v{font-size:26px;font-weight:600;font-family:"Sarabun",sans-serif;line-height:1.25;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.crit{color:var(--crit)}
+
+/* ── สารบัญ ── */
+nav.toc{position:sticky;top:0;z-index:5;background:var(--ground);border-bottom:1px solid var(--line);margin:34px 0 0;padding:10px 0;overflow-x:auto}
+nav.toc ul{display:flex;gap:4px;list-style:none;margin:0;padding:0;white-space:nowrap}
+nav.toc a{font-size:13px;color:var(--ink-2);text-decoration:none;padding:5px 11px;border-radius:2px;display:block}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--surface);color:var(--ink);outline:none}
+nav.toc a:focus-visible{box-shadow:0 0 0 2px var(--brand)}
+
+/* ── ส่วน ── */
+section{padding-top:46px}
+.sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:0}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);letter-spacing:.08em}
+h2{font-size:23px;font-weight:600;margin:0;flex:1}
+h3{font-size:17px;font-weight:600;margin:0}
+
+/* ── การ์ดหมวด ── */
+.item{border-bottom:1px solid var(--line);padding:22px 0}
+.item-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.item-head h3{flex:1;min-width:200px}
+.where{font-size:12.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.rows{display:grid;grid-template-columns:104px 1fr;gap:6px 16px;align-items:start}
+.rows dt{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;padding-top:5px}
+.rows dd{margin:0;color:var(--ink)}
+.rows dd.q{color:var(--ink-2)}
+@media (max-width:640px){.rows{grid-template-columns:1fr;gap:2px 0}.rows dt{padding-top:10px}}
+
+/* ── ชิปสถานะ ── */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.chip::before{content:"";width:6px;height:6px;border-radius:99px;background:currentColor;flex:none}
+.chip.ok{color:var(--ok);background:var(--ok-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.chip.crit{color:var(--crit);background:var(--crit-bg)}
+.chip.block{color:var(--block);background:var(--block-bg)}
+.chip.none{color:var(--ink-3);background:var(--line-2)}
+
+/* ── กล่องเน้น ── */
+.alert{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--crit);padding:20px 22px;margin:22px 0}
+.alert.warn{border-top-color:var(--warn)}
+.alert h3{margin-bottom:6px}
+.alert p{margin:6px 0;color:var(--ink-2)}
+.alert p b{color:var(--ink)}
+.chain{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);padding:10px 12px;margin-top:12px;overflow-x:auto;white-space:nowrap}
+
+/* ── ตาราง ── */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface);margin:16px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th{text-align:left;font-weight:600;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+   font-family:"IBM Plex Mono",monospace;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r{text-align:right;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace}
+td.nw{white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+
+/* ── ขั้นตอน ── */
+ol.steps{list-style:none;counter-reset:s;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);padding:16px 20px 16px 58px;position:relative}
+ol.steps>li::before{content:counter(s,decimal-leading-zero);position:absolute;left:20px;top:16px;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-3);font-weight:500}
+ol.steps b{display:block;font-family:"Sarabun",sans-serif;font-size:16px;font-weight:600;margin-bottom:2px}
+ol.steps small{color:var(--ink-2);font-size:13.5px;line-height:1.65;display:block}
+ol.steps .who{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--ink-3);letter-spacing:.05em}
+
+ul.plain{margin:8px 0 0;padding-left:18px;color:var(--ink-2)}
+ul.plain li{margin:3px 0}
+ul.plain b{color:var(--ink)}
+p.note{color:var(--ink-2);margin:14px 0 0;font-size:14px}
+.kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;white-space:nowrap;color:var(--ink)}
+
+figure{margin:18px 0 0;background:var(--surface);border:1px solid var(--line);padding:10px}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--line-2)}
+figcaption{font-size:12.5px;color:var(--ink-2);padding:10px 4px 2px;line-height:1.6}
+figcaption b{color:var(--ink)}
+.figs{display:grid;gap:14px}
+@media (min-width:820px){.figs.two{grid-template-columns:1fr 1fr}}
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px}
+a{color:var(--ink);text-underline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── ปรับเฉพาะเล่มนี้ ── */
+/* ห้ามให้ข้อความไทยตกไปอยู่ในฟอนต์ mono — ไม่มีสระ/วรรณยุกต์ไทย จะกลายเป็น fallback ที่อ่านยาก */
+th, .rows dt, .where, .eyebrow, .tile .k, ol.steps .who { font-family:"Sarabun",sans-serif !important; letter-spacing:.02em }
+th, .rows dt, .tile .k { text-transform:none }
+.num, code, td.r { font-family:"IBM Plex Mono",monospace }
+figure img { max-width:340px; margin:0 auto }
+figure.wide img { max-width:520px }
+.sec-head { border-bottom-color:#d51f7d }
+ol.steps>li::before { color:#d51f7d; font-weight:700 }
+.alert { border-top-color:#d51f7d }
+h1 { color:#a01560 }
+</style>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">MENA COSMETICS</div>
+  <h1>คู่มือผูกบัญชีเข้าระบบลางาน</h1>
+  <p class="lede">สำหรับพนักงานทุกคน — ทำครั้งเดียวตอนเริ่มใช้ระบบ ใช้เวลาไม่ถึง 1 นาที
+  หลังจากนี้ส่งใบลาผ่านไลน์ได้เลย ไม่ต้องกรอกกระดาษ</p>
+  <div class="stamp"><b>ฉบับวันที่</b> 2 กันยายน 2569 <span>·</span> <b>ระบบ</b> ลางาน MENA COSMETICS</div>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="k">ทำกี่ครั้ง</div><div class="v ok">1 ครั้ง</div><div class="s">ผูกแล้วระบบจำได้ตลอด</div></div>
+  <div class="tile"><div class="k">ต้องกรอกอะไร</div><div class="v">2 ช่อง</div><div class="s">รหัสพนักงาน + ชื่อ-นามสกุล</div></div>
+  <div class="tile"><div class="k">รออนุมัติไหม</div><div class="v ok">ไม่ต้องรอ</div><div class="s">ผูกเสร็จใช้งานได้ทันที</div></div>
+  <div class="tile"><div class="k">ผูกไม่ได้</div><div class="v warn">ติดต่อบุคคล</div><div class="s">ขอรหัสจับคู่ 6 หลัก</div></div>
+</div>
+
+<nav class="toc"><ul>
+  <li><a href="#s1">1. เตรียมตัว</a></li>
+  <li><a href="#s2">2. เพิ่มเพื่อน</a></li>
+  <li><a href="#s3">3. ผูกบัญชี</a></li>
+  <li><a href="#s4">4. ผูกไม่สำเร็จ</a></li>
+  <li><a href="#s5">5. รหัสจับคู่</a></li>
+  <li><a href="#s6">6. อาการที่เจอบ่อย</a></li>
+</ul></nav>
+
+<section id="s1">
+  <div class="sec-head"><span class="sec-num">01</span><h2>เตรียมตัวก่อนเริ่ม</h2></div>
+  <ul class="plain">
+    <li><b>โทรศัพท์ที่มีแอป LINE</b> — ใช้บัญชีไลน์ส่วนตัวของคุณเอง</li>
+    <li><b>รหัสพนักงานของคุณ</b> — ถ้าจำไม่ได้ ถามฝ่ายบุคคล</li>
+    <li><b>ชื่อ-นามสกุลจริง</b> ตามที่แจ้งไว้กับบริษัท</li>
+  </ul>
+  <div class="alert">
+    <h3>ผูกกับบัญชีไลน์ของตัวเองเท่านั้น</h3>
+    <p>ระบบจะจำว่าบัญชีไลน์นี้คือคุณ แล้วใช้ส่งใบลากับแจ้งผลอนุมัติให้ตลอด
+    <b>หนึ่งคนผูกได้ครั้งเดียว</b> ถ้าใช้ไลน์ของคนอื่นผูก เจ้าตัวจะผูกไม่ได้อีกและต้องให้ฝ่ายบุคคลแก้ให้</p>
+  </div>
+</section>
+
+<section id="s2">
+  <div class="sec-head"><span class="sec-num">02</span><h2>เพิ่มเพื่อนไลน์ของบริษัท</h2></div>
+  <ol class="steps">
+    <li><b>เปิดแอป LINE แล้วสแกน QR</b><small>QR อยู่ในรูปที่ฝ่ายบุคคลส่งเข้าไลน์กลุ่ม หรือที่ติดไว้บนบอร์ดประกาศ
+      ถ้าสแกนไม่ได้ ให้ค้นหาไอดี <span class="kbd">@966nnfkr</span> ในช่องค้นหาของ LINE</small></li>
+    <li><b>กด "เพิ่มเพื่อน"</b><small>ระบบจะทักกลับหาคุณทันทีพร้อมปุ่ม <b>ผูกบัญชีของฉัน</b></small></li>
+    <li><b>กดปุ่ม "ผูกบัญชีของฉัน" ในข้อความที่ระบบทักมา</b><small>จะเปิดหน้ากรอกข้อมูลขึ้นมาให้</small></li>
+  </ol>
+  <figure class="wide">
+    <img src="img/00-poster.png" alt="โปสเตอร์ QR เพิ่มเพื่อน">
+    <figcaption><b>รูปที่ฝ่ายบุคคลแจก</b> — สแกน QR ตรงกลางด้วยแอป LINE</figcaption>
+  </figure>
+</section>
+
+<section id="s3">
+  <div class="sec-head"><span class="sec-num">03</span><h2>ผูกบัญชี — กรอก 2 ช่อง</h2></div>
+  <ol class="steps">
+    <li><b>กรอกช่อง "รหัสพนักงาน"</b><small>รหัสประจำตัวพนักงานของบริษัท ใส่เฉพาะตัวเลข/ตัวอักษรตามที่บริษัทให้มา</small></li>
+    <li><b>กรอกช่อง "ชื่อ-นามสกุล"</b><small>ชื่อจริงตามทะเบียนพนักงาน <b>ไม่ต้องใส่คำนำหน้า</b> (นาย/นาง/นางสาว) ก็ได้ ระบบตัดให้เอง</small></li>
+    <li><b>กดปุ่ม "ผูกบัญชี"</b><small>ถ้าข้อมูลตรง จะขึ้นว่า <b>ผูกบัญชีเรียบร้อย</b> พร้อมชื่อและแผนกของคุณ ใช้งานได้ทันทีไม่ต้องรอใครอนุมัติ</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/01-claim-form.jpg" alt="หน้าผูกบัญชี ยังไม่กรอก">
+      <figcaption><b>หน้าที่เปิดขึ้นมา</b> — มี 2 ช่องให้กรอก</figcaption></figure>
+    <figure><img src="img/02-claim-filled.jpg" alt="กรอกข้อมูลแล้ว">
+      <figcaption><b>กรอกครบแล้ว</b> — ตัวเลขและชื่อในภาพเป็นตัวอย่าง ให้ใส่ของคุณเอง</figcaption></figure>
+  </div>
+  <figure><img src="img/03-claim-done.jpg" alt="ผูกบัญชีสำเร็จ">
+    <figcaption><b>ผูกสำเร็จ</b> — ตรวจว่าชื่อ รหัสพนักงาน และแผนกเป็นของคุณจริง
+    ถ้าไม่ใช่ให้แจ้งฝ่ายบุคคลทันที จากนั้นกด <b>ส่งใบลา</b> ได้เลย</figcaption></figure>
+</section>
+
+<section id="s4">
+  <div class="sec-head"><span class="sec-num">04</span><h2>ถ้าขึ้นว่าข้อมูลไม่ตรง</h2></div>
+  <p class="note">ระบบจะขึ้นข้อความว่า <b>ข้อมูลไม่ตรงกับทะเบียนพนักงาน</b> เมื่อรหัสพนักงานหรือชื่อไม่ตรงกับที่บริษัทบันทึกไว้
+  ข้อความนี้ไม่ได้บอกว่าผิดช่องไหน ให้ลองไล่ตามนี้</p>
+  <ul class="plain">
+    <li>ตรวจ <b>รหัสพนักงาน</b> ว่าพิมพ์ครบและไม่มีช่องว่างเกิน</li>
+    <li>ตรวจ <b>การสะกดชื่อ-นามสกุล</b> — ต้องเป็นชื่อจริง ไม่ใช่ชื่อเล่น</li>
+    <li>ถ้าลองแล้วยังไม่ผ่าน แปลว่าชื่อในทะเบียนสะกดคนละแบบกับที่คุณกรอก <b>ให้ติดต่อฝ่ายบุคคล</b> ไม่ต้องลองเดาต่อ</li>
+  </ul>
+  <figure><img src="img/04-claim-error.jpg" alt="ข้อความข้อมูลไม่ตรง">
+    <figcaption><b>หน้าตาตอนข้อมูลไม่ตรง</b> — ข้อมูลที่กรอกยังอยู่ในช่อง แก้แล้วกดใหม่ได้เลย</figcaption></figure>
+</section>
+
+<section id="s5">
+  <div class="sec-head"><span class="sec-num">05</span><h2>ทางสำรอง — รหัสจับคู่ 6 หลัก</h2></div>
+  <p class="note">ใช้เมื่อผูกด้วยรหัสพนักงานกับชื่อไม่สำเร็จ ฝ่ายบุคคลจะออก <b>รหัสจับคู่</b> 6 หลักให้เป็นรายคน</p>
+  <ol class="steps">
+    <li><b>ขอรหัสจับคู่จากฝ่ายบุคคล</b><small>ฝ่ายบุคคลจะส่งเลข 6 หลักมาให้ทางแชท</small></li>
+    <li><b>ในหน้าผูกบัญชี กดหัวข้อ "ผูกไม่ได้ / ได้รับรหัส 6 หลักจากฝ่ายบุคคล"</b><small>หัวข้อจะกางออกมาให้เห็นช่องกรอกรหัส</small></li>
+    <li><b>กรอกรหัส 6 หลัก แล้วกด "ใช้รหัสจับคู่"</b><small>ทางนี้ <b>ต้องรอฝ่ายบุคคลกดอนุมัติอีกครั้ง</b> ถึงจะส่งใบลาได้ ระบบจะแจ้งกลับทางไลน์</small></li>
+  </ol>
+  <div class="alert warn">
+    <h3>รหัสมีอายุ 24 ชั่วโมง</h3>
+    <p>ถ้าได้รหัสมาแล้วไม่ได้ใช้ภายในวันนั้น รหัสจะหมดอายุ ให้ขอใหม่จากฝ่ายบุคคลได้เลย ขอกี่ครั้งก็ได้</p>
+  </div>
+  <figure><img src="img/05-claim-code.jpg" alt="ช่องกรอกรหัสจับคู่">
+    <figcaption><b>ช่องกรอกรหัสจับคู่</b> — เลข 6 หลักในภาพเป็นตัวอย่าง</figcaption></figure>
+</section>
+
+<section id="s6">
+  <div class="sec-head"><span class="sec-num">06</span><h2>อาการที่เจอบ่อย</h2></div>
+  <figure><img src="img/06-request-gate.jpg" alt="กดส่งใบลาแต่ยังไม่ผูกบัญชี">
+    <figcaption><b>ถ้ากดเมนู "ส่งใบลา" แล้วเจอหน้านี้</b> แปลว่ายังไม่ได้ผูกบัญชี
+    กดปุ่ม <b>ผูกบัญชีของฉัน</b> แล้วทำตามหัวข้อ 3</figcaption></figure>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>อาการ</th><th>แปลว่าอะไร</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>กดเมนูแล้วขึ้นว่ายังไม่ได้ผูกบัญชี</td><td>ยังไม่เคยผูก หรือเปลี่ยนบัญชีไลน์ใหม่</td><td>กดปุ่มผูกบัญชีของฉัน แล้วกรอก 2 ช่อง</td></tr>
+      <tr><td>ข้อมูลไม่ตรงกับทะเบียนพนักงาน</td><td>รหัสหรือชื่อไม่ตรงกับที่บริษัทบันทึกไว้</td><td>ตรวจการสะกด ถ้ายังไม่ได้ให้ติดต่อฝ่ายบุคคล</td></tr>
+      <tr><td>รหัสพนักงานนี้ถูกผูกกับบัญชีไลน์อื่นแล้ว</td><td>มีบัญชีไลน์อื่นผูกรหัสนี้ไปก่อน</td><td>ติดต่อฝ่ายบุคคล อย่าใช้รหัสคนอื่นแทน</td></tr>
+      <tr><td>พบข้อมูลซ้ำในทะเบียน</td><td>มีชื่อและรหัสเหมือนกันหลายรายการ</td><td>ติดต่อฝ่ายบุคคลให้ผูกให้</td></tr>
+      <tr><td>บัญชีของคุณถูกปิดการใช้งาน</td><td>สถานะพนักงานในระบบถูกปิดอยู่</td><td>ติดต่อฝ่ายบุคคลให้เปิดบัญชีก่อน</td></tr>
+      <tr><td>รหัสจับคู่หมดอายุแล้ว</td><td>เกิน 24 ชั่วโมงนับจากที่ออกรหัส</td><td>ขอรหัสใหม่จากฝ่ายบุคคล</td></tr>
+      <tr><td>เปิดหน้าไม่ขึ้น / ค้างที่กำลังโหลด</td><td>สัญญาณอินเทอร์เน็ตไม่นิ่ง</td><td>ปิดหน้าแล้วกดปุ่มในไลน์เข้าใหม่อีกครั้ง</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>คู่มือผูกบัญชีเข้าระบบลางาน · MENA COSMETICS · ฉบับวันที่ 2 กันยายน 2569</footer>
+</div>

@@ -63,9 +63,14 @@ html, body {
   border-bottom: 1px solid var(--brand-tint-strong);
 }
 
+/* โลโก้ mena เป็นคำวางแนวนอน (671x248) ไม่ใช่รูปสี่เหลี่ยมจัตุรัส
+   ถ้าใช้ 44x44 + object-fit:cover จะถูกครอปเหลือแค่กลางคำ อ่านไม่ออก */
 .app-header .logo {
-  width: 44px; height: 44px; border-radius: 50%;
-  object-fit: cover; background: white;
+  width: auto; max-width: 104px; height: 32px;
+  object-fit: contain; object-position: left center;
+  background: transparent;
+  /* ไฟล์โลโก้เป็น JPEG พื้นขาว — multiply ทำให้พื้นขาวกลืนไปกับแถบสีชมพูอ่อน */
+  mix-blend-mode: multiply;
 }
 
 .app-header .brand {
