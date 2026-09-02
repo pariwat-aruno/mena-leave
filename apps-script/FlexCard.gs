@@ -788,3 +788,64 @@ function previewAllCardsToOwner() {
   ]);
   console.log('preview ส่งให้ ' + owner.display_name + ' แล้ว');
 }
+
+/**
+ * HR ได้ flex: มีพนักงานผูกบัญชีเข้าระบบเอง (ไม่ต้องกดอะไร — แจ้งให้เห็นความคืบหน้า)
+ * ใช้ตอนพาพนักงานทั้งบริษัทเข้าระบบ HR จะได้รู้ว่าใครเข้ามาแล้วบ้างโดยไม่ต้องเปิดหน้าจอเช็ค
+ */
+function buildClaimNoticeCard(user) {
+  const c = flexColors_();
+  return {
+    type: 'flex', altText: 'ผูกบัญชีแล้ว: ' + (user.display_name || user.emp_code || ''),
+    contents: {
+      type: 'bubble', size: 'mega',
+      header: flexHeader_('พนักงานผูกบัญชีเข้าระบบแล้ว', c.success),
+      body: {
+        type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          flexKV_('ชื่อ', user.display_name || '-'),
+          flexKV_('รหัสพนักงาน', normEmpCode_(user.emp_code) || '-'),
+          flexKV_('แผนก', user.department || '-'),
+          flexKV_('ตำแหน่ง', user.position || '-'),
+          flexKV_('เวลา', formatThaiDateTime(nowBangkok())),
+          flexSeparator_(),
+          { type: 'text', text: 'ผูกด้วยรหัสพนักงาน + ชื่อ-นามสกุล ใช้งานระบบได้แล้ว ไม่ต้องกดอนุมัติ',
+            size: 'xs', color: c.subtle, margin: 'md', wrap: true },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * คนที่เพิ่งเพิ่มเพื่อน OA ได้ flex: บอกว่าต้องผูกบัญชีก่อน + ปุ่มพาไปหน้าผูกเลย
+ * ⭐ นี่คือจุดที่ถูกที่สุดในการบอกวิธี — ยิงเองอัตโนมัติตอนสแกน QR เพิ่มเพื่อน
+ *    ไม่ต้องให้ HR ส่งอะไรตามหลัง
+ */
+function buildWelcomeClaimCard(liffClaimUrl) {
+  const c = flexColors_();
+  return {
+    type: 'flex', altText: 'ยินดีต้อนรับ — ผูกบัญชีเพื่อเริ่มใช้ระบบลางาน',
+    contents: {
+      type: 'bubble', size: 'mega',
+      header: flexHeader_('ยินดีต้อนรับสู่ระบบลางาน'),
+      body: {
+        type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          { type: 'text', text: 'อีก 1 ขั้นตอนก่อนเริ่มใช้งาน', size: 'md', weight: 'bold',
+            color: c.text, wrap: true },
+          { type: 'text', text: 'กดปุ่มด้านล่าง แล้วกรอก 2 อย่าง', size: 'sm', color: c.subtle,
+            margin: 'md', wrap: true },
+          flexKV_('1', 'รหัสพนักงานของคุณ'),
+          flexKV_('2', 'ชื่อ-นามสกุล'),
+          flexSeparator_(),
+          { type: 'text', text: 'ทำครั้งเดียวจบ หลังจากนี้กดเมนูด้านล่างส่งใบลาได้เลย',
+            size: 'xs', color: c.subtle, margin: 'md', wrap: true },
+          { type: 'text', text: 'ถ้าผูกไม่ได้ กรุณาติดต่อฝ่ายบุคคล',
+            size: 'xs', color: c.subtle, margin: 'sm', wrap: true },
+        ],
+      },
+      footer: flexFooter_([
+        btnUri_('ผูกบัญชีของฉัน', liffClaimUrl || 'https://line.me'),
+      ]),
+    },
+  };
+}

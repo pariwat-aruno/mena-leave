@@ -52,6 +52,7 @@ mena-leave/
 │   ├── WebApp.gs           # doGet/doPost router + handleLineEvent_
 │   ├── Pairing.gs          # 6-digit code + invite message (4-role foundation)
 │   ├── Register.gs         # Visitor → User flow + HR approve
+│   ├── Claim.gs            # พนักงานในทะเบียนผูกบัญชีเอง (รหัสพนักงาน + ชื่อ)
 │   ├── Supervisor.gs       # HR pair supervisor ↔ subordinate
 │   ├── LeaveRequest.gs     # ส่งใบลา + validate quota
 │   ├── Approval.gs         # 3-stage approval flow
@@ -72,14 +73,17 @@ mena-leave/
 │   ├── img/logo.jpg
 │   ├── myid.html           # show LINE userId (I-001 — Visitor first stop)
 │   ├── register.html       # USER ลงทะเบียน (Visitor → pending)
+│   ├── claim.html          # ผูกบัญชีเข้าทะเบียนที่นำเข้ามาแล้ว (+ ทางสำรองรหัส 6 หลัก)
 │   ├── request.html        # USER ส่งใบลา + ดูเงื่อนไข
 │   ├── my-requests.html    # USER ดูประวัติ
 │   ├── approve.html        # หัวหน้างาน + ADMIN + OWNER ใช้ร่วม (stage-aware)
 │   ├── admin.html          # ADMIN/OWNER LIFF — onboard + supervisor + quota + rules
 │   ├── manual.html         # คู่มือ User (I-021)
 │   └── manual-admin.html   # คู่มือ Admin/Owner (I-021)
-└── scripts/
-    └── setup_rich_menu.py  # generate image + upload via LINE API
+├── scripts/
+│   ├── setup_rich_menu.py  # generate image + upload via LINE API
+│   └── make_onboarding_poster.py  # รูป QR + ขั้นตอน สำหรับพาพนักงานเข้าระบบ
+└── docs/onboarding/        # โปสเตอร์ + คู่มือฝ่ายบุคคลตอนพาเข้าทั้งบริษัท
 ```
 
 ---
@@ -266,6 +270,8 @@ USER submit
 | Drive URL `/file/d/.../view` แสดง HTML viewer | Drive default URL | แปลง → `https://drive.google.com/thumbnail?id=ID&sz=w800` |
 | iOS file input บางครั้ง show gallery แม้ใส่ `capture` | browser ignore hint | (ตั้งใจให้เลือก gallery ได้สำหรับ leave attachment) |
 | `clasp push` รายงานสำเร็จแต่ server มีไฟล์ไม่ครบ | OAuth expired silently | `clasp login` ใหม่ + force push |
+| วาดรูปภาษาไทยด้วย PIL แล้วสระ/วรรณยุกต์เป็นวงกลมจุดไข่ปลา | PIL บนเครื่องนี้ไม่มี Raqm (ตัวจัดวางอักษร) | เรนเดอร์ผ่าน Chrome headless แทน (`make_onboarding_poster.py`) |
+| ทุกหน้าไม่ขึ้นโลโก้เงียบ ๆ | ไฟล์ชื่อ `logo.svg.jpg` แต่โค้ดอ้าง `logo.jpg` + มี `onerror` ซ่อนให้ | คัดลอกเป็น `liff/img/logo.jpg` |
 
 ---
 

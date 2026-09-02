@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ผูกบัญชี — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">ผูกบัญชีของฉัน</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <!-- ผูกแล้ว / รออนุมัติ / ถูกปิด -->
+    <div id="state-done" class="hidden">
+      <div class="alert success" id="done-msg">ผูกบัญชีเรียบร้อย</div>
+      <div id="done-card" class="card soft mb-2"></div>
+      <a class="btn primary block" href="./request.html">ส่งใบลา</a>
+      <a class="btn secondary block mt-1" href="./my-requests.html">ใบลาของฉัน</a>
+    </div>
+
+    <div id="state-pending" class="hidden">
+      <div class="alert info">ส่งข้อมูลแล้ว รอฝ่ายบุคคลอนุมัติ</div>
+      <p class="subtle">เมื่ออนุมัติแล้ว ระบบจะส่งข้อความแจ้งคุณผ่าน LINE</p>
+    </div>
+
+    <div id="state-inactive" class="hidden">
+      <div class="alert error">บัญชีของคุณถูกปิดการใช้งาน กรุณาติดต่อฝ่ายบุคคล</div>
+    </div>
+
+    <!-- ฟอร์มผูกบัญชี -->
+    <div id="state-form" class="hidden">
+      <div class="card soft mb-2">
+        <p class="text-center" style="margin:0">
+          กรอก 2 อย่างเพื่อเริ่มใช้งาน<br>
+          <span class="subtle">ทำครั้งเดียว ไม่ต้องทำอีก</span>
+        </p>
+      </div>
+
+      <div id="alert-msg" class="hidden"></div>
+
+      <form id="claim-form">
+        <div class="form-group">
+          <label>รหัสพนักงาน <span class="required">*</span></label>
+          <input type="text" name="emp_code" required maxlength="20" autocomplete="off" placeholder="เช่น 6818">
+          <div class="hint">รหัสประจำตัวพนักงานของบริษัท ถ้าไม่แน่ใจให้ถามฝ่ายบุคคล</div>
+        </div>
+
+        <div class="form-group">
+          <label>ชื่อ-นามสกุล <span class="required">*</span></label>
+          <input type="text" name="full_name" required maxlength="100" autocomplete="off" placeholder="เช่น สมชาย ใจดี">
+          <div class="hint">ชื่อจริงตามทะเบียนพนักงาน ไม่ต้องใส่คำนำหน้าก็ได้</div>
+        </div>
+
+        <button type="submit" class="btn primary block" id="btn-submit">ผูกบัญชี</button>
+      </form>
+
+      <!-- ทางสำรอง: รหัสจับคู่ 6 หลักจากฝ่ายบุคคล -->
+      <div class="accordion mt-2">
+        <div class="accordion-header">ผูกไม่ได้ / ได้รับรหัส 6 หลักจากฝ่ายบุคคล</div>
+        <div class="accordion-body">
+          <p class="subtle">
+            ถ้าชื่อในทะเบียนสะกดไม่ตรงกับที่กรอก ให้ติดต่อฝ่ายบุคคลขอ "รหัสจับคู่" 6 หลัก
+            แล้วนำมากรอกที่นี่ (รหัสมีอายุ 24 ชั่วโมง)
+          </p>
+          <div id="alert-code" class="hidden"></div>
+          <form id="code-form">
+            <div class="form-group">
+              <label>รหัสจับคู่ 6 หลัก</label>
+              <input type="tel" name="code" maxlength="6" inputmode="numeric" pattern="[0-9]*"
+                     autocomplete="one-time-code" placeholder="000000">
+            </div>
+            <button type="submit" class="btn secondary block" id="btn-code">ใช้รหัสจับคู่</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => $(id).classList.remove('hidden');
+  const hide = (id) => $(id).classList.add('hidden');
+
+  try { await window.auth.init(); }
+  catch (err) {
+    $('loading').innerHTML = '<div class="alert error">เปิดผ่านแอป LINE เท่านั้น (' + err.message + ')</div>';
+    return;
+  }
+
+  /** แสดงผลตามสถานะที่ backend ตอบกลับมา */
+  function renderStatus(status, user) {
+    hide('state-form'); hide('state-done'); hide('state-pending'); hide('state-inactive');
+    if (status === 'active') {
+      $('done-card').innerHTML = user ?
+        ('<div class="card-row"><span class="label">ชื่อ</span><span class="value">' +
+           window.utils.escapeHtml(user.display_name || '-') + '</span></div>' +
+         '<div class="card-row"><span class="label">รหัสพนักงาน</span><span class="value">' +
+           window.utils.escapeHtml(String(user.emp_code || '-')) + '</span></div>' +
+         '<div class="card-row"><span class="label">แผนก</span><span class="value">' +
+           window.utils.escapeHtml(user.department || '-') + '</span></div>') : '';
+      show('state-done');
+      return;
+    }
+    if (status === 'pending') { show('state-pending'); return; }
+    if (status === 'inactive') { show('state-inactive'); return; }
+    show('state-form');
+  }
+
+  // accordion (ทางสำรองรหัส 6 หลัก) — เขียนเองสั้น ๆ แทนการโหลด manual.js ทั้งไฟล์
+  document.querySelectorAll('.accordion-header').forEach((h) => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+  });
+
+  const res = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  hide('loading');
+  renderStatus(res.ok ? res.status : 'visitor', res.user);
+
+  // ---------- ผูกด้วยรหัสพนักงาน + ชื่อ ----------
+  $('claim-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    window.utils.clearAlert('#alert-msg');
+    const form = e.target;
+    const btn = $('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'กำลังผูกบัญชี...';
+
+    const r = await window.api.post('claimMyAccount', {
+      lineUserId: window.state.lineUserId,
+      displayName: window.state.displayName || '',
+      emp_code: form.emp_code.value.trim(),
+      full_name: form.full_name.value.trim(),
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'ผูกบัญชี';
+
+    if (!r.ok) {
+      window.utils.showAlert('#alert-msg', r.message || ('ผิดพลาด: ' + r.error), 'error');
+      return;
+    }
+    $('done-msg').textContent = r.message || 'ผูกบัญชีเรียบร้อย';
+    renderStatus(r.status, r.user);
+    window.utils.showToast('ผูกบัญชีเรียบร้อย');
+  });
+
+  // ---------- ทางสำรอง: รหัสจับคู่ 6 หลัก ----------
+  $('code-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    window.utils.clearAlert('#alert-code');
+    const form = e.target;
+    const code = form.code.value.trim();
+    if (!/^[0-9]{6}$/.test(code)) {
+      window.utils.showAlert('#alert-code', 'รหัสจับคู่ต้องเป็นตัวเลข 6 หลัก', 'error');
+      return;
+    }
+    const btn = $('btn-code');
+    btn.disabled = true;
+    btn.textContent = 'กำลังตรวจรหัส...';
+
+    const r = await window.api.post('redeemPairingCode', {
+      code: code,
+      lineUserId: window.state.lineUserId,
+      displayName: window.state.displayName || '',
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'ใช้รหัสจับคู่';
+
+    if (!r.ok) {
+      // แปล error code ของ backend เป็นภาษาคน — ไม่งั้นพนักงานเห็น "code_expired" แล้วไม่รู้ต้องทำอะไร
+      const MSG = {
+        code_not_found: 'ไม่พบรหัสนี้ กรุณาตรวจตัวเลขอีกครั้ง',
+        code_expired:   'รหัสหมดอายุแล้ว กรุณาขอรหัสใหม่จากฝ่ายบุคคล',
+        code_redeemed:  'รหัสนี้ถูกใช้ไปแล้ว กรุณาขอรหัสใหม่จากฝ่ายบุคคล',
+        code_revoked:   'รหัสนี้ถูกยกเลิกแล้ว กรุณาขอรหัสใหม่จากฝ่ายบุคคล',
+        user_not_found: 'ไม่พบข้อมูลพนักงานของรหัสนี้ กรุณาติดต่อฝ่ายบุคคล',
+      };
+      window.utils.showAlert('#alert-code', MSG[r.error] || (r.message || ('ผิดพลาด: ' + r.error)), 'error');
+      return;
+    }
+    // redeem แล้วสถานะเป็น pending — ต้องให้ฝ่ายบุคคลกดอนุมัติอีกที
+    renderStatus((r.user && r.user.status) || 'pending', r.user);
+    window.utils.showToast('ใช้รหัสเรียบร้อย');
+  });
+})();
+</script>
+</body>
+</html>

@@ -68,6 +68,9 @@ function routeAction_(action, payload) {
     'approveRegister':         function (p) { return approveRegister(p); },
     'rejectRegister':          function (p) { return rejectRegister(p); },
 
+    // พนักงานที่มีชื่อในทะเบียนอยู่แล้ว ผูกบัญชีไลน์เอง (รหัสพนักงาน + ชื่อ-นามสกุล)
+    'claimMyAccount':          function (p) { return claimMyAccount(p); },
+
     // pairing (used when ADMIN invites — Visitor redeems via myid/register)
     'redeemPairingCode':       function (p) { return redeemPairingCode(p.code, p.lineUserId, p.displayName); },
 
@@ -135,11 +138,18 @@ function handleLineEvent_(ev) {
   if (type === 'postback') {
     handlePostback_(ev);
   } else if (type === 'follow') {
-    // welcome message (optional)
+    // ⭐ จุดที่ถูกที่สุดในการบอกวิธีผูกบัญชี — ยิงเองตอนพนักงานสแกน QR เพิ่มเพื่อน
+    //    ไม่ต้องให้ HR ส่งข้อความตามหลังทีละคน
     if (ev.replyToken) {
-      replyText(ev.replyToken,
-        'ยินดีต้อนรับสู่ระบบลางาน MENA COSMETICS\n' +
-        'กดเมนู "ส่งใบลา" เพื่อเริ่มใช้งาน หรือ "คู่มือ" เพื่อดูวิธีใช้');
+      try {
+        replyMessage(ev.replyToken, buildWelcomeClaimCard(getLiffPageUrl('claim')));
+      } catch (e) {
+        // การ์ดส่งไม่ได้ก็ต้องไม่เงียบ — อย่างน้อยต้องได้ข้อความบอกทาง
+        logWarn('handleLineEvent_', 'ส่งการ์ดต้อนรับไม่สำเร็จ: ' + e.message);
+        replyText(ev.replyToken,
+          'ยินดีต้อนรับสู่ระบบลางาน MENA COSMETICS\n' +
+          'กดเมนู "ส่งใบลา" ด้านล่าง แล้วกรอกรหัสพนักงานกับชื่อ-นามสกุลเพื่อผูกบัญชีก่อนใช้งาน');
+      }
     }
   } else if (type === 'message' && ev.message && ev.message.type === 'text') {
     const text = ev.message.text || '';

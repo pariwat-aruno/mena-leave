@@ -34,6 +34,20 @@ function submitRegister(payload) {
     }
   }
 
+  // ⭐ กันแถวซ้ำ: รหัสพนักงานที่กรอกมามีอยู่ในทะเบียนแล้ว = คนนี้ถูกนำเข้ามาแล้ว
+  //    ห้ามสร้างแถวใหม่ทับ ไม่งั้นได้พนักงานคนเดียว 2 แถว (แถวจริงมีสายอนุมัติ/ระดับ แถวใหม่ไม่มี)
+  //    ให้ไปผูกบัญชีที่หน้า claim.html แทน
+  const dupe = findUserByEmpCode_(payload.emp_code);
+  if (dupe) {
+    if (dupe.line_user_id) {
+      return { ok: false, error: 'emp_code_taken',
+               message: 'รหัสพนักงานนี้ถูกผูกกับบัญชีไลน์อื่นไปแล้ว กรุณาติดต่อฝ่ายบุคคล' };
+    }
+    return { ok: false, error: 'emp_code_exists',
+             message: 'คุณมีชื่ออยู่ในทะเบียนพนักงานแล้ว กรุณาผูกบัญชีที่หน้า "ผูกบัญชีของฉัน" ' +
+                      'โดยกรอกรหัสพนักงานกับชื่อ-นามสกุล' };
+  }
+
   // create new Users row
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');

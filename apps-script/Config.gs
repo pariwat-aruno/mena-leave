@@ -269,6 +269,37 @@ function findUserByUserId_(userId) {
   return null;
 }
 
+/**
+ * หา user จาก emp_code (normalize เป็นสตริงเสมอ — Sheet เก็บ 6818 เป็นตัวเลข)
+ * ⭐ รหัสพนักงานซ้ำกันได้จริงในระบบนี้ (แถว HR ใช้ emp_code เดียวกัน 3 แถว)
+ *    คืนแถวที่ "ยังไม่ผูกไลน์" ก่อนเสมอ เพื่อให้ผู้เรียกแยกออกว่าเหลือที่ว่างให้ผูกไหม
+ */
+function findUserByEmpCode_(empCode) {
+  const code = normEmpCode_(empCode);
+  if (!code) return null;
+
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');
+  const last = sh.getLastRow();
+  if (last < 2) return null;
+
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const iCode = headers.indexOf('emp_code');
+  const iLine = headers.indexOf('line_user_id');
+  const data = sh.getRange(2, 1, last - 1, sh.getLastColumn()).getValues();
+
+  let first = null;
+  for (let i = 0; i < data.length; i++) {
+    if (normEmpCode_(data[i][iCode]) !== code) continue;
+    const row = {};
+    headers.forEach(function (h, j) { row[h] = data[i][j]; });
+    row._rowNumber = i + 2;
+    if (!data[i][iLine]) return row;   // แถวว่างที่ผูกได้ — คืนทันที
+    if (!first) first = row;
+  }
+  return first;
+}
+
 /** label ของ role ใน UI — รองรับ override ผ่าน Settings */
 function getRoleLabelTh(role, opts) {
   // opts.isSupervisor = TRUE → "หัวหน้างาน" (override สำหรับ USER)

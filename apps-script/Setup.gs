@@ -107,6 +107,8 @@ const SETTINGS_DEFAULTS = [
   ['default_vacation_total',        '10',               'โควตา vacation เริ่มต้น'],
   ['count_weekends_as_leave',       'FALSE',            'นับ ส-อา เป็นวันลาไหม'],
   ['pairing_code_ttl_hours',        '24',               'อายุ pairing code (ชม.)'],
+  // พาพนักงานเข้าระบบครบแล้วให้ตั้งเป็น FALSE — กันคนนอกเดารหัสพนักงาน+ชื่อมาผูกทีหลัง
+  ['self_claim_enabled',            'TRUE',             'ให้พนักงานผูกบัญชีเองด้วยรหัสพนักงาน+ชื่อ'],
   ['quota_reset_month',             '1',                'เดือนรีเซ็ตโควตา (1=ม.ค.)'],
   ['quota_reset_day',               '1',                'วันรีเซ็ตโควตา'],
   ['gps_required',                  'TRUE',             'บังคับ GPS ตอน submit'],
