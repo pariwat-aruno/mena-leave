@@ -21,3 +21,6 @@ scripts/import.local.json
 *.xlsx
 *.xls
 *.csv
+
+# ใบส่งอัปเดตลูกค้ามีชื่อผู้บริหาร/พนักงาน — repo นี้ public ห้าม commit (เก็บในเครื่อง + artifact + Desktop)
+docs/updates/
