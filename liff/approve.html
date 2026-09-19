@@ -26,6 +26,7 @@
 
     <div id="content" class="hidden">
       <div id="my-role" class="card soft mb-2"></div>
+      <div id="target-note" class="alert info mb-2 hidden"></div>
       <div id="list"></div>
     </div>
 
@@ -91,13 +92,70 @@ let CURRENT_STAGE = 0;
   await loadList();
 })();
 
+/** ใบที่เปิดมาจากปุ่มในการ์ดไลน์ (?id=) */
+function targetLeaveId() {
+  const q = new URLSearchParams(location.search);
+  return q.get('id') ||
+    new URLSearchParams((q.get('liff.state') || '').replace(/^[^?]*\?/, '')).get('id') || '';
+}
+
 async function loadList() {
-  const r = await window.api.post('getPendingForMe', { lineUserId: window.state.lineUserId });
   const list = document.getElementById('list');
+  let r = await window.api.post('getPendingForMe', { lineUserId: window.state.lineUserId });
+  // เน็ตในไลน์สะดุดบ่อย — ลองใหม่ให้เองหนึ่งครั้งก่อนบอกว่าพัง
+  if (!r.ok && (r.error === 'network_error' || r.error === 'invalid_response')) {
+    await new Promise(res => setTimeout(res, 1500));
+    r = await window.api.post('getPendingForMe', { lineUserId: window.state.lineUserId });
+  }
   if (!r.ok) {
-    list.innerHTML = '<div class="alert error">โหลดรายการไม่สำเร็จ</div>';
+    list.innerHTML = '<div class="alert error">โหลดรายการไม่สำเร็จ — สัญญาณอินเทอร์เน็ตอาจสะดุด</div>' +
+      '<button class="btn primary block mt-1" id="btn-retry-list">ลองอีกครั้ง</button>';
+    document.getElementById('btn-retry-list').onclick = () => {
+      list.innerHTML = '<div class="loader"><div class="spinner"></div>กำลังโหลด...</div>';
+      loadList();
+    };
     return;
   }
+  // ใช้ ?id= แค่ครั้งแรก — กดตัดสินแล้วโหลดรายการใหม่ จะได้ไม่เด้งกล่องเดิมซ้ำ
+  const wantId = window._idConsumed ? '' : targetLeaveId();
+  window._idConsumed = true;
+  if (wantId) {
+    const idx = r.pending.findIndex(p => p.leave_id === wantId);
+    if (idx >= 0) {
+      window._pending = r.pending;
+      renderPending(r.pending);
+      openDecision(idx);
+      return;
+    }
+    // ใบจากการ์ดไม่อยู่ในมือเราแล้ว — บอกเหตุผล ไม่ปล่อยให้เจอหน้าว่างแล้วงง
+    await explainNotMine(wantId);
+  }
+  renderPending(r.pending);
+}
+
+async function explainNotMine(leaveId) {
+  const box = document.getElementById('target-note');
+  const one = await window.api.post('getOneRequest', { lineUserId: window.state.lineUserId, leave_id: leaveId });
+  let msg = 'ใบลา ' + leaveId + ' ไม่ได้รอคุณตัดสินแล้ว';
+  if (one.ok && one.leave) {
+    const l = one.leave;
+    const status = window.STATUS_LABELS[l.final_status] || l.final_status;
+    if (l.final_status !== 'pending') {
+      msg = 'ใบลา ' + leaveId + ' ตัดสินไปแล้ว — สถานะ: ' + status;
+      const last = [3, 2, 1].map(n => ({ n, st: l['stage' + n + '_status'], at: l['stage' + n + '_at'], note: l['stage' + n + '_note'] }))
+        .find(x => x.st === 'approved' || x.st === 'rejected');
+      if (last && last.at) msg += ' (เมื่อ ' + window.utils.formatThaiDateTime(last.at) + ')';
+    } else {
+      msg = 'ใบลา ' + leaveId + ' ยังรออยู่ แต่ตอนนี้อยู่ที่ผู้อนุมัติชั้นอื่น ไม่ใช่คุณ';
+    }
+  }
+  box.textContent = msg;
+  box.classList.remove('hidden');
+}
+
+function renderPending(pending) {
+  const r = { pending: pending };
+  const list = document.getElementById('list');
   if (!r.pending.length) {
     list.innerHTML = '<div class="empty"><div class="icon">✓</div>ไม่มีรายการรออนุมัติ</div>';
     return;

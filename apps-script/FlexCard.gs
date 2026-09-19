@@ -364,7 +364,7 @@ function buildApprovalRequestCard(leave, requester, stage, opts) {
         btnPrimary_(isCancel ? '✅ อนุมัติให้ยกเลิก' : '✅ อนุมัติ',
           'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) +
           '&stage=' + stage + '&decision=approve'),
-        btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve')),
+        btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve') + '?id=' + encodeURIComponent(leave.leave_id)),
       ]),
     },
   };
@@ -724,7 +724,7 @@ function buildReminderCard(leave, requester, stage, count, quietHours, opts) {
         btnPrimary_('✅ อนุมัติ',
           'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) +
           '&stage=' + stage + '&decision=approve'),
-        btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve')),
+        btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve') + '?id=' + encodeURIComponent(leave.leave_id)),
       ]),
     },
   };
@@ -948,7 +948,7 @@ function buildDocAddedCard(leave, requester, url, wasRequested, note) {
   const c = flexColors_();
   const pending = leave.final_status === 'pending';
   const buttons = [btnUri_('ดูเอกสาร', url)];
-  if (pending) buttons.unshift(btnUri_('เปิดหน้าอนุมัติ', getLiffPageUrl('approve')));
+  if (pending) buttons.unshift(btnUri_('เปิดหน้าอนุมัติ', getLiffPageUrl('approve') + '?id=' + encodeURIComponent(leave.leave_id)));
   return {
     type: 'flex', altText: 'ผู้ลาแนบเอกสารเพิ่มแล้ว ใบลา ' + leave.leave_id,
     contents: {
