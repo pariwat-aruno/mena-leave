@@ -323,5 +323,12 @@ check('หัวหน้าใหม่ไม่ใช่ผู้บริห�
 const d10 = decide('Usup', r10.leave_id, 1, 'approve');
 check('หัวหน้าใหม่อนุมัติได้ → ไป HR', d10.ok && d10.moved_to_stage === 2, d10);
 
+console.log('\n=== 11) ปุ่มไม่อนุมัติในการ์ดต้องเปิดใบนั้นตรง (ลูกค้าแจ้ง: กดแล้วไม่มีช่องเหตุผล) ===');
+const lv11 = row(r10.leave_id);
+const reqCard = JSON.stringify(sandbox.buildApprovalRequestCard(lv11, { display_name: 'x' }, 1));
+check('การ์ดขออนุมัติ: ลิงก์ไม่อนุมัติมี ?id=เลขใบ', reqCard.includes('approve.html?id=' + r10.leave_id), reqCard.match(/approve\.html[^"]*/));
+const remCard = JSON.stringify(sandbox.buildReminderCard(lv11, { display_name: 'x' }, 2, 1, 4));
+check('การ์ดเตือน: ลิงก์ไม่อนุมัติมี ?id=เลขใบ', remCard.includes('approve.html?id=' + r10.leave_id), remCard.match(/approve\.html[^"]*/));
+
 console.log(fails ? '\nตก ' + fails + ' ข้อ' : '\nผ่านทุกข้อ');
 process.exit(fails ? 1 : 0);
