@@ -37,12 +37,14 @@
         <div id="decision-body"></div>
 
         <div class="form-group mt-2">
-          <label>หมายเหตุ <span class="subtle">(ถ้าไม่อนุมัติ ต้องระบุเหตุผล)</span></label>
-          <textarea id="decision-note" maxlength="200" placeholder="เช่น อนุมัติ / ขอเอกสารเพิ่ม / ไม่อนุมัติเพราะ..."></textarea>
+          <label>หมายเหตุ <span class="subtle">(ไม่อนุมัติ / ขอเอกสารเพิ่ม ต้องระบุ)</span></label>
+          <textarea id="decision-note" maxlength="200" placeholder="เช่น ขอใบรับรองแพทย์ฉบับจริง / ไม่อนุมัติเพราะ..."></textarea>
         </div>
 
         <div id="decision-alert" class="hidden"></div>
 
+        <!-- ขอเอกสารเพิ่ม = ใบยังค้างชั้นนี้ ส่งเรื่องกลับให้ผู้ลาแนบ แล้วกลับมาที่คุณ -->
+        <button class="btn secondary block mt-1" id="btn-request-doc">ขอเอกสารเพิ่มจากผู้ลา</button>
         <div class="btn-row">
           <button class="btn danger" id="btn-reject">❌ ไม่อนุมัติ</button>
           <button class="btn primary" id="btn-approve">✅ อนุมัติ</button>
@@ -102,7 +104,9 @@ async function loadList() {
   }
   list.innerHTML = '<h2 class="section-title">มี ' + r.pending.length + ' รายการรออนุมัติ</h2>' +
     r.pending.map((p, i) => {
-      const stageLabel = ({ 1: 'ชั้น 1 (หัวหน้างาน)', 2: 'ชั้น 2 (HR)', 3: 'ชั้น 3 (ผู้บริหาร)' })[p.my_stage];
+      const stageLabel = p.hr_fallback ? 'ชั้น 3 (HR แทนผู้บริหาร)'
+        : p.owner_first ? 'ชั้น 1 (ผู้บริหาร)'
+        : ({ 1: 'ชั้น 1 (หัวหน้างาน)', 2: 'ชั้น 2 (HR)', 3: 'ชั้น 3 (ผู้บริหาร)' })[p.my_stage];
       const isCancel = p.record_type === 'cancel';
       return '<div class="card mb-1">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
@@ -122,10 +126,23 @@ async function loadList() {
         (Number(p.reminder_count) > 0
           ? '<div class="alert error mt-1">ใบนี้ถูกเตือนไปแล้ว ' + Number(p.reminder_count) + ' ครั้ง</div>'
           : '') +
+        (p.hr_fallback
+          ? '<div class="alert warning mt-1"><strong>HR ตัดสินแทนผู้บริหารได้</strong><div>' +
+            window.utils.escapeHtml(p.hr_fallback_reason || '') + '</div></div>'
+          : '') +
+        (p.doc_request_status === 'requested'
+          ? '<div class="alert info mt-1"><strong>รอผู้ลาแนบเอกสารเพิ่ม</strong><div>ขอไว้ว่า: ' +
+            window.utils.escapeHtml(p.doc_request_note || '-') + '</div></div>'
+          : p.doc_request_status === 'submitted'
+          ? '<div class="alert success mt-1"><strong>ผู้ลาแนบเอกสารที่ขอแล้ว</strong></div>'
+          : '') +
+        (p.doc_pending
+          ? '<div class="alert warning mt-1">ยังไม่มีใบรับรองแพทย์ — ผู้ลาจะแนบตามมาภายหลัง</div>'
+          : '') +
         '<div class="card-row mt-1"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + (p.is_retroactive && !isCancel ? ' (ย้อนหลัง)' : '') + '</span></div>' +
-        '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + ' (' + p.days + ' วัน)</span></div>' +
+        '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + (p.date_from === p.date_to ? '' : ' - ' + window.utils.formatThaiDateShort(p.date_to)) + ' (' + window.utils.escapeHtml(p.amount_text || (p.days + ' วัน')) + ')</span></div>' +
         '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>' +
-        (p.attachment_url ? '<div class="text-center mt-1"><a class="btn ghost sm" target="_blank" href="' + p.attachment_url + '">ดูไฟล์แนบ</a></div>' : '') +
+        attachmentLinks(p) +
         // ใบขอยกเลิกไม่ได้เก็บพิกัด — ไม่ต้องขึ้นธง "ไม่มีพิกัดยืนยัน" ให้เข้าใจผิด
         (isCancel ? ''
         : p.gps_lat
@@ -140,6 +157,20 @@ async function loadList() {
     }).join('');
 
   window._pending = r.pending;
+}
+
+/** ลิงก์ไฟล์แนบตอนส่ง + ที่แนบเพิ่มทีหลัง */
+function attachmentLinks(p) {
+  const links = [];
+  if (p.attachment_url) links.push({ url: p.attachment_url, label: 'ไฟล์แนบตอนส่ง' });
+  (p.extra_attachments || []).forEach((a, i) => {
+    links.push({ url: a.url, label: 'แนบเพิ่ม ' + (i + 1) + (a.at ? ' · ' + window.utils.formatThaiDateTime(a.at) : '') +
+      (a.note ? ' · ' + a.note : '') });
+  });
+  if (!links.length) return '';
+  return '<div class="mt-1">' + links.map(l =>
+    '<a class="btn ghost sm block mt-1" style="min-height:44px;display:flex;align-items:center;justify-content:center" target="_blank" rel="noopener" href="' + window.utils.escapeHtml(l.url) + '">' +
+    window.utils.escapeHtml(l.label) + '</a>').join('') + '</div>';
 }
 
 function openDecision(idx) {
@@ -157,7 +188,7 @@ function openDecision(idx) {
     '<div class="card-row"><span class="label">เลขที่</span><span class="value">' + p.leave_id + '</span></div>' +
     '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[p.leave_type] || p.leave_type) + '</span></div>' +
     '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + '</span></div>' +
-    '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + p.days + ' วัน</span></div>' +
+    '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + window.utils.escapeHtml(p.amount_text || (p.days + ' วัน')) + '</span></div>' +
     '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>';
   document.getElementById('decision-note').value = '';
   window.utils.clearAlert('#decision-alert');
@@ -178,10 +209,16 @@ async function decide(decision) {
     document.getElementById('decision-note').focus();
     return;
   }
+  if (decision === 'request_doc' && note.length < 3) {
+    window.utils.showAlert('#decision-alert', 'กรุณาพิมพ์ในช่องหมายเหตุว่าต้องการเอกสารอะไร เช่น ใบรับรองแพทย์', 'error');
+    document.getElementById('decision-note').focus();
+    return;
+  }
 
   const btn1 = document.getElementById('btn-approve');
   const btn2 = document.getElementById('btn-reject');
-  btn1.disabled = true; btn2.disabled = true;
+  const btn3 = document.getElementById('btn-request-doc');
+  btn1.disabled = true; btn2.disabled = true; btn3.disabled = true;
 
   const r = await window.api.post('approveLeave', {
     lineUserId: window.state.lineUserId,
@@ -191,19 +228,24 @@ async function decide(decision) {
     note: note,
   });
 
-  btn1.disabled = false; btn2.disabled = false;
+  btn1.disabled = false; btn2.disabled = false; btn3.disabled = false;
 
   if (!r.ok) {
-    window.utils.showAlert('#decision-alert', r.message || ('ผิดพลาด: ' + r.error), 'error');
+    window.utils.showAlert('#decision-alert', r.message || 'ทำรายการไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
     return;
   }
-  window.utils.showToast(decision === 'approve' ? 'อนุมัติเรียบร้อย' : 'ปฏิเสธเรียบร้อย');
+  window.utils.showToast(
+    decision === 'approve' ? 'อนุมัติเรียบร้อย'
+    : decision === 'reject' ? 'ปฏิเสธเรียบร้อย'
+    : r.delivered_to_requester ? 'ส่งคำขอเอกสารถึงผู้ลาแล้ว'
+    : 'บันทึกคำขอแล้ว แต่ผู้ลายังไม่ผูกไลน์ — HR ได้รับแจ้งให้ติดต่อผู้ลา');
   document.getElementById('decision-overlay').classList.add('hidden');
   await loadList();
 }
 
 document.getElementById('btn-approve').onclick = () => decide('approve');
 document.getElementById('btn-reject').onclick = () => decide('reject');
+document.getElementById('btn-request-doc').onclick = () => decide('request_doc');
 </script>
 </body>
 </html>

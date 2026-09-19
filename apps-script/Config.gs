@@ -194,12 +194,17 @@ function readSheetSettings_(sheetId) {
   const result = {};
   if (last >= 2) {
     const data = sh.getRange(2, 1, last - 1, 2).getValues();
-    data.forEach(function (row) {
+    // ⭐ เซลล์เวลา (ชีตแปลง "13:00" เป็นเวลา) ต้องอ่านจาก "ข้อความที่แสดง"
+    //    formatDate ของ Date ปี 1899 ในเขตเวลาไทยใช้ offset ยุคนั้น (+6:42) → 13:00 กลายเป็น 12:42
+    const shown = sh.getRange(2, 2, last - 1, 1).getDisplayValues();
+    data.forEach(function (row, i) {
       const k = row[0];
       let v = row[1];
       if (!k) return;
-      // Sheets auto-convert "08:00" → Date — format กลับ
-      if (v instanceof Date) {
+      const m = String((shown[i] && shown[i][0]) || '').match(/(\d{1,2}):(\d{2})/);
+      if (v instanceof Date && m) {
+        v = padLeft_(Number(m[1]), 2) + ':' + m[2];
+      } else if (v instanceof Date) {
         v = Utilities.formatDate(v, 'Asia/Bangkok', 'HH:mm');
       } else if (typeof v === 'string' && !isNaN(parseFloat(v)) && isFinite(v)) {
         v = Number(v);

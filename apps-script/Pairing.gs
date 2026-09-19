@@ -137,7 +137,10 @@ function redeemPairingCode(code, lineUserId, displayName) {
   usersSh.getRange(user._rowNumber, uILine + 1).setValue(lineUserId);
   if (displayName) usersSh.getRange(user._rowNumber, uIName + 1).setValue(displayName);
   // ⚠️ ไม่ activate ที่นี่ — Register flow ต้อง HR approve ก่อน
-  if (user.status === 'invited') {
+  // ⭐ แถวผู้บริหาร/HR → pending เสมอ (แม้แถวเดิม active) แล้วแจ้งผู้บริหารให้ยืนยัน
+  //    ไม่งั้นรหัสที่หลุดไปถึงคนอื่นเปิดบัญชีระดับสูงได้ทันที และเดิมไม่มีใครรู้ว่ามีคนรอยืนยัน
+  const privileged = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
+  if (user.status === 'invited' || privileged) {
     usersSh.getRange(user._rowNumber, uIStatus + 1).setValue('pending');
   }
 
@@ -150,6 +153,10 @@ function redeemPairingCode(code, lineUserId, displayName) {
   audit(lineUserId, 'redeem_pairing_code', 'Users', forUserId, { code: code });
 
   const updatedUser = findUserByUserId_(forUserId);
+  if (privileged) {
+    try { pushToAllOwners(buildRegisterPendingCard(updatedUser)); }
+    catch (e) { logWarn('redeemPairingCode', 'แจ้งผู้บริหารไม่สำเร็จ: ' + e.message); }
+  }
   return { ok: true, user: updatedUser };
 }
 

@@ -135,8 +135,13 @@ function requestCancelLeave(payload) {
   }
 
   const requester = findUserByUserId_(parent.user_id);
-  if (!requester) return { ok: false, error: 'requester_not_found' };
+  if (!requester) return { ok: false, error: 'requester_not_found' }
+  // ใบขอยกเลิกของผู้บริหารผ่านอัตโนมัติ — HR ยื่นแทนแล้วคืนโควตาได้ทันทีโดยไม่มีใครอนุมัติ
+  if (requester.role === ROLES.OWNER && !isOwnLeave) {
+    return { ok: false, error: 'forbidden', message: 'ขอยกเลิกวันลาของผู้บริหารได้เฉพาะผู้บริหารคนนั้นเอง' };
+  };
 
+  ensureSheetColumns_('LeaveRequests');
   const flow = computeInitialStages_(requester);
   const cancelId = nextLeaveId();
   const now = nowBangkok();
@@ -174,6 +179,11 @@ function requestCancelLeave(payload) {
     parent_leave_id: parent.leave_id,
     last_reminded_at: '',
     reminder_count: 0,
+    // ยกเลิกลาเป็นชั่วโมง — ผู้อนุมัติต้องเห็นช่วงเวลาเดิม ไม่ใช่ "0.25 วัน"
+    leave_unit: parent.leave_unit || 'day',
+    time_from: parent.time_from ? "'" + timeText_(parent.time_from) : '',
+    time_to: parent.time_to ? "'" + timeText_(parent.time_to) : '',
+    hours: parent.hours || '',
   });
 
   logInfo('requestCancelLeave', 'submitted', { cancelId: cancelId, parent: parent.leave_id });
@@ -286,7 +296,9 @@ function notifyPendingApprovers_(leave, messages) {
   } else if (leave.stage2_status === 'pending') {
     pushToAllAdmins(messages);
   } else if (leave.stage3_status === 'pending') {
-    pushToExecutivesOf_(leave.user_id, messages);
+    const res = pushToExecutivesOf_(leave.user_id, messages);
+    // ผู้บริหารในสายยังรับใบไม่ได้ → ใบอยู่ในมือ HR
+    if (res && res.hrFallback) pushToAllAdmins(messages);
   }
 }
 

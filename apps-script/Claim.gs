@@ -98,6 +98,11 @@ function claimMyAccount(payload) {
     }
     if (!matched.length) return NO_MATCH;
 
+    // แถวที่ปิดไปแล้ว (เช่นแถวซ้ำที่ HR ปิดทิ้ง) ห้ามนับ ถ้ายังมีแถวที่เปิดอยู่
+    // — ไม่งั้นคนจริงผูกไม่ได้ตลอดไปเพราะ "พบข้อมูลซ้ำ" (เคสคุณสุรศักดิ์ 19 ก.ย. 69)
+    const live = matched.filter(function (m) { return m.row[iStatus] !== 'inactive'; });
+    if (live.length) matched.splice(0, matched.length, ...live);
+
     const open = matched.filter(function (m) { return !m.row[iLine]; });
 
     if (!open.length) {
@@ -129,12 +134,19 @@ function claimMyAccount(payload) {
     // ⭐ ไม่ต้องรอ HR กดอนุมัติ เพราะแถวนี้ HR เป็นคนนำเข้าจากไฟล์ทะเบียนของบริษัทเอง
     //    ตัวที่ต้องพิสูจน์คือ "คนนี้คือเจ้าของแถว" ซึ่งพิสูจน์ด้วยรหัส+ชื่อไปแล้ว
     // ⭐ ห้ามเขียนทับ display_name ด้วยชื่อใน LINE (กติกาข้อ 5)
+    // ⭐ แถวผู้บริหาร/HR ห้ามเปิดใช้เองด้วยรหัส+ชื่อ — HR เห็นรหัสกับชื่อผู้บริหารในทะเบียนอยู่แล้ว
+    //    ถ้าเปิดทันที HR ใช้ไลน์อีกเครื่องผูกแถวผู้บริหารแล้วได้สิทธิ์ผู้บริหารทันที
+    //    → ผูกไลน์ไว้ แต่สถานะ pending จนผู้บริหารที่ใช้งานอยู่กดยืนยัน (approveRegister ฝั่งนี้ OWNER เท่านั้น)
+    const iRole = hdr.indexOf('role');
+    const privileged = [ROLES.OWNER, ROLES.ADMIN].indexOf(target.row[iRole]) >= 0;
     sh.getRange(target.rowNumber, iLine + 1).setValue(lineUserId);
-    sh.getRange(target.rowNumber, iStatus + 1).setValue('active');
+    sh.getRange(target.rowNumber, iStatus + 1).setValue(privileged ? 'pending' : 'active');
     const iApprovedAt = hdr.indexOf('approved_at');
     const iApprovedBy = hdr.indexOf('approved_by');
-    if (iApprovedAt >= 0) sh.getRange(target.rowNumber, iApprovedAt + 1).setValue(nowBangkok());
-    if (iApprovedBy >= 0) sh.getRange(target.rowNumber, iApprovedBy + 1).setValue('(self-claim)');
+    if (!privileged) {
+      if (iApprovedAt >= 0) sh.getRange(target.rowNumber, iApprovedAt + 1).setValue(nowBangkok());
+      if (iApprovedBy >= 0) sh.getRange(target.rowNumber, iApprovedBy + 1).setValue('(self-claim)');
+    }
 
     ensureQuotaRow_(targetId);
 
@@ -142,6 +154,18 @@ function claimMyAccount(payload) {
     audit(lineUserId, 'claim_account', 'Users', targetId, { emp_code: empCode });
 
     const user = findUserByUserId_(targetId);
+
+    if (privileged) {
+      logInfo('claimMyAccount', 'ผูกแถวผู้บริหาร/HR — รอผู้บริหารยืนยัน', { userId: targetId, lineUserId: lineUserId });
+      try {
+        pushToAllOwners(buildRegisterPendingCard(user));
+      } catch (e) {
+        logWarn('claimMyAccount', 'แจ้งผู้บริหารไม่สำเร็จ: ' + e.message);
+      }
+      return { ok: true, status: 'pending', user: publicUser_(user),
+               message: 'ผูกบัญชีแล้ว — บัญชีระดับ' + getRoleLabelTh(target.row[iRole]) +
+                        ' ต้องให้ผู้บริหารกดยืนยันก่อนใช้งาน ระบบแจ้งผู้บริหารให้แล้ว' };
+    }
 
     // แจ้ง HR ว่ามีคนเข้าระบบเพิ่ม — ไม่ต้องกดอะไร แค่ให้เห็นความคืบหน้าตอนพาเข้าทั้งบริษัท
     try {

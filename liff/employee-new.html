@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>สร้างพนักงานใหม่ — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+<style>
+  .btn { min-height: 44px; }
+  .form-group input, .form-group select { font-size: 16px; }
+  .summary-value { max-width: 64%; overflow-wrap: anywhere; }
+  .invite-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.65;
+    margin: 12px 0;
+  }
+  .pairing-code {
+    margin: 12px 0;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    text-align: center;
+    font: 700 34px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 8px;
+    user-select: all;
+  }
+  .section-note { margin: -4px 0 14px; }
+  .duplicate-person { border-left: 4px solid var(--brand-primary); }
+  .status-line { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">สร้างพนักงานใหม่</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-allowed" class="hidden">
+      <div class="alert error">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
+      <p class="subtle">เฉพาะ HR / ผู้บริหาร เท่านั้น</p>
+      <a class="btn primary block mt-2" href="./myid.html">กลับ</a>
+    </div>
+
+    <div id="load-error" class="hidden">
+      <div class="alert error">โหลดข้อมูลไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วเปิดหน้าใหม่</div>
+      <a class="btn ghost block mt-2" href="./employees.html">กลับหน้าฐานข้อมูลพนักงาน</a>
+    </div>
+
+    <div id="content" class="hidden">
+      <div id="form-screen">
+        <div class="card soft">
+          <strong>สร้าง 1 คน พร้อมผูกรหัส</strong>
+          <p class="subtle">ระบบจะกันรหัสพนักงานซ้ำ สร้างโควตา และเตรียมข้อความสำหรับผูกบัญชี LINE ให้ทันที</p>
+        </div>
+
+        <form id="employee-form" novalidate>
+          <h2 class="section-title">ข้อมูลพนักงาน</h2>
+
+          <div class="form-group">
+            <label for="emp-code">รหัสพนักงาน <span class="required">*</span></label>
+            <input id="emp-code" type="text" autocomplete="off" maxlength="40" required>
+          </div>
+
+          <div class="form-group">
+            <label for="display-name">ชื่อ-นามสกุล <span class="required">*</span></label>
+            <input id="display-name" type="text" autocomplete="name" maxlength="120" required>
+            <div class="hint">ใช้ชื่อจริงตามทะเบียน เพราะพนักงานต้องกรอกชื่อนี้ตอนผูกบัญชี</div>
+          </div>
+
+          <div class="form-group">
+            <label for="department">แผนก</label>
+            <select id="department">
+              <option value="">ไม่ระบุ</option>
+            </select>
+          </div>
+
+          <div class="form-group hidden" id="department-other-wrap">
+            <label for="department-other">ชื่อแผนกอื่น</label>
+            <input id="department-other" type="text" maxlength="100" autocomplete="organization-title">
+          </div>
+
+          <div class="form-group">
+            <label for="position">ตำแหน่ง</label>
+            <input id="position" type="text" maxlength="100" autocomplete="organization-title">
+          </div>
+
+          <div class="form-group">
+            <label for="phone">เบอร์โทร</label>
+            <input id="phone" type="tel" inputmode="tel" maxlength="30" autocomplete="tel">
+          </div>
+
+          <div class="form-group">
+            <label for="role">ระดับ <span class="required">*</span></label>
+            <select id="role" required></select>
+            <div class="hint" id="role-hint"></div>
+          </div>
+
+          <h2 class="section-title">สายอนุมัติ</h2>
+          <p class="subtle section-note">เว้นว่างได้ และกลับไปแก้ภายหลังที่หน้าผังอำนาจอนุมัติ</p>
+
+          <div class="form-group">
+            <label for="supervisor-search">หัวหน้างาน</label>
+            <input id="supervisor-search" type="search" list="supervisor-list"
+              placeholder="พิมพ์ชื่อหรือรหัสเพื่อค้นหา" autocomplete="off">
+            <datalist id="supervisor-list"></datalist>
+            <div class="hint">เลือกจากรายชื่อที่ระบบแนะนำ หรือเว้นว่างเพื่อให้ใบลาเข้า HR โดยตรง</div>
+          </div>
+
+          <div class="form-group">
+            <label>ผู้บริหารในสาย</label>
+            <div class="pick-list" id="executive-options"></div>
+            <div class="hint">เลือกได้หลายคน ผู้บริหารคนใดกดก่อนถือว่าจบชั้นอนุมัติ</div>
+          </div>
+
+          <div id="form-alert" class="hidden" role="alert"></div>
+
+          <button type="submit" class="btn primary block">ตรวจสอบข้อมูลก่อนสร้าง</button>
+          <a class="btn ghost block mt-1" href="./employees.html">กลับหน้าฐานข้อมูลพนักงาน</a>
+        </form>
+      </div>
+
+      <div id="preview-screen" class="hidden">
+        <h2 class="section-title">ตรวจสอบก่อนสร้าง</h2>
+        <div class="card" id="preview-summary"></div>
+        <div class="alert info">เมื่อยืนยัน ระบบจะสร้างพนักงานเพียง 1 แถว พร้อมโควตา สายอนุมัติ และรหัสจับคู่สำรอง</div>
+        <div id="submit-alert" class="hidden" role="alert"></div>
+        <div id="same-name-warning" class="hidden"></div>
+        <div id="duplicate-result" class="hidden"></div>
+        <div class="btn-row" id="preview-actions">
+          <button type="button" class="btn ghost" id="btn-edit">กลับไปแก้ไข</button>
+          <button type="button" class="btn primary" id="btn-create">ยืนยันสร้างพนักงาน</button>
+        </div>
+      </div>
+
+      <div id="result-screen" class="hidden">
+        <div class="alert success">สร้างพนักงานเรียบร้อย พร้อมนำข้อความไปส่งให้พนักงานได้เลย</div>
+        <div class="card soft" id="created-summary"></div>
+
+        <div class="card">
+          <div class="subtle">รหัสจับคู่สำรอง 6 หลัก</div>
+          <div class="pairing-code" id="pairing-code"></div>
+          <div class="subtle status-line" id="pairing-expiry"></div>
+          <pre class="invite-text" id="invite-text"></pre>
+          <button type="button" class="btn secondary block" id="btn-copy">คัดลอกข้อความเชิญ</button>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="btn-another">สร้างอีกคน</button>
+          <a class="btn ghost" href="./employees.html">กลับหน้าฐานข้อมูลพนักงาน</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+let DIR = null;
+let MY = null;
+let DRAFT = null;
+let SUBMITTING = false;
+let CONFIRM_SAME_NAME = false;
+let INVITE_TEXT = '';
+
+(async function () {
+  try {
+    await window.auth.init();
+  } catch (err) {
+    showLoadError();
+    return;
+  }
+
+  const status = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  if (!status.ok || !status.user || status.status !== 'active' ||
+      !window.hasRole(status.user.role, window.ROLES.ADMIN)) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('not-allowed').classList.remove('hidden');
+    return;
+  }
+  MY = status.user;
+
+  const directory = await window.api.post('getEmployeeDirectory', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+  if (!directory.ok) {
+    if (directory.error === 'forbidden') {
+      document.getElementById('not-allowed').classList.remove('hidden');
+    } else {
+      document.getElementById('load-error').classList.remove('hidden');
+    }
+    return;
+  }
+
+  DIR = directory;
+  setupOptions();
+  document.getElementById('content').classList.remove('hidden');
+})();
+
+function showLoadError() {
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('load-error').classList.remove('hidden');
+}
+
+function setupOptions() {
+  const esc = window.utils.escapeHtml;
+  const departments = DIR.employees
+    .map(function (e) { return String(e.department || '').trim(); })
+    .filter(function (v, i, arr) { return !!v && arr.indexOf(v) === i; })
+    .sort(function (a, b) { return a.localeCompare(b, 'th'); });
+  document.getElementById('department').innerHTML =
+    '<option value="">ไม่ระบุ</option>' +
+    departments.map(function (name) {
+      return '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+    }).join('') +
+    '<option value="__other__">อื่น ๆ — พิมพ์เอง</option>';
+
+  const roles = [
+    { value: window.ROLES.USER, label: 'พนักงาน' },
+    { value: window.ROLES.SPECIAL, label: 'พนักงานพิเศษ' },
+    { value: window.ROLES.SUPERVISOR, label: 'หัวหน้างาน' },
+  ];
+  if (MY.role === window.ROLES.OWNER) {
+    roles.push({ value: window.ROLES.ADMIN, label: 'HR' });
+    roles.push({ value: window.ROLES.OWNER, label: 'ผู้บริหาร' });
+    document.getElementById('role-hint').textContent = 'ผู้บริหารสามารถสร้างได้ทุกระดับ';
+  } else {
+    document.getElementById('role-hint').textContent = 'การสร้าง HR / ผู้บริหาร ต้องให้ผู้บริหารเป็นผู้ดำเนินการ';
+  }
+  document.getElementById('role').innerHTML = roles.map(function (r) {
+    return '<option value="' + r.value + '">' + esc(r.label) + '</option>';
+  }).join('');
+
+  document.getElementById('supervisor-list').innerHTML = DIR.supervisor_options.map(function (u) {
+    return '<option value="' + esc(supervisorLabel(u)) + '"></option>';
+  }).join('');
+
+  const execBox = document.getElementById('executive-options');
+  if (!DIR.executive_options.length) {
+    execBox.innerHTML = '<div class="pick-item"><span class="who"><span class="meta">ยังไม่มีผู้บริหารให้เลือก</span></span></div>';
+  } else {
+    execBox.innerHTML = DIR.executive_options.map(function (u) {
+      return '<label class="pick-item">' +
+        '<input type="checkbox" class="exec-check" value="' + esc(u.user_id) + '">' +
+        '<span class="who"><span class="name">' + esc(u.display_name || u.user_id) + '</span>' +
+        '<span class="meta" style="display:block">' + esc(u.user_id) + '</span></span>' +
+      '</label>';
+    }).join('');
+  }
+}
+
+function supervisorLabel(user) {
+  return (user.display_name || user.user_id) + ' · ' + (user.role_label || '') + ' (' + user.user_id + ')';
+}
+
+function selectedSupervisorId() {
+  const typed = document.getElementById('supervisor-search').value.trim();
+  if (!typed) return '';
+  const found = DIR.supervisor_options.filter(function (u) {
+    return typed === supervisorLabel(u) || typed === u.user_id;
+  })[0];
+  return found ? found.user_id : null;
+}
+
+function selectedExecutiveIds() {
+  return Array.from(document.querySelectorAll('.exec-check:checked')).map(function (el) { return el.value; });
+}
+
+function departmentValue() {
+  const selected = document.getElementById('department').value;
+  if (selected === '__other__') return document.getElementById('department-other').value.trim();
+  return selected;
+}
+
+document.getElementById('department').addEventListener('change', function () {
+  const other = this.value === '__other__';
+  document.getElementById('department-other-wrap').classList.toggle('hidden', !other);
+  if (other) document.getElementById('department-other').focus();
+});
+
+document.getElementById('employee-form').addEventListener('submit', function (event) {
+  event.preventDefault();
+  window.utils.clearAlert('#form-alert');
+
+  const empCode = document.getElementById('emp-code').value.trim();
+  const displayName = document.getElementById('display-name').value.trim();
+  const supervisorId = selectedSupervisorId();
+  if (!empCode) return window.utils.showAlert('#form-alert', 'กรุณากรอกรหัสพนักงาน', 'error');
+  if (displayName.length < 2) {
+    return window.utils.showAlert('#form-alert', 'กรุณากรอกชื่อ-นามสกุลอย่างน้อย 2 ตัวอักษร', 'error');
+  }
+  if (supervisorId === null) {
+    return window.utils.showAlert('#form-alert', 'กรุณาเลือกหัวหน้างานจากรายชื่อที่ระบบแนะนำ', 'error');
+  }
+  if (document.getElementById('department').value === '__other__' && !departmentValue()) {
+    return window.utils.showAlert('#form-alert', 'กรุณากรอกชื่อแผนกอื่น', 'error');
+  }
+
+  DRAFT = {
+    lineUserId: window.state.lineUserId,
+    emp_code: empCode,
+    display_name: displayName,
+    department: departmentValue(),
+    position: document.getElementById('position').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    role: document.getElementById('role').value,
+    supervisor_user_id: supervisorId,
+    executive_user_ids: selectedExecutiveIds(),
+    issue_code: true,
+  };
+  CONFIRM_SAME_NAME = false;
+  renderPreview();
+});
+
+function nameOf(userId) {
+  if (!userId) return 'ไม่กำหนด — ใบลาเข้า HR โดยตรง';
+  const all = DIR.supervisor_options.concat(DIR.executive_options);
+  const found = all.filter(function (u) { return u.user_id === userId; })[0];
+  return found ? (found.display_name || userId) : userId;
+}
+
+function renderPreview() {
+  const esc = window.utils.escapeHtml;
+  const executives = DRAFT.executive_user_ids.map(nameOf);
+  document.getElementById('preview-summary').innerHTML = [
+    summaryRow('รหัสพนักงาน', DRAFT.emp_code),
+    summaryRow('ชื่อ-นามสกุล', DRAFT.display_name),
+    summaryRow('แผนก', DRAFT.department || 'ไม่ระบุ'),
+    summaryRow('ตำแหน่ง', DRAFT.position || 'ไม่ระบุ'),
+    summaryRow('เบอร์โทร', DRAFT.phone || 'ไม่ระบุ'),
+    summaryRow('ระดับ', window.ROLE_LABELS_TH[DRAFT.role] || DRAFT.role),
+    summaryRow('หัวหน้างาน', nameOf(DRAFT.supervisor_user_id)),
+    summaryRow('ผู้บริหารในสาย', executives.length ? executives.join(', ') : 'ยังไม่กำหนด'),
+  ].join('');
+  document.getElementById('form-screen').classList.add('hidden');
+  document.getElementById('preview-screen').classList.remove('hidden');
+  document.getElementById('same-name-warning').classList.add('hidden');
+  document.getElementById('duplicate-result').classList.add('hidden');
+  document.getElementById('preview-actions').classList.remove('hidden');
+  document.getElementById('btn-create').textContent = 'ยืนยันสร้างพนักงาน';
+  window.utils.clearAlert('#submit-alert');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  function summaryRow(label, value) {
+    return '<div class="card-row"><span class="label">' + esc(label) + '</span>' +
+      '<span class="value summary-value">' + esc(value) + '</span></div>';
+  }
+}
+
+document.getElementById('btn-edit').addEventListener('click', function () {
+  if (SUBMITTING) return;
+  document.getElementById('preview-screen').classList.add('hidden');
+  document.getElementById('form-screen').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.getElementById('btn-create').addEventListener('click', function () {
+  submitCreate(CONFIRM_SAME_NAME);
+});
+
+async function submitCreate(confirmSameName) {
+  if (SUBMITTING || !DRAFT) return;
+  SUBMITTING = true;
+  const button = document.getElementById('btn-create');
+  button.disabled = true;
+  button.textContent = 'กำลังสร้าง...';
+  window.utils.clearAlert('#submit-alert');
+  document.getElementById('duplicate-result').classList.add('hidden');
+
+  const payload = Object.assign({}, DRAFT, { confirm_same_name: confirmSameName === true });
+  const result = await window.api.post('createEmployee', payload);
+
+  SUBMITTING = false;
+  button.disabled = false;
+
+  if (result.ok) {
+    showSuccess(result);
+    return;
+  }
+  if (result.error === 'emp_code_exists') {
+    showDuplicate(result);
+    button.textContent = 'ยืนยันสร้างพนักงาน';
+    return;
+  }
+  if (result.error === 'same_name_exists') {
+    showSameNameWarning(result);
+    CONFIRM_SAME_NAME = true;
+    button.textContent = 'ยืนยันสร้าง แม้ชื่อซ้ำ';
+    return;
+  }
+
+  button.textContent = CONFIRM_SAME_NAME ? 'ยืนยันสร้าง แม้ชื่อซ้ำ' : 'ยืนยันสร้างพนักงาน';
+  window.utils.showAlert('#submit-alert', result.message || friendlyError(result.error), 'error');
+}
+
+function showDuplicate(result) {
+  const esc = window.utils.escapeHtml;
+  const existing = result.existing || {};
+  document.getElementById('duplicate-result').innerHTML =
+    '<div class="card duplicate-person">' +
+      '<strong>ไม่สร้างรายการใหม่ เพราะรหัสนี้มีอยู่แล้ว</strong>' +
+      '<div class="card-row"><span class="label">ชื่อ</span><span class="value">' +
+        esc(existing.display_name || 'ไม่ระบุ') + '</span></div>' +
+      '<div class="card-row"><span class="label">สถานะ</span><span class="value">' +
+        esc(statusLabel(existing.status)) + '</span></div>' +
+      '<div class="card-row"><span class="label">บัญชี LINE</span><span class="value">' +
+        (existing.has_line ? 'ผูกแล้ว' : 'ยังไม่ผูก') + '</span></div>' +
+      '<p class="subtle">' + esc(result.message || '') + '</p>' +
+      '<a class="btn primary block mt-1" href="./employees.html">ไปหน้าฐานข้อมูลพนักงาน</a>' +
+    '</div>';
+  document.getElementById('duplicate-result').classList.remove('hidden');
+  document.getElementById('preview-actions').classList.add('hidden');
+}
+
+function showSameNameWarning(result) {
+  const esc = window.utils.escapeHtml;
+  const existing = result.existing || {};
+  document.getElementById('same-name-warning').innerHTML =
+    '<div class="alert warning"><strong>พบชื่อเหมือนกันในระบบ</strong><br>' +
+      esc(result.message || 'กรุณาตรวจสอบว่าเป็นคนละคน') + '</div>' +
+    '<div class="card">' +
+      '<div class="card-row"><span class="label">รหัสเดิม</span><span class="value">' +
+        esc(existing.emp_code || 'ไม่ระบุ') + '</span></div>' +
+      '<div class="card-row"><span class="label">ชื่อเดิม</span><span class="value">' +
+        esc(existing.display_name || 'ไม่ระบุ') + '</span></div>' +
+    '</div>';
+  document.getElementById('same-name-warning').classList.remove('hidden');
+}
+
+function statusLabel(status) {
+  const labels = { active: 'ใช้งานอยู่', invited: 'รอผูกบัญชี', pending: 'รออนุมัติ', inactive: 'ปิดบัญชี' };
+  return labels[status] || 'ไม่ทราบสถานะ';
+}
+
+function friendlyError(code) {
+  const messages = {
+    forbidden: 'คุณไม่มีสิทธิ์สร้างพนักงาน',
+    forbidden_owner_only: 'เฉพาะผู้บริหารเท่านั้นที่สร้าง HR หรือผู้บริหารได้',
+    missing_emp_code: 'กรุณากรอกรหัสพนักงาน',
+    invalid_display_name: 'กรุณาตรวจชื่อ-นามสกุล',
+    invalid_role: 'ระดับพนักงานไม่ถูกต้อง',
+    supervisor_not_found: 'ไม่พบหัวหน้างานที่เลือก กรุณาโหลดหน้าใหม่',
+    supervisor_inactive: 'หัวหน้างานที่เลือกยังใช้งานไม่ได้',
+    supervisor_wrong_role: 'คนที่เลือกยังไม่มีสิทธิ์เป็นหัวหน้างาน',
+    executive_not_found: 'ไม่พบผู้บริหารที่เลือก กรุณาโหลดหน้าใหม่',
+    executive_inactive: 'ผู้บริหารที่เลือกยังใช้งานไม่ได้',
+    executive_wrong_role: 'คนที่เลือกยังไม่ใช่ระดับผู้บริหาร',
+    lock_failed: 'ระบบกำลังบันทึกข้อมูลอยู่ กรุณาลองอีกครั้ง',
+    approval_chain_failed: 'สร้างพนักงานแล้ว แต่บันทึกสายอนุมัติไม่สำเร็จ กรุณาไปตั้งที่หน้าผังอำนาจอนุมัติ',
+    network_error: 'เชื่อมต่อระบบไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง',
+    invalid_response: 'ระบบตอบกลับไม่สมบูรณ์ กรุณาลองอีกครั้ง',
+    internal_error: 'สร้างพนักงานไม่สำเร็จ กรุณาลองอีกครั้งหรือติดต่อผู้ดูแลระบบ',
+  };
+  return messages[code] || 'สร้างพนักงานไม่สำเร็จ กรุณาลองอีกครั้ง';
+}
+
+function showSuccess(result) {
+  const esc = window.utils.escapeHtml;
+  const user = result.user || {};
+  INVITE_TEXT = result.invite_text || '';
+  document.getElementById('preview-screen').classList.add('hidden');
+  document.getElementById('result-screen').classList.remove('hidden');
+  document.getElementById('created-summary').innerHTML =
+    '<div class="card-row"><span class="label">รหัสพนักงาน</span><span class="value">' + esc(user.emp_code || '') + '</span></div>' +
+    '<div class="card-row"><span class="label">ชื่อ-นามสกุล</span><span class="value">' + esc(user.display_name || '') + '</span></div>' +
+    '<div class="card-row"><span class="label">ระดับ</span><span class="value">' +
+      esc(window.ROLE_LABELS_TH[user.role] || user.role || '') + '</span></div>' +
+    '<div class="card-row"><span class="label">สถานะ</span><span class="value">รอผูกบัญชี</span></div>';
+  document.getElementById('pairing-code').textContent = result.pairing_code || 'ไม่ได้ออกรหัส';
+  document.getElementById('pairing-expiry').textContent = result.expires_at
+    ? 'ใช้ได้ถึง ' + window.utils.formatThaiDateTime(result.expires_at)
+    : 'พนักงานยังผูกบัญชีด้วยรหัสพนักงานและชื่อ-นามสกุลได้';
+  document.getElementById('invite-text').textContent = INVITE_TEXT;
+  document.getElementById('btn-copy').textContent = 'คัดลอกข้อความเชิญ';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('btn-copy').addEventListener('click', async function () {
+  const button = this;
+  let copied = false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(INVITE_TEXT);
+      copied = true;
+    } catch (err) { /* ใช้ fallback ด้านล่าง */ }
+  }
+  if (!copied) {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = INVITE_TEXT;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      copied = document.execCommand('copy');
+      textarea.remove();
+    } catch (err) {
+      copied = false;
+    }
+  }
+  button.textContent = copied ? 'คัดลอกแล้ว' : 'คัดลอกไม่ได้ กรุณากดค้างที่ข้อความ';
+  if (copied) setTimeout(function () { button.textContent = 'คัดลอกข้อความเชิญ'; }, 1500);
+});
+
+document.getElementById('btn-another').addEventListener('click', function () {
+  document.getElementById('employee-form').reset();
+  document.getElementById('department-other-wrap').classList.add('hidden');
+  document.querySelectorAll('.exec-check').forEach(function (el) { el.checked = false; });
+  DRAFT = null;
+  CONFIRM_SAME_NAME = false;
+  INVITE_TEXT = '';
+  window.utils.clearAlert('#form-alert');
+  window.utils.clearAlert('#submit-alert');
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('form-screen').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>

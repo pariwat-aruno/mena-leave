@@ -23,8 +23,12 @@ function approveLeave(payload) {
   if (!payload.lineUserId || !payload.leave_id || !payload.stage || !payload.decision) {
     return { ok: false, error: 'missing_fields' };
   }
-  if (payload.decision !== 'approve' && payload.decision !== 'reject') {
+  if (['approve', 'reject', 'request_doc'].indexOf(payload.decision) < 0) {
     return { ok: false, error: 'invalid_decision' };
+  }
+  // ขอเอกสารเพิ่มต้องบอกว่าขออะไร ไม่งั้นผู้ลาไม่รู้จะแนบอะไร
+  if (payload.decision === 'request_doc' && String(payload.note || '').trim().length < 3) {
+    return { ok: false, error: 'note_required', message: 'กรุณาระบุว่าต้องการเอกสารอะไรเพิ่ม' };
   }
 
   const stage = Number(payload.stage);
@@ -40,6 +44,17 @@ function approveLeave(payload) {
       message: leave.final_status === 'withdrawn' ? 'ผู้ลาถอนใบลานี้ไปแล้ว' : 'ใบลานี้ตัดสินเรียบร้อยแล้ว' };
   }
 
+  ensureSheetColumns_('LeaveRequests');
+  let actingAsHrFallback = false;
+
+  // ห้ามตัดสินใบของตัวเองทุกชั้น (ชั้น HR เดิมไม่มีด่านนี้ — HR ที่หัวหน้าเป็นผู้บริหารที่ยังไม่ผูกไลน์อนุมัติตัวเองได้)
+  if (leave.user_id === approver.user_id) {
+    return { ok: false, error: 'forbidden', message: 'ตัดสินใบลาของตัวเองไม่ได้' };
+  }
+  // ต้องเป็นชั้นที่ใบรออยู่จริง — ห้ามกระโดดข้ามชั้นที่ยังค้าง
+  const stageGateErr = stageNotCurrent_(leave, stage);
+  if (stageGateErr) return stageGateErr;
+
   // === Permission check per stage ===
   if (stage === 1) {
     if (leave.stage1_status !== 'pending') {
@@ -48,6 +63,11 @@ function approveLeave(payload) {
     const supervisorId = getSupervisorFor(leave.user_id);
     if (supervisorId !== approver.user_id) {
       return { ok: false, error: 'forbidden', message: 'คุณไม่ใช่หัวหน้างานของผู้ลานี้' };
+    }
+    // ใบแบบ "ผู้บริหารก่อน" (ชั้น 2/3 ข้าม) ต้องเป็นผู้บริหารกดเท่านั้น
+    // กันกรณีเปลี่ยนผังกลางทาง ตั้งคนอื่นเป็นหัวหน้าแล้วปิดใบโดยไม่ผ่านผู้บริหาร
+    if (isOwnerFirstLeave_(leave) && approver.role !== ROLES.OWNER) {
+      return { ok: false, error: 'forbidden', message: 'ใบนี้ต้องให้ผู้บริหารเป็นผู้อนุมัติ' };
     }
   } else if (stage === 2) {
     if (leave.stage2_status !== 'pending') {
@@ -60,14 +80,26 @@ function approveLeave(payload) {
     if (leave.stage3_status !== 'pending') {
       return { ok: false, error: 'stage3_not_pending', message: 'ใบลานี้ตัดสินไปแล้ว' };
     }
-    if (approver.role !== ROLES.OWNER) {
-      return { ok: false, error: 'forbidden', message: 'เฉพาะผู้บริหารเท่านั้น' };
-    }
-    // ผู้บริหารอนุมัติได้เฉพาะคนในสายงานตัวเอง
-    // (พนักงานที่ยังไม่ถูกผูกสาย → getExecutivesFor คืนผู้บริหารทุกคน ใบลาจะได้ไม่ค้างตาย)
-    if (!isExecutiveOf_(approver.user_id, leave.user_id)) {
-      return { ok: false, error: 'forbidden',
-        message: 'ใบลานี้ไม่ได้อยู่ในสายงานของคุณ — ผู้บริหารที่ดูแลสายนี้เป็นผู้อนุมัติ' };
+    if (approver.role === ROLES.ADMIN) {
+      // HR อนุมัติแทนผู้บริหารได้ 2 กรณี: ผู้บริหารในสายยังรับใบไม่ได้ · ผู้บริหารเงียบจนโดนเตือนแล้ว
+      if (leave.user_id === approver.user_id) {
+        return { ok: false, error: 'forbidden', message: 'อนุมัติใบลาของตัวเองไม่ได้' };
+      }
+      if (!hrMayActOnStage3_(leave)) {
+        return { ok: false, error: 'forbidden',
+          message: 'ใบนี้ยังอยู่ในมือผู้บริหาร — HR อนุมัติแทนได้เมื่อผู้บริหารไม่ตอบเกินเวลาที่กำหนด' };
+      }
+      actingAsHrFallback = true;
+    } else {
+      if (approver.role !== ROLES.OWNER) {
+        return { ok: false, error: 'forbidden', message: 'เฉพาะผู้บริหารเท่านั้น' };
+      }
+      // ผู้บริหารอนุมัติได้เฉพาะคนในสายงานตัวเอง
+      // (พนักงานที่ยังไม่ถูกผูกสาย → getExecutivesFor คืนผู้บริหารทุกคน ใบลาจะได้ไม่ค้างตาย)
+      if (!isExecutiveOf_(approver.user_id, leave.user_id)) {
+        return { ok: false, error: 'forbidden',
+          message: 'ใบลานี้ไม่ได้อยู่ในสายงานของคุณ — ผู้บริหารที่ดูแลสายนี้เป็นผู้อนุมัติ' };
+      }
     }
   }
 
@@ -87,20 +119,73 @@ function approveLeave(payload) {
 
     // re-check stage status under lock (กัน race: 2 admins กดพร้อมกัน)
     const stageStatusCol = 'stage' + stage + '_status';
-    if (leaveAfterLock[stageStatusCol] !== 'pending') {
+    if (leaveAfterLock.final_status !== 'pending' || leaveAfterLock[stageStatusCol] !== 'pending' ||
+        stageNotCurrent_(leaveAfterLock, stage)) {
       return { ok: false, error: 'race_lost', message: 'มีผู้อื่นตัดสินใจไปแล้ว' };
+    }
+    // สิทธิ์ HR แทนผู้บริหารต้องตรวจซ้ำกับข้อมูลล่าสุด (ระหว่างรอล็อก ผู้บริหารอาจขอเอกสารไปแล้ว)
+    if (actingAsHrFallback && !hrMayActOnStage3_(leaveAfterLock)) {
+      return { ok: false, error: 'race_lost', message: 'ผู้บริหารเพิ่งดำเนินการกับใบนี้ — กรุณาโหลดหน้าใหม่' };
     }
 
     const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
     const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
     const row = leaveAfterLock._rowNumber;
+
+    // === ขอเอกสารเพิ่ม — ใบค้างชั้นเดิม ส่งเรื่องกลับไปหาผู้ลา ===
+    // เดิมไม่มีปุ่มนี้ ผู้อนุมัติพิมพ์ "ขอเอกสารเพิ่ม" ในหมายเหตุแล้วกดอนุมัติ/ไม่อนุมัติ
+    // ข้อความนั้นไม่เคยไปถึงผู้ลา (ลูกค้าแจ้ง 19 ก.ย. 69)
+    if (payload.decision === 'request_doc') {
+      if ((leaveAfterLock.record_type || 'leave') !== 'leave') {
+        return { ok: false, error: 'not_leave', message: 'ขอเอกสารได้เฉพาะใบลา' };
+      }
+      const docNote = String(payload.note).trim().slice(0, 200);
+      updateRowByHeader_(sh, row, {
+        doc_request_status: 'requested',
+        doc_request_stage: stage,
+        doc_request_by: approver.user_id,
+        doc_request_at: nowBangkok(),
+        doc_request_note: docNote,
+        // พักการเตือนผู้อนุมัติ — ตอนนี้รอผู้ลา ไม่ใช่รอผู้อนุมัติ
+        // ⭐ ห้ามล้าง reminder_count — HR ที่รับช่วงแทนผู้บริหาร (ดู hrMayActOnStage3_) จะเสียสิทธิ์กลางทาง
+        last_reminded_at: nowBangkok(),
+      });
+      audit(payload.lineUserId, 'leave_request_doc_s' + stage, 'LeaveRequests', payload.leave_id, { note: docNote });
+      logInfo('approveLeave', 'ขอเอกสารเพิ่ม ชั้น ' + stage, { leaveId: payload.leave_id, by: approver.user_id });
+
+      const requesterD = findUserByUserId_(leaveAfterLock.user_id);
+      const freshD = findLeaveById_(payload.leave_id);
+      let delivered = false;
+      try {
+        const card = buildDocRequestCard(freshD, requesterD, approver.display_name, docNote);
+        if (requesterD && requesterD.line_user_id && requesterD.status === 'active') {
+          const res = pushMessage(requesterD.line_user_id, card);
+          // ไลน์ตอบ error = ผู้ลาไม่ได้รับ — ห้ามบอกผู้อนุมัติว่าส่งถึงแล้ว
+          delivered = !(res && res.ok === false);
+        }
+        // HR รู้ด้วยเสมอ — ผู้ลาที่ยังไม่ผูกไลน์จะได้ให้ HR โทรตาม
+        pushToAllAdmins(buildDocRequestHrNoticeCard(freshD, requesterD, approver.display_name, docNote, delivered));
+      } catch (e) {
+        logWarn('approveLeave request_doc', 'push failed: ' + e.message);
+      }
+      return { ok: true, decision: 'request_doc', delivered_to_requester: delivered };
+    }
+
     const newStatus = payload.decision === 'approve' ? 'approved' : 'rejected';
 
     sh.getRange(row, hdr.indexOf('stage' + stage + '_status') + 1).setValue(newStatus);
     sh.getRange(row, hdr.indexOf('stage' + stage + '_by') + 1).setValue(approver.user_id);
     sh.getRange(row, hdr.indexOf('stage' + stage + '_at') + 1).setValue(nowBangkok());
-    if (payload.note) {
-      sh.getRange(row, hdr.indexOf('stage' + stage + '_note') + 1).setValue(payload.note);
+    const noteText = (actingAsHrFallback ? '[HR ตัดสินแทนผู้บริหาร] ' : '') + (payload.note || '');
+    if (noteText) {
+      sh.getRange(row, hdr.indexOf('stage' + stage + '_note') + 1).setValue(noteText);
+    }
+    if (actingAsHrFallback && hdr.indexOf('hr_fallback') >= 0) {
+      sh.getRange(row, hdr.indexOf('hr_fallback') + 1).setValue(true);
+    }
+    // ตัดสินแล้ว = คำขอเอกสารที่ค้างอยู่จบไปด้วย
+    if (hdr.indexOf('doc_request_status') >= 0 && leaveAfterLock.doc_request_status === 'requested') {
+      sh.getRange(row, hdr.indexOf('doc_request_status') + 1).setValue('closed');
     }
 
     // ชั้นนี้มีคนกดแล้ว → เริ่มนับเวลาเงียบของชั้นถัดไปใหม่ ไม่งั้นชั้นถัดไปโดนเตือนทันทีที่รับใบ
@@ -153,6 +238,8 @@ function approveLeave(payload) {
         }
         // ADMIN (if stage 2 passed)
         if (stage > 2) pushToAllAdmins(rejectedCard);
+        // HR ปฏิเสธแทน → ผู้บริหารในสายต้องรู้ว่าใบนี้ปิดไปแล้ว
+        if (actingAsHrFallback) pushToExecutivesOf_(leaveAfterLock.user_id, rejectedCard);
         // OWNER (if stage 3 passed) — n/a since stage 3 finalize
 
         // === Report (PDF ข้อ 2): หัวหน้างานปฏิเสธตั้งแต่ชั้น 1 → HR + ผู้บริหารไม่เคยเห็นใบลานี้เลย
@@ -200,11 +287,14 @@ function approveLeave(payload) {
         const card = buildFinalApprovedCard(finalLeave, requester);
         if (requester.line_user_id) pushMessage(requester.line_user_id, card);
         const supId = getSupervisorFor(leaveAfterLock.user_id);
-        if (supId) {
+        if (supId && supId !== approver.user_id) {
           const sup = findUserByUserId_(supId);
           if (sup && sup.line_user_id) pushMessage(sup.line_user_id, card);
         }
+        // ผู้อนุมัติขั้นแรกเป็นผู้บริหาร → ผู้บริหารอนุมัติแล้ว "ค่อย" แจ้ง HR ตรงนี้
         pushToAllAdmins(card);
+        // HR อนุมัติแทน → ผู้บริหารในสายต้องรู้ว่าใบนี้ปิดไปแล้ว
+        if (actingAsHrFallback) pushToExecutivesOf_(leaveAfterLock.user_id, card);
       } catch (e) {
         logWarn('approveLeave final', 'push failed: ' + e.message);
       }
@@ -246,6 +336,24 @@ function computeInitialStages_(requester) {
   if (requester.role === ROLES.OWNER) {
     return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'skipped',
              stage3Status: 'approved', firstApprovalStage: 0, finalStatus: 'approved' };
+  }
+  // ⭐ ผู้อนุมัติขั้นแรกเป็น "ผู้บริหาร" (เช่น HR/หัวหน้าแผนกที่ขึ้นตรงผู้บริหาร)
+  //    → ส่งผู้บริหารคนนั้นก่อน อนุมัติแล้วจบ แล้วค่อยแจ้ง HR (ลูกค้าสั่ง 19 ก.ย. 69)
+  //    เดิม: ข้ามชั้น 1 → HR อนุมัติก่อน → ผู้บริหารอนุมัติซ้ำอีกรอบ
+  //    ผู้บริหารคนนั้นยังรับใบไม่ได้ (ยังไม่ผูกไลน์) → HR ตัดสินแทน แล้วจบ ไม่วนไปชั้นผู้บริหารซ้ำ
+  const firstId = getSupervisorFor(requester.user_id);
+  const first = firstId ? findUserByUserId_(firstId) : null;
+  if (first && first.role === ROLES.OWNER && first.user_id !== requester.user_id) {
+    const reachable = first.status === 'active' && !!first.line_user_id;
+    if (!reachable) {
+      logWarn('computeInitialStages_', 'ผู้บริหารที่เป็นผู้อนุมัติขั้นแรกยังรับใบไม่ได้ — ส่ง HR แทน',
+        { userId: requester.user_id, ownerUserId: first.user_id });
+    }
+    return reachable
+      ? { stage1Required: true, stage1Status: 'pending', stage2Status: 'skipped',
+          stage3Status: 'skipped', firstApprovalStage: 1, finalStatus: 'pending', ownerFirst: true }
+      : { stage1Required: false, stage1Status: 'skipped', stage2Status: 'pending',
+          stage3Status: 'skipped', firstApprovalStage: 2, finalStatus: 'pending', ownerFirst: true };
   }
   if (requester.role === ROLES.ADMIN) {
     return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'skipped',
@@ -309,6 +417,11 @@ function sendApprovalRequestStage_(leave, requester, stage) {
     } else if (stage === 3) {
       // เฉพาะผู้บริหารในสายงานของผู้ลา — ไม่ใช่ผู้บริหารทุกคนเหมือนเดิม
       const res = getExecutivesFor(leave.user_id);
+      if (res.hrFallback) {
+        // ผู้บริหารในสายยังรับใบไม่ได้ → HR รับแทน (การ์ดบอกชัดว่าอนุมัติแทนผู้บริหาร)
+        pushToAllAdmins(buildApprovalRequestCard(leave, requester, 3, { hrFallback: true }));
+        return;
+      }
       if (res.fallback) {
         logWarn('sendApprovalRequestStage_', 'ยังไม่ได้ผูกผู้บริหารให้พนักงานคนนี้ — ส่งให้ผู้บริหารทุกคนแทน',
           { leaveId: leave.leave_id, userId: leave.user_id });
@@ -323,11 +436,42 @@ function sendApprovalRequestStage_(leave, requester, stage) {
 }
 
 /** push การ์ดหาผู้บริหารในสายงานของพนักงานคนนี้ (แทน pushToAllOwners เดิม) */
+/** ใบนี้ไหลแบบ "ผู้บริหารเป็นผู้อนุมัติขั้นแรก" ไหม (ดู computeInitialStages_) */
+function isOwnerFirstLeave_(leave) {
+  return leave.stage1_status !== 'skipped' && leave.stage2_status === 'skipped' && leave.stage3_status === 'skipped';
+}
+
+/** ชั้นที่ขอกด ต้องเป็นชั้นแรกที่ยังรออยู่ — คืน error object ถ้าไม่ใช่ */
+function stageNotCurrent_(leave, stage) {
+  for (let s = 1; s < stage; s++) {
+    if (leave['stage' + s + '_status'] === 'pending') {
+      return { ok: false, error: 'stage_not_current', message: 'ใบนี้ยังรอชั้นก่อนหน้าอยู่' };
+    }
+  }
+  return null;
+}
+
 function pushToExecutivesOf_(userId, messages) {
   const res = getExecutivesFor(userId);
   res.users.forEach(function (u) {
     if (u.line_user_id) pushMessage(u.line_user_id, messages);
   });
+  return res;
+}
+
+/**
+ * HR ตัดสินชั้นผู้บริหารแทนได้ไหม
+ *   - ผู้บริหารในสายยังรับใบไม่ได้ (ยังไม่ผูกไลน์ / ปิดบัญชี)
+ *   - ผู้บริหารเงียบจนระบบเตือนไปแล้วอย่างน้อย 1 รอบ (reminder_hours ชั่วโมงทำงาน)
+ * ⭐ reminder_count ถูกล้างทุกครั้งที่ชั้นก่อนหน้ามีคนกด → ค่าที่เห็นตอนชั้น 3 ค้าง = เตือนผู้บริหารจริง
+ */
+function hrMayActOnStage3_(leave, route) {
+  if (!leave || leave.stage3_status !== 'pending') return false;
+  if (leave.stage1_status === 'pending' || leave.stage2_status === 'pending') return false;
+  const r = route || getExecutivesFor(leave.user_id);
+  if (r.hrFallback) return true;
+  if (leave.doc_request_status === 'requested') return false;
+  return Number(leave.reminder_count || 0) >= 1;
 }
 
 /**
@@ -362,12 +506,8 @@ function getPendingForMe(payload) {
     }
   });
   // ผู้บริหารที่ยังใช้งานได้ ของพนักงานคนหนึ่ง — ว่าง = ยังไม่ผูกสาย → ผู้บริหารทุกคนรับได้
-  const executivesOf = function (uid) {
-    const live = (execOf[uid] || []).filter(function (id) {
-      const u = idx.byId[id];
-      return u && u.status === 'active' && u.role === ROLES.OWNER;
-    });
-    return live;
+  const routeOf = function (uid) {
+    return executiveRouteFrom_(execOf[uid] || [], idx, null);
   };
 
   const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -380,8 +520,8 @@ function getPendingForMe(payload) {
     if (obj.final_status === 'approved' || obj.final_status === 'rejected' ||
         obj.final_status === 'withdrawn' || obj.final_status === 'cancelled') return;
 
-    // stage 1
-    if (isSup && obj.stage1_status === 'pending') {
+    // stage 1 — ผู้บริหารเป็นผู้อนุมัติขั้นแรกได้ด้วย (ไม่ต้องมีธงหัวหน้างาน)
+    if ((isSup || user.role === ROLES.OWNER) && obj.stage1_status === 'pending') {
       if (supOf[obj.user_id] === user.user_id) {
         pending.push(shapePendingItem_(obj, 1, idx));
       }
@@ -395,11 +535,18 @@ function getPendingForMe(payload) {
       }
     }
     // stage 3 — เฉพาะใบลาในสายงานของผู้บริหารคนนี้
-    if (user.role === ROLES.OWNER && obj.stage3_status === 'pending' && obj.stage2_status !== 'pending') {
-      const live = executivesOf(obj.user_id);
-      const mine = live.length ? live.indexOf(user.user_id) >= 0 : true;
-      if (obj.user_id !== user.user_id && mine) {
-        pending.push(shapePendingItem_(obj, 3, idx));
+    if (obj.stage3_status === 'pending' && obj.stage2_status !== 'pending' && obj.stage1_status !== 'pending' &&
+        obj.user_id !== user.user_id) {
+      const route = routeOf(obj.user_id);
+      if (user.role === ROLES.OWNER) {
+        const mine = route.users.some(function (u) { return u.user_id === user.user_id; });
+        if (mine) pending.push(shapePendingItem_(obj, 3, idx));
+      } else if (user.role === ROLES.ADMIN && hrMayActOnStage3_(obj, route)) {
+        // HR เห็นใบชั้นผู้บริหารที่ค้าง — ผู้บริหารติดต่อไม่ได้ / เงียบเกินกำหนด
+        const item = shapePendingItem_(obj, 3, idx);
+        item.hr_fallback = true;
+        item.hr_fallback_reason = route.hrFallback ? 'ผู้บริหารในสายยังรับใบไม่ได้' : 'ผู้บริหารยังไม่ตอบเกินเวลาที่กำหนด';
+        pending.push(item);
       }
     }
   });
@@ -437,6 +584,16 @@ function shapePendingItem_(leave, myStage, usersIndex) {
     stage1_status: leave.stage1_status,
     stage2_status: leave.stage2_status,
     stage3_status: leave.stage3_status,
+    leave_unit: leave.leave_unit || 'day',
+    time_from: timeText_(leave.time_from),
+    time_to: timeText_(leave.time_to),
+    hours: Number(leave.hours || 0),
+    amount_text: leaveAmountText_(leave),
+    doc_pending: isTruthyCell_(leave.doc_pending),
+    extra_attachments: parseExtraAttachments_(leave.extra_attachments),
+    doc_request_status: leave.doc_request_status || '',
+    doc_request_note: leave.doc_request_note || '',
+    owner_first: leave.stage2_status === 'skipped' && leave.stage3_status === 'skipped' && myStage === 1,
   };
 }
 

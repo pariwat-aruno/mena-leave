@@ -57,6 +57,14 @@ const SHEET_HEADERS = {
     'record_type', 'parent_leave_id',
     // เตือนซ้ำเมื่อผู้อนุมัติเงียบ (นับเฉพาะเวลาทำงาน)
     'last_reminded_at', 'reminder_count',
+    // ลาเป็นชั่วโมง — leave_unit = 'day' | 'hour' · days = hours / hours_per_day
+    'leave_unit', 'time_from', 'time_to', 'hours',
+    // ลาป่วยส่งก่อน แนบใบรับรองแพทย์ทีหลัง + ไฟล์ที่แนบเพิ่มภายหลัง (JSON array)
+    'doc_pending', 'extra_attachments',
+    // ผู้อนุมัติกด "ขอเอกสารเพิ่ม" — ใบยังค้างชั้นเดิม รอผู้ลาแนบ
+    'doc_request_status', 'doc_request_stage', 'doc_request_by', 'doc_request_at', 'doc_request_note',
+    // HR อนุมัติชั้นผู้บริหารแทน (ผู้บริหารติดต่อไม่ได้ / เงียบเกินกำหนด)
+    'hr_fallback',
   ],
   'LeaveQuota': [
     'quota_id', 'user_id', 'year',
@@ -122,6 +130,11 @@ const SETTINGS_DEFAULTS = [
   ['reminder_hours',                '4',                'ผู้อนุมัติเงียบกี่ชั่วโมงทำงานถึงเตือนซ้ำ'],
   ['reminder_enabled',              'TRUE',             'เปิด/ปิดการเตือนซ้ำทั้งระบบ'],
   ['emergency_reason_min',          '10',               'เหตุผลตอนติ๊กฉุกเฉิน ขั้นต่ำกี่ตัวอักษร'],
+  // ลาเป็นชั่วโมง
+  ['hours_per_day',                 '8',                'ลาเป็นชั่วโมง: กี่ชั่วโมงนับเป็น 1 วัน'],
+  ['lunch_start',                   '12:00',            'พักเที่ยงเริ่ม (ไม่นับเป็นชั่วโมงลา)'],
+  ['lunch_end',                     '13:00',            'พักเที่ยงจบ'],
+  ['hourly_leave_types',            'sick,personal,vacation', 'ประเภทที่ลาเป็นชั่วโมงได้ (คั่นด้วย ,)'],
 ];
 
 /**

@@ -337,6 +337,16 @@ function inviteUser(payload) {
   }
 
   const actor = findUserByLineId_(payload.lineUserId);
+
+  // ⭐ กันแถวซ้ำ — เดิมกดเชิญกี่ครั้งก็สร้างแถวใหม่ทุกครั้ง (prod เคยมีรหัส 4501 ซ้ำ 6 แถว)
+  //    แถวซ้ำทำให้พนักงานผูกบัญชีเองไม่ได้ตลอดไป → ต้องใช้ "ออกรหัส" ของแถวเดิมแทน
+  const dup = findActiveRowByEmpCode_(payload.emp_code);
+  if (dup) {
+    return { ok: false, error: 'emp_code_exists',
+      message: 'รหัสพนักงาน ' + payload.emp_code + ' มีในระบบแล้ว (' + (dup.display_name || dup.user_id) +
+               ') — ถ้าต้องการรหัสจับคู่ใหม่ ให้กด "ออกรหัส" ที่แถวเดิมในหน้าฐานข้อมูลพนักงาน',
+      existing: { user_id: dup.user_id, display_name: dup.display_name, status: dup.status } };
+  }
   // SUPERVISOR (หัวหน้างาน) → ตั้ง is_supervisor=TRUE ให้อัตโนมัติ
   const isSupervisorFlag = !!payload.is_supervisor || role === ROLES.SUPERVISOR;
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
@@ -566,4 +576,66 @@ function applyUpdateSettings_(updates, actor) {
   clearConfigCache();
   audit(actor && actor.line_user_id, 'update_settings', 'Settings', '(multi)', updates);
   return { ok: true, mode: 'applied' };
+}
+
+
+/** แถวพนักงานที่ยังไม่ปิด ที่ใช้รหัสพนักงานนี้ (เทียบแบบ normalize — ชีตเก็บ 6818 เป็นตัวเลข) */
+function findActiveRowByEmpCode_(empCode) {
+  const code = normEmpCode_(empCode);
+  if (!code) return null;
+  const idx = loadUsersIndex_();
+  return idx.list.filter(function (u) {
+    return u.status !== 'inactive' && normEmpCode_(u.emp_code) === code;
+  })[0] || null;
+}
+
+/**
+ * แก้ข้อมูลพนักงาน (รหัส / ชื่อ / แผนก / ตำแหน่ง / เบอร์)
+ * payload = { lineUserId, user_id, emp_code?, display_name?, department?, position?, phone? }
+ *
+ * สิทธิ์: HR/ผู้บริหาร · แก้แถวของผู้บริหารได้เฉพาะผู้บริหาร
+ * ⭐ รหัสพนักงานห้ามชนแถวอื่นที่ยังไม่ปิด — รหัสซ้ำ = คนนั้นผูกบัญชีเองไม่ได้
+ */
+function updateEmployeeProfile(payload) {
+  payload = payload || {};
+  if (!isAdmin(payload.lineUserId)) return { ok: false, error: 'forbidden' };
+  if (!payload.user_id) return { ok: false, error: 'missing_user_id' };
+
+  const actor = findUserByLineId_(payload.lineUserId);
+  const user = findUserByUserId_(payload.user_id);
+  if (!user) return { ok: false, error: 'user_not_found', message: 'ไม่พบพนักงานคนนี้' };
+  if (user.role === ROLES.OWNER && actor.role !== ROLES.OWNER) {
+    return { ok: false, error: 'forbidden_owner_only', message: 'แก้ข้อมูลผู้บริหารได้เฉพาะผู้บริหาร' };
+  }
+
+  const patch = {};
+  const before = {};
+  if (payload.emp_code != null) {
+    const code = String(payload.emp_code).trim();
+    if (!code) return { ok: false, error: 'missing_emp_code', message: 'รหัสพนักงานห้ามว่าง' };
+    const clash = findActiveRowByEmpCode_(code);
+    if (clash && clash.user_id !== user.user_id) {
+      return { ok: false, error: 'emp_code_exists',
+        message: 'รหัสพนักงาน ' + code + ' ถูกใช้โดย ' + (clash.display_name || clash.user_id) + ' (' + clash.user_id + ')' };
+    }
+    patch.emp_code = code;
+  }
+  if (payload.display_name != null) {
+    const name = String(payload.display_name).trim();
+    if (name.length < 2) return { ok: false, error: 'name_too_short', message: 'ชื่อ-นามสกุลสั้นเกินไป' };
+    patch.display_name = name;
+  }
+  ['department', 'position', 'phone'].forEach(function (k) {
+    if (payload[k] != null) patch[k] = String(payload[k]).trim();
+  });
+  if (!Object.keys(patch).length) return { ok: false, error: 'nothing_to_update' };
+  Object.keys(patch).forEach(function (k) { before[k] = user[k]; });
+
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');
+  updateRowByHeader_(sh, user._rowNumber, patch);
+
+  audit(payload.lineUserId, 'update_employee_profile', 'Users', user.user_id, { before: before, after: patch });
+  logInfo('updateEmployeeProfile', 'แก้ข้อมูลพนักงาน', { userId: user.user_id, by: actor.user_id, fields: Object.keys(patch) });
+  return { ok: true, user_id: user.user_id, updated: patch };
 }

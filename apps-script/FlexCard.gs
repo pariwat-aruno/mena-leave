@@ -218,7 +218,7 @@ function buildLeaveSubmittedCard(leave, nextStageLabel) {
           flexKV_('เลขที่ใบลา', leave.leave_id),
           flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
-          flexKV_('จำนวนวัน', leave.days + ' วัน'),
+          flexKV_('จำนวน', leaveAmountText_(leave)),
           flexSeparator_(),
           { type: 'text', text: 'ขั้นถัดไป: ' + (nextStageLabel || 'รออนุมัติ'),
             size: 'sm', color: c.primary, margin: 'md', weight: 'bold', wrap: true },
@@ -239,10 +239,15 @@ function buildLeaveSubmittedCard(leave, nextStageLabel) {
  * @param requester  Users row (ผู้ลา)
  * @param stage  1 | 2 | 3
  */
-function buildApprovalRequestCard(leave, requester, stage) {
+function buildApprovalRequestCard(leave, requester, stage, opts) {
+  opts = opts || {};
   const c = flexColors_();
   const isCancel = (leave.record_type || 'leave') === 'cancel';
-  const who = stage === 1 ? '(หัวหน้างาน)' : stage === 2 ? '(HR)' : '(ผู้บริหาร)';
+  // ผู้อนุมัติขั้นแรกเป็นผู้บริหาร — ชั้น 2/3 ถูกข้าม (ดู computeInitialStages_)
+  const ownerFirst = stage === 1 && leave.stage2_status === 'skipped' && leave.stage3_status === 'skipped';
+  const who = opts.hrFallback ? '(HR อนุมัติแทนผู้บริหาร)'
+    : ownerFirst ? '(ผู้บริหาร)'
+    : stage === 1 ? '(หัวหน้างาน)' : stage === 2 ? '(HR)' : '(ผู้บริหาร)';
   const stageLabel = (isCancel ? 'ขออนุมัติยกเลิกวันลา ชั้น ' : 'ขออนุมัติชั้น ') + stage + ' ' + who;
 
   const body = {
@@ -251,7 +256,7 @@ function buildApprovalRequestCard(leave, requester, stage) {
       flexKV_('แผนก', requester.department || '-'),
       flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type) + (leave.is_retroactive && !isCancel ? ' (ย้อนหลัง)' : '')),
       flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
-      flexKV_('จำนวนวัน', leave.days + ' วัน'),
+      flexKV_('จำนวน', leaveAmountText_(leave)),
       flexKV_(isCancel ? 'เหตุผลที่ขอยกเลิก' : 'เหตุผล', leave.reason || '-'),
     ],
   };
@@ -268,6 +273,23 @@ function buildApprovalRequestCard(leave, requester, stage) {
     });
   }
 
+  if (opts.hrFallback) {
+    body.contents.unshift({
+      type: 'box', layout: 'vertical', margin: 'none', spacing: 'xs',
+      backgroundColor: '#fff8e6', paddingAll: '10px', cornerRadius: '6px',
+      contents: [
+        { type: 'text', text: 'ผู้บริหารในสายของพนักงานคนนี้ยังรับใบลาไม่ได้', size: 'sm', weight: 'bold', color: c.warning, wrap: true },
+        { type: 'text', size: 'xs', color: c.subtle, wrap: true,
+          text: '(ยังไม่ผูกไลน์ หรือปิดบัญชีอยู่) ระบบจึงส่งให้ HR ตัดสินแทน' },
+      ],
+    });
+  }
+
+  // ลาป่วยส่งก่อน เอกสารตามมาทีหลัง — ผู้อนุมัติต้องรู้ว่ายังไม่มีใบรับรองแพทย์
+  if (isTruthyCell_(leave.doc_pending)) {
+    body.contents.push(flexKV_('เอกสาร', 'ยังไม่แนบ — ผู้ลาจะแนบตามมาภายหลัง', c.warning));
+  }
+
   // ยื่นไม่ทันกำหนดแล้วติ๊กว่าเร่งด่วน — ผู้อนุมัติต้องเห็นก่อนกด
   if (leave.is_emergency === true || leave.is_emergency === 'TRUE') {
     body.contents.push(flexSeparator_());
@@ -275,7 +297,7 @@ function buildApprovalRequestCard(leave, requester, stage) {
       type: 'box', layout: 'vertical', margin: 'md', spacing: 'xs',
       backgroundColor: '#fdeaea', paddingAll: '10px', cornerRadius: '6px',
       contents: [
-        { type: 'text', text: '⚠️ แจ้งไม่ทันกำหนด — ผู้ลาระบุว่าเป็นกรณีฉุกเฉิน',
+        { type: 'text', text: '⚠️ แจ้งไม่ทันกำหนด — ลากะทันหัน/ฉุกเฉิน',
           size: 'sm', weight: 'bold', color: '#b3261e', wrap: true },
         { type: 'text', size: 'xs', color: c.subtle, wrap: true,
           text: leave.emergency_reason ? 'เหตุผล: ' + leave.emergency_reason : 'ไม่ได้ระบุเหตุผล' },
@@ -385,7 +407,7 @@ function buildFinalApprovedCard(leave, requester) {
           flexKV_('ผู้ลา', requester.display_name || requester.user_id),
           flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
-          flexKV_('จำนวนวัน', leave.days + ' วัน'),
+          flexKV_('จำนวน', leaveAmountText_(leave)),
           flexSeparator_(),
           { type: 'text', text: '✓ ผ่านครบทุกชั้นแล้ว', size: 'sm', color: c.success, margin: 'md', weight: 'bold', wrap: true },
         ],
@@ -436,7 +458,7 @@ function buildStage1RejectReportCard(leave, requester, rejectedByName, note) {
           flexKV_('ผู้ลา', requester.display_name || requester.user_id),
           flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
-          flexKV_('จำนวนวัน', leave.days + ' วัน'),
+          flexKV_('จำนวน', leaveAmountText_(leave)),
           flexKV_('ปฏิเสธโดย', 'หัวหน้างาน (' + (rejectedByName || '-') + ')'),
           flexKV_('เหตุผลการปฏิเสธ', note || '(ไม่ได้ระบุ)'),
         ],
@@ -549,7 +571,7 @@ function buildHrNoticeCard(leave, requester, supervisor, statusLabel) {
           flexKV_('ผู้ลา', requester.display_name || requester.user_id),
           flexKV_('แผนก', requester.department || '-'),
           flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
-          flexKV_('จำนวนวัน', leave.days + ' วัน'),
+          flexKV_('จำนวน', leaveAmountText_(leave)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
           flexKV_('หัวหน้างาน', supervisor ? (supervisor.display_name || supervisor.user_id) : 'ไม่มี (เข้า HR โดยตรง)'),
           flexKV_('สถานะ', statusLabel || 'รอดำเนินการ', c.warning),
@@ -623,7 +645,7 @@ function buildCancelResultCard(cancelRow, parent, requester, approved, byName, n
       flexKV_('ใบลา', parent ? parent.leave_id : (cancelRow.parent_leave_id || '-')),
       flexKV_('ประเภท', leaveTypeLabel_(cancelRow.leave_type)),
       flexKV_('วันที่', formatThaiDateShort(cancelRow.date_from) + ' - ' + formatThaiDateShort(cancelRow.date_to)),
-      flexKV_('จำนวนวัน', cancelRow.days + ' วัน'),
+      flexKV_('จำนวน', leaveAmountText_(cancelRow)),
     ],
   };
   if (byName) body.contents.push(flexKV_('ผู้ตัดสิน', byName));
@@ -653,11 +675,17 @@ function buildCancelResultCard(cancelRow, parent, requester, approved, byName, n
  * เตือนซ้ำ: ใบนี้ค้างอยู่ที่คุณ
  * ใช้โทนแดงตั้งแต่ครั้งแรก เพราะเป็นการ์ดที่ต้องสะดุดตากว่าการ์ดขออนุมัติปกติ
  */
-function buildReminderCard(leave, requester, stage, count, quietHours) {
+function buildReminderCard(leave, requester, stage, count, quietHours, opts) {
+  opts = opts || {};
   const c = flexColors_();
   const alert = '#b3261e';
   const isCancel = (leave.record_type || 'leave') === 'cancel';
   const stageName = stage === 1 ? 'หัวหน้างาน' : stage === 2 ? 'HR' : 'ผู้บริหาร';
+  // สำเนาถึง HR ตอนผู้บริหารเงียบ — HR ตัดสินแทนได้
+  const headText = opts.hrFallback
+    ? (opts.executivesUnreachable ? 'ผู้บริหารในสายยังรับใบไม่ได้ — HR ตัดสินแทนได้'
+                                  : 'ผู้บริหารยังไม่อนุมัติ — HR ตัดสินแทนได้')
+    : 'เตือนครั้งที่ ' + count + ' — ใบลายังรอคุณอยู่';
 
   return {
     type: 'flex',
@@ -671,7 +699,7 @@ function buildReminderCard(leave, requester, stage, count, quietHours) {
           type: 'box', layout: 'vertical', spacing: 'xs', flex: 1, contents: [
             { type: 'text', text: brandName_(), size: 'xs', color: '#ffd9d6' },
             { type: 'text', size: 'md', weight: 'bold', color: '#ffffff', wrap: true,
-              text: 'เตือนครั้งที่ ' + count + ' — ใบลายังรอคุณอยู่' },
+              text: headText },
           ],
         }],
       },
@@ -685,7 +713,7 @@ function buildReminderCard(leave, requester, stage, count, quietHours) {
           flexKV_('แผนก', requester.department || '-'),
           flexKV_('ประเภท', (isCancel ? 'ขอยกเลิก — ' : '') + leaveTypeLabel_(leave.leave_type)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
-          flexKV_('จำนวนวัน', leave.days + ' วัน'),
+          flexKV_('จำนวน', leaveAmountText_(leave)),
           flexKV_('เหตุผล', leave.reason || '-'),
           (leave.is_emergency === true || leave.is_emergency === 'TRUE')
             ? flexKV_('กรณีฉุกเฉิน', leave.emergency_reason || 'ผู้ลาระบุว่าเร่งด่วน', alert)
@@ -846,6 +874,102 @@ function buildWelcomeClaimCard(liffClaimUrl) {
       footer: flexFooter_([
         btnUri_('ผูกบัญชีของฉัน', liffClaimUrl || 'https://line.me'),
       ]),
+    },
+  };
+}
+
+// ========== ขอเอกสารเพิ่ม / แนบเอกสารทีหลัง ==========
+
+/**
+ * ผู้ลาได้: ผู้อนุมัติขอเอกสารเพิ่ม — ปุ่มพาไปหน้าใบลานั้นเพื่อแนบรูป
+ * isReminder = การ์ดเตือนซ้ำ (ผู้ลายังไม่แนบ)
+ */
+function buildDocRequestCard(leave, requester, askerName, note, isReminder) {
+  const c = flexColors_();
+  const url = getLiffPageUrl('my-requests') + '?id=' + encodeURIComponent(leave.leave_id);
+  return {
+    type: 'flex', altText: (isReminder ? 'เตือน: ' : '') + 'ผู้อนุมัติขอเอกสารเพิ่ม ใบลา ' + leave.leave_id,
+    contents: {
+      type: 'bubble', size: 'mega',
+      header: flexHeader_(isReminder ? 'เตือน: ยังรอเอกสารเพิ่มจากคุณ' : 'ผู้อนุมัติขอเอกสารเพิ่ม', c.warning),
+      body: {
+        type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          { type: 'text', size: 'sm', weight: 'bold', color: c.text, wrap: true,
+            text: 'ใบลายังไม่ถูกตัดสิน — กรุณาแนบเอกสารตามที่ขอ แล้วระบบจะส่งกลับไปให้ผู้อนุมัติ' },
+          flexSeparator_(),
+          flexKV_('ต้องการ', note || '-', c.warning),
+          flexKV_('ขอโดย', askerName || '-'),
+          flexKV_('เลขที่ใบลา', leave.leave_id),
+          flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
+          flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
+          flexKV_('จำนวน', leaveAmountText_(leave)),
+        ],
+      },
+      footer: flexFooter_([
+        { type: 'button', style: 'primary', height: 'sm', color: c.primary,
+          action: { type: 'uri', label: 'แนบเอกสาร', uri: url } },
+      ]),
+    },
+  };
+}
+
+/** HR ได้สำเนา: มีการขอเอกสารเพิ่ม (บอกด้วยว่าส่งถึงผู้ลาไหม) */
+function buildDocRequestHrNoticeCard(leave, requester, askerName, note, delivered) {
+  const c = flexColors_();
+  return {
+    type: 'flex', altText: 'แจ้ง HR: ขอเอกสารเพิ่ม ใบลา ' + leave.leave_id,
+    contents: {
+      type: 'bubble', size: 'mega',
+      header: flexHeader_('ขอเอกสารเพิ่มจากผู้ลา (สำเนาถึง HR)', c.warning),
+      body: {
+        type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          flexKV_('ผู้ลา', (requester && requester.display_name) || leave.user_id),
+          flexKV_('แผนก', (requester && requester.department) || '-'),
+          flexKV_('เลขที่', leave.leave_id),
+          flexKV_('ขอโดย', askerName || '-'),
+          flexKV_('ต้องการ', note || '-'),
+          flexSeparator_(),
+          delivered
+            ? { type: 'text', margin: 'md', size: 'xs', color: c.success, wrap: true, text: '✅ ส่งแจ้งผู้ลาทางไลน์แล้ว' }
+            : { type: 'text', margin: 'md', size: 'sm', weight: 'bold', color: '#b3261e', wrap: true,
+                text: '⚠️ ส่งถึงผู้ลาไม่ได้ (ยังไม่ผูกไลน์/ไลน์ขัดข้อง) — กรุณาแจ้งผู้ลาโดยตรง ได้รูปมาแล้ว HR แนบแทนได้' },
+        ],
+      },
+      // HR รับรูปจากผู้ลาที่ไม่มีไลน์ แล้วแนบแทนได้จากหน้านี้
+      footer: flexFooter_([
+        btnUri_('เปิดใบลานี้ / แนบเอกสารแทน', getLiffPageUrl('my-requests') + '?id=' + encodeURIComponent(leave.leave_id)),
+      ]),
+    },
+  };
+}
+
+/** ผู้ที่ขอเอกสาร + HR ได้: ผู้ลาแนบเอกสารเพิ่มแล้ว */
+function buildDocAddedCard(leave, requester, url, wasRequested, note) {
+  const c = flexColors_();
+  const pending = leave.final_status === 'pending';
+  const buttons = [btnUri_('ดูเอกสาร', url)];
+  if (pending) buttons.unshift(btnUri_('เปิดหน้าอนุมัติ', getLiffPageUrl('approve')));
+  return {
+    type: 'flex', altText: 'ผู้ลาแนบเอกสารเพิ่มแล้ว ใบลา ' + leave.leave_id,
+    contents: {
+      type: 'bubble', size: 'mega',
+      header: flexHeader_(wasRequested ? 'ได้รับเอกสารที่ขอแล้ว' : 'ผู้ลาแนบเอกสารเพิ่ม', c.success),
+      body: {
+        type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
+          flexKV_('ผู้ลา', (requester && requester.display_name) || leave.user_id),
+          flexKV_('เลขที่', leave.leave_id),
+          flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
+          flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
+          flexKV_('สถานะใบลา', pending ? 'รออนุมัติ' : 'อนุมัติแล้ว'),
+          note ? flexKV_('คำอธิบาย', note) : { type: 'filler' },
+          {
+            type: 'image', url: driveUrlToThumbnail_(url), size: 'full',
+            aspectRatio: '4:3', aspectMode: 'cover', margin: 'md',
+            action: { type: 'uri', uri: url },
+          },
+        ],
+      },
+      footer: flexFooter_(buttons),
     },
   };
 }

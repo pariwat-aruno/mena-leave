@@ -67,6 +67,11 @@
 
   document.getElementById('content').classList.remove('hidden');
   await loadList();
+
+  // เปิดจากการ์ด "ผู้อนุมัติขอเอกสารเพิ่ม" → เด้งใบนั้นขึ้นมาเลย
+  const openId = new URLSearchParams(location.search).get('id') ||
+    new URLSearchParams((new URLSearchParams(location.search).get('liff.state') || '').replace(/^[^?]*\?/, '')).get('id');
+  if (openId) showDetail(openId);
 })();
 
 async function loadList() {
@@ -89,9 +94,11 @@ async function loadList() {
     const statusLabel = window.STATUS_LABELS[req.final_status] || req.final_status;
     return '<div class="list-row" onclick="showDetail(\'' + req.leave_id + '\')">' +
       '<div class="info">' +
-        '<div class="name">' + (isCancel ? 'ขอยกเลิก · ' : '') + ltLabel + ' · ' + req.days + ' วัน</div>' +
+        '<div class="name">' + (isCancel ? 'ขอยกเลิก · ' : '') + ltLabel + ' · ' + window.utils.escapeHtml(req.amount_text || (req.days + ' วัน')) + '</div>' +
         '<div class="meta">' + dateStr +
-          (req.is_emergency ? ' · แจ้งไม่ทันกำหนด' : '') + '</div>' +
+          (req.is_emergency ? ' · ลากะทันหัน' : '') +
+          (req.doc_request_status === 'requested' ? ' · <strong style="color:#b3261e">ผู้อนุมัติขอเอกสารเพิ่ม</strong>'
+            : req.doc_pending ? ' · รอแนบใบรับรองแพทย์' : '') + '</div>' +
       '</div>' +
       '<span class="badge ' + req.final_status + '">' + statusLabel + '</span>' +
     '</div>';
@@ -107,8 +114,9 @@ async function showDetail(leaveId) {
   const l = r.leave;
   const body = document.getElementById('detail-body');
 
+  const ownerFirst = l.stage2_status === 'skipped' && l.stage3_status === 'skipped' && l.stage1_status !== 'skipped';
   const stages = [
-    { n: 1, label: 'หัวหน้างาน', status: l.stage1_status, at: l.stage1_at, note: l.stage1_note },
+    { n: 1, label: ownerFirst ? 'ผู้บริหาร (ผู้อนุมัติขั้นแรก)' : 'หัวหน้างาน', status: l.stage1_status, at: l.stage1_at, note: l.stage1_note },
     { n: 2, label: 'ฝ่ายบุคคล (HR)', status: l.stage2_status, at: l.stage2_at, note: l.stage2_note },
     { n: 3, label: 'ผู้บริหาร', status: l.stage3_status, at: l.stage3_at, note: l.stage3_note },
   ];
@@ -117,17 +125,24 @@ async function showDetail(leaveId) {
 
   body.innerHTML =
     (isCancel ? '<div class="alert info">ใบขอยกเลิกวันลา (ของใบ ' + window.utils.escapeHtml(l.parent_leave_id || '-') + ')</div>' : '') +
-    (l.is_emergency ? '<div class="alert warning">แจ้งไม่ทันกำหนด — ระบุว่าเป็นกรณีฉุกเฉิน: ' +
+    (l.doc_request_status === 'requested'
+      ? '<div class="alert error"><strong>ผู้อนุมัติขอเอกสารเพิ่ม</strong><div>' +
+        window.utils.escapeHtml(l.doc_request_note || '-') + '</div><div class="mt-1">แนบรูปที่ช่อง "แนบเอกสารเพิ่ม" ด้านล่าง แล้วระบบจะส่งกลับไปให้ผู้อนุมัติ</div></div>'
+      : '') +
+    (l.doc_pending && l.doc_request_status !== 'requested'
+      ? '<div class="alert warning">ยังไม่ได้แนบใบรับรองแพทย์ — ได้มาแล้วแนบที่ด้านล่างได้เลย</div>' : '') +
+    (l.is_emergency ? '<div class="alert warning">ลากะทันหัน / แจ้งไม่ทันกำหนด: ' +
       window.utils.escapeHtml(l.emergency_reason || '-') + '</div>' : '') +
     '<div class="card">' +
       '<div class="card-row"><span class="label">เลขที่</span><span class="value">' + l.leave_id + '</span></div>' +
       '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + (window.LEAVE_TYPE_LABELS[l.leave_type] || l.leave_type) + (l.is_retroactive && !isCancel ? ' (ย้อนหลัง)' : '') + '</span></div>' +
-      '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(l.date_from) + ' - ' + window.utils.formatThaiDateShort(l.date_to) + '</span></div>' +
-      '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + l.days + ' วัน</span></div>' +
+      '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(l.date_from) + (l.date_from === l.date_to ? '' : ' - ' + window.utils.formatThaiDateShort(l.date_to)) + '</span></div>' +
+      '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + window.utils.escapeHtml(l.amount_text || (l.days + ' วัน')) + '</span></div>' +
       '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(l.reason || '-') + '</span></div>' +
       '<div class="card-row"><span class="label">สถานะ</span><span class="badge ' + l.final_status + '">' + (window.STATUS_LABELS[l.final_status] || l.final_status) + '</span></div>' +
     '</div>' +
-    (l.attachment_url ? '<div class="mt-2 text-center"><a href="' + l.attachment_url + '" target="_blank" class="btn ghost sm">ดูไฟล์แนบ</a></div>' : '') +
+    attachmentLinks(l) +
+    buildAttachBox(l) +
     buildActions(l) +
     '<h2 class="section-title">ลำดับการอนุมัติ</h2>' +
     '<div class="timeline">' +
@@ -143,7 +158,80 @@ async function showDetail(leaveId) {
     '</div>';
 
   bindActionButton();
+  bindAttachBox();
   document.getElementById('detail-overlay').classList.remove('hidden');
+}
+
+/** ลิงก์ไฟล์แนบตอนส่ง + ที่แนบเพิ่มทีหลัง */
+function attachmentLinks(l) {
+  const links = [];
+  if (l.attachment_url) links.push({ url: l.attachment_url, label: 'ไฟล์แนบตอนส่ง' });
+  (l.extra_attachments || []).forEach((a, i) => {
+    links.push({ url: a.url, label: 'แนบเพิ่ม ' + (i + 1) + (a.at ? ' · ' + window.utils.formatThaiDateTime(a.at) : '') +
+      (a.note ? ' · ' + a.note : '') });
+  });
+  if (!links.length) return '';
+  return '<div class="mt-2">' + links.map(x =>
+    '<a class="btn ghost sm block mt-1" style="min-height:44px;display:flex;align-items:center;justify-content:center" target="_blank" rel="noopener" href="' + window.utils.escapeHtml(x.url) + '">' +
+    window.utils.escapeHtml(x.label) + '</a>').join('') + '</div>';
+}
+
+/**
+ * แนบเอกสารเพิ่ม — ใบรับรองแพทย์ที่ได้มาทีหลัง / ตามที่ผู้อนุมัติขอ
+ * ได้ทั้งใบที่รออนุมัติและที่อนุมัติแล้ว
+ */
+let ATTACH_FILE = null;
+function buildAttachBox(l) {
+  if (l.record_type === 'cancel') return '';
+  if (['pending', 'approved'].indexOf(l.final_status) < 0) return '';
+  const urgent = l.doc_request_status === 'requested';
+  return '<div class="card ' + (urgent ? '' : 'soft ') + 'mt-2" id="attach-box">' +
+    '<h3 class="section-title" style="font-size:15px;margin-top:0">แนบเอกสารเพิ่ม</h3>' +
+    '<p class="subtle">เช่น ใบรับรองแพทย์ ใบนัด — ถ่ายรูปหรือเลือกจากแกลเลอรีได้ แนบได้หลายครั้ง</p>' +
+    '<input type="file" id="attach-input" accept="image/*">' +
+    '<div id="attach-preview" class="hidden attachment-preview"><img id="attach-img" alt="ตัวอย่าง"></div>' +
+    '<input type="text" id="attach-note" class="mt-1" maxlength="100" placeholder="คำอธิบาย (ไม่บังคับ) เช่น ใบรับรองแพทย์">' +
+    '<div id="attach-alert" class="hidden"></div>' +
+    '<button class="btn primary block mt-1" id="btn-attach" data-leave="' + l.leave_id + '">ส่งเอกสาร</button>' +
+  '</div>';
+}
+
+function bindAttachBox() {
+  ATTACH_FILE = null;
+  const input = document.getElementById('attach-input');
+  const btn = document.getElementById('btn-attach');
+  if (!input || !btn) return;
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    ATTACH_FILE = null;
+    document.getElementById('attach-preview').classList.add('hidden');
+    if (!file) return;
+    try {
+      ATTACH_FILE = await window.utils.fileToResizedBase64(file);
+      document.getElementById('attach-img').src = ATTACH_FILE.base64;
+      document.getElementById('attach-preview').classList.remove('hidden');
+    } catch (err) {
+      window.utils.showAlert('#attach-alert', 'ไฟล์นี้ใช้ไม่ได้ กรุณาเลือกรูปภาพ', 'error');
+    }
+  };
+  btn.onclick = async () => {
+    window.utils.clearAlert('#attach-alert');
+    if (!ATTACH_FILE) return window.utils.showAlert('#attach-alert', 'กรุณาเลือกรูปก่อน', 'error');
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+    const r = await window.api.post('addLeaveAttachment', {
+      lineUserId: window.state.lineUserId,
+      leave_id: btn.dataset.leave,
+      attachment_base64: ATTACH_FILE.base64,
+      attachment_filename: ATTACH_FILE.filename,
+      note: (document.getElementById('attach-note').value || '').trim(),
+    });
+    btn.disabled = false; btn.textContent = label;
+    if (!r.ok) return window.utils.showAlert('#attach-alert', r.message || 'ส่งเอกสารไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
+    window.utils.showToast(r.request_cleared ? 'ส่งเอกสารแล้ว ระบบแจ้งผู้อนุมัติให้แล้ว' : 'แนบเอกสารเรียบร้อย');
+    await showDetail(btn.dataset.leave);
+    await loadList();
+  };
 }
 
 /**

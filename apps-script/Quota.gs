@@ -188,7 +188,7 @@ function adjustQuota_(userId, leaveType, deltas, forYear) {
   let quota = getQuotaRow_(userId, year);
   if (!quota) {
     // ensure row exists with defaults
-    ensureQuotaRow_(userId);
+    ensureQuotaRow_(userId, year);
     quota = getQuotaRow_(userId, year);
   }
   if (!quota) {
@@ -204,16 +204,21 @@ function adjustQuota_(userId, leaveType, deltas, forYear) {
   if (deltas.used != null) {
     const col = leaveType + '_used';
     const cur = Number(quota[col] || 0);
-    const next = Math.max(0, cur + Number(deltas.used));
+    const next = roundDays_(Math.max(0, cur + Number(deltas.used)));
     sh.getRange(quota._rowNumber, hdr.indexOf(col) + 1).setValue(next);
   }
   if (deltas.reserved != null) {
     const col = leaveType + '_reserved';
     const cur = Number(quota[col] || 0);
-    const next = Math.max(0, cur + Number(deltas.reserved));
+    const next = roundDays_(Math.max(0, cur + Number(deltas.reserved)));
     sh.getRange(quota._rowNumber, hdr.indexOf(col) + 1).setValue(next);
   }
   sh.getRange(quota._rowNumber, hdr.indexOf('updated_at') + 1).setValue(nowBangkok());
+}
+
+/** ปัดจำนวนวันเป็น 4 ตำแหน่ง (หน่วยเล็กสุดของลาชั่วโมง = 1/10000 วัน) */
+function roundDays_(n) {
+  return Math.round(Number(n || 0) * 10000) / 10000;
 }
 
 /** helper อ่าน quota row */
@@ -250,7 +255,8 @@ function shapeQuota_(quota) {
       total: total,
       used: used,
       reserved: reserved,
-      available: Math.max(0, total - used - reserved),
+      // ปัดทศนิยม 4 ตำแหน่ง — ลาเป็นชั่วโมงทำให้เกิดเศษ 0.1+0.2 แล้วคนใช้วันที่เหลือพอดีไม่ได้
+      available: roundDays_(Math.max(0, total - used - reserved)),
     };
   });
   return {

@@ -21,6 +21,7 @@ function makeSheet(name, headers, rows) {
     getLastColumn: () => headers.length,
     getRange(r, c, nr = 1, nc = 1) {
       return {
+        getDisplayValues() { return this.getValues().map(r => r.map(v => String(v))); },
         getValues() {
           const out = [];
           for (let i = 0; i < nr; i++) {

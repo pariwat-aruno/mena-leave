@@ -241,6 +241,31 @@ function appendRowByHeader_(sh, obj) {
   return sh.getLastRow();
 }
 
+/**
+ * เติมคอลัมน์ที่ยังไม่มีในหัวตาราง (ต่อท้ายเท่านั้น ไม่แทรกกลาง) ตาม SHEET_HEADERS
+ * เรียกก่อนเขียนคอลัมน์ใหม่ — deploy โค้ดใหม่แล้วไม่ต้องรอใครไปกดรัน setupDatabase()
+ * ไม่งั้น appendRowByHeader_ จะ throw แล้วส่งใบลาไม่ได้ทั้งบริษัท
+ * @return {number} จำนวนคอลัมน์ที่เติม
+ */
+function ensureSheetColumns_(tabName) {
+  const want = (typeof SHEET_HEADERS !== 'undefined' && SHEET_HEADERS[tabName]) || [];
+  if (!want.length) return 0;
+  // ไม่ใช้ cache — อ่านหัวตารางแถวเดียวถูกกว่าเสี่ยงคอลัมน์หายแล้วเขียนไม่ได้ทั้งวัน
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName(tabName);
+  if (!sh) return 0;
+  const lastCol = sh.getLastColumn();
+  const hdr = lastCol ? sh.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  const missing = want.filter(function (h) { return hdr.indexOf(h) < 0; });
+  if (missing.length) {
+    const shortBy = lastCol + missing.length - sh.getMaxColumns();
+    if (shortBy > 0) sh.insertColumnsAfter(sh.getMaxColumns(), shortBy);
+    sh.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
+    logInfo('ensureSheetColumns_', 'เติมคอลัมน์ ' + missing.join(', ') + ' ใน ' + tabName);
+  }
+  return missing.length;
+}
+
 /** แก้หลายคอลัมน์ในแถวเดียว โดยอ้างชื่อคอลัมน์ */
 function updateRowByHeader_(sh, rowNumber, obj) {
   const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];

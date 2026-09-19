@@ -104,6 +104,10 @@ function approveRegister(payload) {
   const user = findUserByUserId_(userId);
   if (!user) return { ok: false, error: 'user_not_found' };
   if (user.status === 'active') return { ok: true, message: 'already active' };
+  // เปิดบัญชีผู้บริหาร/HR ได้เฉพาะผู้บริหาร — ไม่งั้น HR ผูกแถวผู้บริหารแล้วกดอนุมัติตัวเองได้
+  if ((user.role === ROLES.OWNER || user.role === ROLES.ADMIN) && !isOwner(payload.lineUserId)) {
+    return { ok: false, error: 'forbidden_owner_only', message: 'บัญชีระดับผู้บริหาร/HR ต้องให้ผู้บริหารเป็นผู้ยืนยัน' };
+  }
 
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const ss = SpreadsheetApp.openById(sheetId);
@@ -144,6 +148,9 @@ function rejectRegister(payload) {
 
   const user = findUserByUserId_(userId);
   if (!user) return { ok: false, error: 'user_not_found' };
+  if ((user.role === ROLES.OWNER || user.role === ROLES.ADMIN) && !isOwner(payload.lineUserId)) {
+    return { ok: false, error: 'forbidden_owner_only', message: 'บัญชีระดับผู้บริหาร/HR ต้องให้ผู้บริหารเป็นผู้ตัดสิน' };
+  }
 
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Users');
@@ -195,8 +202,9 @@ function publicUser_(user) {
 }
 
 /** create LeaveQuota row ตาม default (idempotent) — ใช้ทั้งใน approveRegister + bootstrapFirstOwner */
-function ensureQuotaRow_(userId) {
-  const year = currentYearBangkok_();
+function ensureQuotaRow_(userId, forYear) {
+  // ยื่นเดือนธันวาคมเพื่อลาเดือนมกราคม ต้องมีแถวโควตาปีหน้า ไม่งั้นส่งใบลาไม่ได้ (throw ที่ shapeQuota_)
+  const year = Number(forYear) || currentYearBangkok_();
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveQuota');
   const quotaId = 'Q-' + year + '-' + userId;

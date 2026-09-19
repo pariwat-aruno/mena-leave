@@ -88,6 +88,15 @@ window.ruleConditionText = function (rule) {
   if (!rule) return '';
   const parts = [];
   const advance = Number(rule.advance_notice_days || 0);
+  if (rule.leave_type === 'sick') {
+    // ลาป่วย: ป่วยกะทันหันส่งได้เลย ไม่ต้องติ๊กฉุกเฉิน (ตรงกับ UNFORESEEABLE_LEAVE_TYPES ฝั่ง backend)
+    parts.push('ป่วยกะทันหันลาวันนี้หรือย้อนหลังได้เลย');
+    const docAboveS = Number(rule.doc_required_above_days || 0);
+    if (docAboveS > 0) parts.push('ลาตั้งแต่ ' + docAboveS + ' วันต้องมีใบรับรองแพทย์ — ส่งใบลาก่อนแล้วแนบทีหลังได้');
+    const maxS = Number(rule.max_consecutive_days || 0);
+    if (maxS > 0) parts.push('ลาติดกันได้ไม่เกิน ' + maxS + ' วัน');
+    return parts.join(' · ');
+  }
   if (advance > 0) {
     parts.push('เขียนใบลาล่วงหน้าอย่างน้อย ' + advance + ' วัน');
     const allowEmergency = !(rule.allow_emergency === false || rule.allow_emergency === 'FALSE');

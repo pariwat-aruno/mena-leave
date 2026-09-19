@@ -45,6 +45,10 @@ function submitLeave(payload) {
     const target = findUserByUserId_(payload.on_behalf_user_id);
     if (!target) return { ok: false, error: 'target_not_found', message: 'ไม่พบพนักงานที่ต้องการลาแทน' };
     if (target.status !== 'active') return { ok: false, error: 'target_inactive', message: 'พนักงานที่ต้องการลาแทนไม่พร้อมใช้งาน' };
+    // ใบของผู้บริหารอนุมัติอัตโนมัติ — คนอื่นยื่นแทนไม่ได้ ไม่งั้นได้วันลาที่ไม่มีใครอนุมัติจริง
+    if (target.role === ROLES.OWNER) {
+      return { ok: false, error: 'forbidden_proxy', message: 'ลาแทนผู้บริหารไม่ได้ — ผู้บริหารต้องยื่นเอง' };
+    }
     requester = target;
     proxyNote = ' (ลาแทนโดย ' + (actor.display_name || actor.user_id) + ')';
   }
@@ -62,6 +66,22 @@ function submitLeave(payload) {
   }
 
   const cfg = getConfig();
+  // โค้ดใหม่เขียนคอลัมน์ใหม่ — เติมหัวตารางให้เองก่อน ไม่ต้องรอใครกด setupDatabase()
+  ensureSheetColumns_('LeaveRequests');
+
+  // === ลาเป็นชั่วโมง === (วันเดียว + ช่วงเวลา → หักโควตาเป็นเศษของวัน)
+  const isHourly = payload.leave_unit === 'hour';
+  let hours = 0;
+  if (isHourly) {
+    if (!isHourlyLeaveType_(payload.leave_type, cfg)) {
+      return { ok: false, error: 'hourly_not_allowed',
+        message: leaveTypeLabel_(payload.leave_type) + 'ลาเป็นชั่วโมงไม่ได้ — กรุณาเลือกลาเป็นวัน' };
+    }
+    payload.date_to = payload.date_from;
+    const hr = computeLeaveHours_(payload.time_from, payload.time_to, cfg);
+    if (!hr.ok) return hr;
+    hours = hr.hours;
+  }
 
   // === validate GPS ===
   // เปิด GPS ไม่ได้ → ส่งใบลาได้ แต่ต้องระบุเหตุผล แล้วใบลาจะถูกติดธง
@@ -79,7 +99,8 @@ function submitLeave(payload) {
   // === compute days ===
   const countWeekends = cfg.count_weekends_as_leave === true || cfg.count_weekends_as_leave === 'TRUE';
   const workDays = workDaysIso_(cfg);
-  const days = countLeaveDays(payload.date_from, payload.date_to, countWeekends, workDays);
+  const calendarDays = countLeaveDays(payload.date_from, payload.date_to, countWeekends, workDays);
+  const days = isHourly && calendarDays > 0 ? hoursToLeaveDays_(hours, cfg) : calendarDays;
   if (days <= 0) {
     // แยกสองสาเหตุให้ชัด — "วันหยุดทั้งช่วง" ไม่ใช่ "กรอกวันที่ผิด"
     // ข้อความเดียวคลุมทั้งสองแบบ ทำให้คนอ่านแล้วไปนั่งแก้วันที่ทั้งที่วันที่ถูกอยู่แล้ว
@@ -103,12 +124,15 @@ function submitLeave(payload) {
     const year = yearOfYmd_(payload.date_from);
     let quota = getQuotaRow_(requester.user_id, year);
     if (!quota) {
-      ensureQuotaRow_(requester.user_id);
+      ensureQuotaRow_(requester.user_id, year);
       quota = getQuotaRow_(requester.user_id, year);
+    }
+    if (!quota) {
+      return { ok: false, error: 'no_quota_row', message: 'ยังไม่มีโควตาวันลาของปี ' + year + ' กรุณาแจ้ง HR' };
     }
     const quotaShaped = shapeQuota_(quota);
     const available = quotaShaped[payload.leave_type].available;
-    if (days > available) {
+    if (roundDays_(days) > roundDays_(available) + 1e-9) {
       return { ok: false, error: 'quota_exceeded',
         message: 'โควตา' + leaveTypeLabel_(payload.leave_type) + 'คงเหลือ ' + available + ' วัน ลาได้ไม่เกินนี้' };
     }
@@ -129,6 +153,16 @@ function submitLeave(payload) {
   );
   if (!advanceCheck.ok) return advanceCheck;
   const isEmergency = advanceCheck.emergency === true;
+  const docPending = ruleCheck.docPending === true;
+
+  // === ใบลาซ้อนกับใบที่ยังรอ/อนุมัติแล้ว === (ลาชั่วโมงทำให้เกิดง่ายขึ้น: ลาทั้งวันแล้วยื่นลาชั่วโมงซ้ำ)
+  const clash = findOverlappingLeave_(requester.user_id, payload.date_from, payload.date_to,
+    isHourly ? payload.time_from : '', isHourly ? payload.time_to : '');
+  if (clash) {
+    return { ok: false, error: 'overlap',
+      message: 'ช่วงนี้มีใบลาอยู่แล้ว (' + clash.leave_id + ' · ' + leaveTypeLabel_(clash.leave_type) + ' ' +
+               leaveAmountText_(clash) + ') — ถ้าต้องการเปลี่ยน ให้ถอน/ขอยกเลิกใบเดิมก่อน' };
+  }
 
   // === upload attachment ===
   let attachmentUrl = '';
@@ -183,11 +217,19 @@ function submitLeave(payload) {
     submitted_at: now,
     gps_missing_reason: hasGps ? '' : gpsMissingReason,
     is_emergency: isEmergency,
-    emergency_reason: isEmergency ? emergencyReason : '',
+    emergency_reason: isEmergency ? (advanceCheck.reason || emergencyReason) : '',
     record_type: 'leave',
     parent_leave_id: '',
     last_reminded_at: '',
     reminder_count: 0,
+    leave_unit: isHourly ? 'hour' : 'day',
+    // ⭐ ขึ้นต้นด้วย ' ให้ชีตเก็บเป็นข้อความ — ถ้าชีตแปลงเป็นเวลา จะได้ Date ปี 1899
+    //    ซึ่งเขตเวลาไทยยุคนั้นเพี้ยน +6:42 อ่านกลับมาเวลาเคลื่อน 17-18 นาที
+    time_from: isHourly ? "'" + String(payload.time_from) : '',
+    time_to: isHourly ? "'" + String(payload.time_to) : '',
+    hours: isHourly ? hours : '',
+    doc_pending: docPending,
+    extra_attachments: '',
   });
 
   // === reserve quota === (เฉพาะประเภทที่มีโควตา — ลาอื่นๆ ไม่แตะ LeaveQuota)
@@ -211,7 +253,8 @@ function submitLeave(payload) {
 
   // confirm card → ผู้ที่กดส่ง (operator) + ผู้ลา (ถ้าลาแทน)
   try {
-    const nextStageLabel = stageWaitingLabel_(firstApprovalStage);
+    const nextStageLabel = flow.ownerFirst && firstApprovalStage === 1
+      ? 'รอผู้บริหารตรวจ' : stageWaitingLabel_(firstApprovalStage);
     pushMessage(payload.lineUserId, buildLeaveSubmittedCard(leave, nextStageLabel));
     // ลาแทน → แจ้งผู้ลาด้วย (ถ้าผูก LINE ไว้)
     if (proxyNote && requester.line_user_id && requester.line_user_id !== payload.lineUserId) {
@@ -227,11 +270,14 @@ function submitLeave(payload) {
 
     // cc HR ให้รู้ตั้งแต่ต้นว่ามีใบลาเข้ามา รอหัวหน้าคนไหนอยู่
     // (ชั้น 2 ขึ้นไป HR ได้การ์ดขออนุมัติอยู่แล้ว ไม่ต้อง cc ซ้ำ)
-    try {
-      const sup = resolveStage1Approver_(requester.user_id);
-      pushToAllAdmins(buildHrNoticeCard(leave, requester, sup, 'รอหัวหน้างานตรวจ'));
-    } catch (e) {
-      logWarn('submitLeave', 'cc HR failed: ' + e.message);
+    // ⭐ ผู้อนุมัติขั้นแรกเป็นผู้บริหาร → ยังไม่แจ้ง HR รอผู้บริหารอนุมัติก่อนค่อยแจ้ง (ลูกค้าสั่ง 19 ก.ย. 69)
+    if (!flow.ownerFirst) {
+      try {
+        const sup = resolveStage1Approver_(requester.user_id);
+        pushToAllAdmins(buildHrNoticeCard(leave, requester, sup, 'รอหัวหน้างานตรวจ'));
+      } catch (e) {
+        logWarn('submitLeave', 'cc HR failed: ' + e.message);
+      }
     }
   } else if (firstApprovalStage === 2) {
     sendApprovalRequestStage_(leave, requester, 2);
@@ -244,7 +290,8 @@ function submitLeave(payload) {
     } catch (e) {}
   }
 
-  return { ok: true, leave_id: leaveId, days: days, final_status: finalStatus };
+  return { ok: true, leave_id: leaveId, days: days, hours: hours, leave_unit: isHourly ? 'hour' : 'day',
+           doc_pending: docPending, final_status: finalStatus };
 }
 
 /** payload = { lineUserId, limit?, offset? } */
@@ -350,5 +397,17 @@ function shapeLeavePublic_(leave, includeSensitive) {
     stage3_note: leave.stage3_note,
     final_status: leave.final_status,
     submitted_at: leave.submitted_at,
+    leave_unit: leave.leave_unit || 'day',
+    time_from: timeText_(leave.time_from),
+    time_to: timeText_(leave.time_to),
+    hours: Number(leave.hours || 0),
+    amount_text: leaveAmountText_(leave),
+    doc_pending: isTruthyCell_(leave.doc_pending),
+    extra_attachments: parseExtraAttachments_(leave.extra_attachments),
+    doc_request_status: leave.doc_request_status || '',
+    doc_request_stage: Number(leave.doc_request_stage || 0),
+    doc_request_note: leave.doc_request_note || '',
+    doc_request_at: leave.doc_request_at || '',
+    hr_fallback: isTruthyCell_(leave.hr_fallback),
   };
 }

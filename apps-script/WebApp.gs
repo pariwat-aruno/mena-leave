@@ -80,6 +80,8 @@ function routeAction_(action, payload) {
     'getMyQuota':              function (p) { return getMyQuota(p); },
     'submitLeave':             function (p) { return submitLeave(p); },
     'getMyHistory':            function (p) { return getMyHistory(p); },
+    // แนบเอกสารเพิ่มภายหลัง (ใบรับรองแพทย์ / ตามที่ผู้อนุมัติขอ)
+    'addLeaveAttachment':      function (p) { return addLeaveAttachment(p); },
     'getOneRequest':           function (p) { return getOneRequest(p); },
 
     // ถอน / ยกเลิกวันลา
@@ -106,6 +108,13 @@ function routeAction_(action, payload) {
 
     // ฐานข้อมูลพนักงาน + ผังอำนาจอนุมัติ
     'getEmployeeDirectory':    function (p) { return getEmployeeDirectory(p); },
+    'updateEmployeeProfile':   function (p) { return updateEmployeeProfile(p); },
+    // สร้างพนักงานใหม่ + ผูกสายอนุมัติ + ออกรหัสจับคู่ ในขั้นเดียว (กันแถวซ้ำ)
+    'createEmployee':          function (p) { return createEmployee(p); },
+    // รายงาน/ส่งออกสถิติการลา
+    'getLeaveReport':          function (p) { return getLeaveReport(p); },
+    'exportLeaveReportCsv':    function (p) { return exportLeaveReportCsv(p); },
+    'getReportFilters':        function (p) { return getReportFilters(p); },
     'getApprovalChain':        function (p) { return getApprovalChain(p); },
     'setApprovalChain':        function (p) { return setApprovalChain(p); },
     'getMyOrgLine':            function (p) { return getMyOrgLine(p); },

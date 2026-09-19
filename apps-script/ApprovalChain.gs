@@ -121,21 +121,38 @@ function getSupervisorFor(userId) {
 function getExecutivesFor(userId, usersIndex) {
   const idx = usersIndex || loadUsersIndex_();
   const ids = listActiveApprovers_(userId, APPROVER_LEVEL_EXECUTIVE);
+  return executiveRouteFrom_(ids, idx, userId);
+}
 
-  const linked = ids
-    .map(function (id) { return idx.byId[id]; })
-    .filter(function (u) { return u && u.status === 'active' && u.role === ROLES.OWNER; });
+/**
+ * ตัดสินเส้นทางชั้นผู้บริหาร จากรายชื่อผู้บริหารที่ผูกไว้ในสาย
+ *
+ *   ผูกไว้ + มีคนรับได้จริง (active · ผู้บริหาร · ผูกไลน์แล้ว) → ส่งเฉพาะคนในสาย
+ *   ผูกไว้ แต่ไม่มีใครรับได้ (ยังไม่ผูกไลน์/ลาออก)           → ส่ง HR แทน (hrFallback)
+ *   ไม่เคยผูกสายเลย                                          → ผู้บริหารทุกคน (กันใบค้างตาย)
+ *
+ * ⭐ เดิมกรณี "ผูกไว้แต่รับไม่ได้" โยนให้ผู้บริหารทุกคน → ใบลาแผนกที่ผูกกับคุณสุรศักดิ์
+ *    ไปโผล่ที่ผู้บริหารคนอื่นที่ไม่เกี่ยว (ลูกค้าแจ้ง 19 ก.ย. 69) — ตอนนี้ให้ HR รับแทน
+ *
+ * return { users, fallback, hrFallback }
+ */
+function executiveRouteFrom_(ids, idx, userIdForLog) {
+  const reachable = function (u) {
+    return u && u.status === 'active' && u.role === ROLES.OWNER && !!u.line_user_id;
+  };
+  const linked = (ids || []).map(function (id) { return idx.byId[id]; }).filter(reachable);
+  if (linked.length) return { users: linked, fallback: false, hrFallback: false };
 
-  if (linked.length) return { users: linked, fallback: false };
-
-  const all = idx.list.filter(function (u) {
-    return u.status === 'active' && u.role === ROLES.OWNER;
-  });
-  if (ids.length) {
-    logWarn('getExecutivesFor', 'ผู้บริหารที่ผูกไว้ใช้งานไม่ได้ (ลาออก/ไม่ใช่ผู้บริหารแล้ว) — ส่งให้ผู้บริหารทุกคนแทน',
-      { userId: userId, linkedIds: ids });
+  if (ids && ids.length) {
+    if (userIdForLog) {
+      logWarn('getExecutivesFor', 'ผู้บริหารในสายยังรับใบไม่ได้ (ยังไม่ผูกไลน์/ปิดบัญชี) — ส่ง HR แทน',
+        { userId: userIdForLog, linkedIds: ids });
+    }
+    return { users: [], fallback: true, hrFallback: true };
   }
-  return { users: all, fallback: true };
+
+  const all = idx.list.filter(reachable);
+  return { users: all, fallback: true, hrFallback: all.length === 0 };
 }
 
 /**
@@ -386,6 +403,8 @@ function setApprovalChain(payload) {
       }
     }
 
+    if (touchSupervisor) rerouteOwnerFirstLeaves_(payload.user_id);
+
     audit(payload.lineUserId, 'set_approval_chain', 'Approvers', payload.user_id, {
       supervisor_user_id: touchSupervisor ? supId : '(ไม่แตะ)',
       executive_user_ids: touchExecutives ? execIds : '(ไม่แตะ)',
@@ -522,4 +541,35 @@ function migrateSupervisorsToApprovers_(ss) {
   });
 
   if (moved) console.log('✓ ย้ายคู่หัวหน้างานเดิมเข้าผังอำนาจอนุมัติ ' + moved + ' คู่');
+}
+
+/**
+ * เปลี่ยนหัวหน้างานกลางทาง: ใบแบบ "ผู้บริหารก่อน" ที่ยังค้างชั้น 1 แต่หัวหน้าคนใหม่ไม่ใช่ผู้บริหาร
+ * → เปิดชั้น HR + ผู้บริหารกลับมาเป็นสายปกติ (หัวหน้าใหม่ → HR → ผู้บริหาร)
+ * ไม่งั้นใบค้างถาวร: ผู้บริหารคนเดิมกดไม่ได้เพราะไม่ใช่หัวหน้าแล้ว หัวหน้าใหม่กดไม่ได้เพราะไม่ใช่ผู้บริหาร
+ */
+function rerouteOwnerFirstLeaves_(userId) {
+  const newSupId = getSupervisorFor(userId);
+  const newSup = newSupId ? findUserByUserId_(newSupId) : null;
+  if (newSup && newSup.role === ROLES.OWNER) return 0;
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
+  if (!sh || sh.getLastRow() < 2) return 0;
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  let n = 0;
+  data.forEach(function (r, i) {
+    const o = {};
+    hdr.forEach(function (h, j) { o[h] = r[j]; });
+    if (o.user_id !== userId || o.final_status !== 'pending') return;
+    if (!(o.stage1_status === 'pending' && o.stage2_status === 'skipped' && o.stage3_status === 'skipped')) return;
+    updateRowByHeader_(sh, i + 2, {
+      stage1_status: newSup ? 'pending' : 'skipped',
+      stage2_status: 'pending', stage2_at: '',
+      stage3_status: 'pending', stage3_at: '',
+    });
+    n++;
+  });
+  if (n) logInfo('rerouteOwnerFirstLeaves_', 'ใบแบบผู้บริหารก่อน ' + n + ' ใบ กลับเป็นสายปกติ', { userId: userId });
+  return n;
 }

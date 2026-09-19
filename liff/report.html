@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>รายงานสถิติการลา — MENA COSMETICS</title>
+<link rel="stylesheet" href="./css/style.css">
+<style>
+  .report-segment {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .report-segment button {
+    min-height: 44px;
+    padding: 8px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: white;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .report-segment button.active {
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
+    background: var(--brand-tint);
+    font-weight: 600;
+  }
+  .report-date-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .report-date-grid .form-group { margin-bottom: 0; }
+  .app input[type="month"] {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: white;
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+  }
+  .report-picks { max-height: 260px; }
+  .report-picks .pick-item { min-height: 44px; }
+  .report-actions { display: grid; gap: 8px; }
+  .report-actions .btn { min-height: 48px; }
+  .report-table { min-width: 1040px; }
+  .report-table.detail { min-width: 1460px; }
+  .report-table td { white-space: nowrap; }
+  .report-table td.wrap { white-space: normal; min-width: 160px; }
+  .report-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin: 24px 0 10px;
+  }
+  .report-heading h2 { color: var(--brand-primary); font-size: 18px; }
+  .report-heading span { color: var(--text-subtle); font-size: 13px; }
+  @media (max-width: 380px) {
+    .report-segment button { font-size: 14px; }
+    .report-date-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <img class="logo" src="./img/logo.jpg" alt="logo" onerror="this.style.visibility='hidden'">
+    <div class="brand">
+      <div class="brand-name">MENA COSMETICS</div>
+      <div class="page-title">รายงานสถิติการลา</div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="loading" class="loader"><div class="spinner"></div>กำลังโหลด...</div>
+
+    <div id="not-allowed" class="hidden">
+      <div class="alert error">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
+      <p class="subtle">เฉพาะ HR / ผู้บริหาร เท่านั้น</p>
+      <a class="btn primary block mt-2" href="./myid.html">กลับ</a>
+    </div>
+
+    <div id="content" class="hidden">
+      <div class="alert info">ข้อมูลเข้างาน/ออกงาน/มาสาย ยังไม่มีในระบบลางาน</div>
+      <div id="report-alert" class="alert error hidden"></div>
+
+      <section class="card">
+        <div class="form-group">
+          <label>ช่วงเวลา</label>
+          <div id="period-mode" class="report-segment">
+            <button type="button" class="active" data-mode="day" aria-pressed="true">รายวัน</button>
+            <button type="button" data-mode="month" aria-pressed="false">รายเดือน</button>
+            <button type="button" data-mode="custom" aria-pressed="false">กำหนดเอง</button>
+          </div>
+        </div>
+
+        <div id="period-day" class="form-group">
+          <label for="day-input">วันที่</label>
+          <input type="date" id="day-input">
+        </div>
+
+        <div id="period-month" class="form-group hidden">
+          <label for="month-input">เดือน</label>
+          <input type="month" id="month-input">
+        </div>
+
+        <div id="period-custom" class="report-date-grid hidden">
+          <div class="form-group">
+            <label for="date-from">ตั้งแต่วันที่</label>
+            <input type="date" id="date-from">
+          </div>
+          <div class="form-group">
+            <label for="date-to">ถึงวันที่</label>
+            <input type="date" id="date-to">
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="form-group">
+          <label>ขอบเขตพนักงาน</label>
+          <div id="scope-mode" class="report-segment">
+            <button type="button" class="active" data-mode="all" aria-pressed="true">ทั้งหมด</button>
+            <button type="button" data-mode="department" aria-pressed="false">เลือกแผนก</button>
+            <button type="button" data-mode="person" aria-pressed="false">เลือกคน</button>
+          </div>
+        </div>
+
+        <div id="scope-department" class="hidden">
+          <div id="department-list" class="pick-list report-picks"></div>
+        </div>
+
+        <div id="scope-person" class="hidden">
+          <input type="search" id="people-search" class="mb-1 hidden" placeholder="ค้นหา รหัส / ชื่อ / แผนก">
+          <div id="people-list" class="pick-list report-picks"></div>
+        </div>
+      </section>
+
+      <div class="report-actions">
+        <button type="button" id="view-report" class="btn primary block">ดูรายงาน</button>
+        <button type="button" id="download-report" class="btn secondary block">ดาวน์โหลดไฟล์ Excel (CSV)</button>
+      </div>
+
+      <div id="results" class="hidden">
+        <div class="report-heading">
+          <h2>สรุปรายบุคคล</h2>
+          <span id="summary-count"></span>
+        </div>
+        <div class="table-wrap card" style="padding:0">
+          <table class="tbl report-table">
+            <thead>
+              <tr>
+                <th>รหัสพนักงาน</th>
+                <th>ชื่อพนักงาน</th>
+                <th>แผนก</th>
+                <th class="r">ลาป่วย (วัน)</th>
+                <th class="r">ลากิจ (วัน)</th>
+                <th class="r">ลาพักร้อน (วัน)</th>
+                <th class="r">ลาอื่นตามกฎหมาย (วัน)</th>
+                <th class="r">ชั่วโมง</th>
+                <th class="r">ฉุกเฉิน (ครั้ง)</th>
+                <th class="r">จำนวนใบลา</th>
+              </tr>
+            </thead>
+            <tbody id="summary-rows"></tbody>
+          </table>
+        </div>
+
+        <div class="report-heading">
+          <h2>รายละเอียดใบลา</h2>
+          <span id="detail-count"></span>
+        </div>
+        <div class="table-wrap card" style="padding:0">
+          <table class="tbl report-table detail">
+            <thead>
+              <tr>
+                <th>เลขที่ใบลา</th>
+                <th>รหัสพนักงาน</th>
+                <th>ชื่อพนักงาน</th>
+                <th>แผนก</th>
+                <th>ตำแหน่ง</th>
+                <th>ประเภทการลา</th>
+                <th>วันที่เริ่ม</th>
+                <th>วันที่สิ้นสุด</th>
+                <th>หน่วย</th>
+                <th class="r">วันในช่วงรายงาน</th>
+                <th class="r">ชั่วโมง</th>
+                <th class="c">ฉุกเฉิน</th>
+                <th>สถานะ</th>
+                <th>ส่งเมื่อ</th>
+              </tr>
+            </thead>
+            <tbody id="detail-rows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <a class="btn ghost block mt-2" href="./admin.html">กลับหน้าจัดการระบบ</a>
+    </div>
+
+    <div class="page-footer">MENA COSMETICS</div>
+  </main>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/role.js"></script>
+<script src="./js/utils.js"></script>
+<script>
+let REPORT_FILTERS = { departments: [], people: [] };
+let PERIOD_MODE = 'day';
+let SCOPE_MODE = 'all';
+
+(async function () {
+  setInitialDates();
+  bindControls();
+
+  try {
+    await window.auth.init();
+  } catch (err) {
+    document.getElementById('loading').innerHTML =
+      '<div class="alert error">ไม่สามารถยืนยันตัวตนได้ กรุณาปิดแล้วเปิดหน้านี้ใหม่</div>';
+    return;
+  }
+
+  const status = await window.api.post('getMyStatus', { lineUserId: window.state.lineUserId });
+  if (!status.ok) {
+    document.getElementById('loading').innerHTML =
+      '<div class="alert error">' + window.utils.escapeHtml(readableReportError(status)) + '</div>';
+    return;
+  }
+  if (status.status !== 'active' || !status.user ||
+      !window.hasRole(status.user.role, window.ROLES.ADMIN)) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('not-allowed').classList.remove('hidden');
+    return;
+  }
+
+  const filters = await window.api.post('getReportFilters', { lineUserId: window.state.lineUserId });
+  document.getElementById('loading').classList.add('hidden');
+  if (!filters.ok) {
+    if (filters.error === 'forbidden') {
+      document.getElementById('not-allowed').classList.remove('hidden');
+      return;
+    }
+    document.getElementById('content').classList.remove('hidden');
+    showReportError(readableReportError(filters));
+    return;
+  }
+
+  REPORT_FILTERS = filters;
+  renderFilterOptions();
+  document.getElementById('content').classList.remove('hidden');
+})();
+
+function bindControls() {
+  document.querySelectorAll('#period-mode button').forEach(function (button) {
+    button.addEventListener('click', function () { setPeriodMode(button.dataset.mode); });
+  });
+  document.querySelectorAll('#scope-mode button').forEach(function (button) {
+    button.addEventListener('click', function () { setScopeMode(button.dataset.mode); });
+  });
+  document.getElementById('people-search').addEventListener('input', filterPeopleList);
+  document.getElementById('view-report').addEventListener('click', loadReport);
+  document.getElementById('download-report').addEventListener('click', downloadReport);
+}
+
+function setInitialDates() {
+  const now = new Date();
+  const bangkok = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  const today = bangkok.toISOString().slice(0, 10);
+  document.getElementById('day-input').value = today;
+  document.getElementById('month-input').value = today.slice(0, 7);
+  document.getElementById('date-from').value = today;
+  document.getElementById('date-to').value = today;
+}
+
+function setPeriodMode(mode) {
+  PERIOD_MODE = mode;
+  document.querySelectorAll('#period-mode button').forEach(function (button) {
+    const active = button.dataset.mode === mode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  document.getElementById('period-day').classList.toggle('hidden', mode !== 'day');
+  document.getElementById('period-month').classList.toggle('hidden', mode !== 'month');
+  document.getElementById('period-custom').classList.toggle('hidden', mode !== 'custom');
+}
+
+function setScopeMode(mode) {
+  SCOPE_MODE = mode;
+  document.querySelectorAll('#scope-mode button').forEach(function (button) {
+    const active = button.dataset.mode === mode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  document.getElementById('scope-department').classList.toggle('hidden', mode !== 'department');
+  document.getElementById('scope-person').classList.toggle('hidden', mode !== 'person');
+}
+
+function renderFilterOptions() {
+  const esc = window.utils.escapeHtml;
+  const departments = REPORT_FILTERS.departments || [];
+  const people = REPORT_FILTERS.people || [];
+
+  document.getElementById('department-list').innerHTML = departments.length
+    ? departments.map(function (department, index) {
+        return '<label class="pick-item">' +
+          '<input type="checkbox" name="report-department" id="department-' + index + '" value="' + esc(department) + '">' +
+          '<span class="who"><span class="name">' + esc(department) + '</span></span>' +
+        '</label>';
+      }).join('')
+    : '<div class="empty">ยังไม่มีข้อมูลแผนก</div>';
+
+  document.getElementById('people-list').innerHTML = people.length
+    ? people.map(function (person, index) {
+        const searchText = [person.emp_code, person.display_name, person.department].join(' ').toLowerCase();
+        return '<label class="pick-item" data-search="' + esc(searchText) + '">' +
+          '<input type="checkbox" name="report-person" id="person-' + index + '" value="' + esc(person.user_id) + '">' +
+          '<span class="who">' +
+            '<span class="name">' + esc(person.display_name || '-') + '</span>' +
+            '<span class="meta">' + esc(person.emp_code || '-') + ' · ' + esc(person.department || '-') + '</span>' +
+          '</span>' +
+        '</label>';
+      }).join('')
+    : '<div class="empty">ยังไม่มีข้อมูลพนักงาน</div>';
+
+  document.getElementById('people-search').classList.toggle('hidden', people.length <= 10);
+}
+
+function filterPeopleList() {
+  const query = document.getElementById('people-search').value.trim().toLowerCase();
+  document.querySelectorAll('#people-list .pick-item').forEach(function (item) {
+    item.style.display = !query || String(item.dataset.search || '').indexOf(query) >= 0 ? 'flex' : 'none';
+  });
+}
+
+function selectedValues(name) {
+  return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
+    .map(function (input) { return input.value; });
+}
+
+function buildReportPayload() {
+  const range = selectedDateRange();
+  if (!range.from || !range.to) throw new Error('กรุณาเลือกช่วงเวลาให้ครบ');
+
+  const from = utcDate(range.from);
+  const to = utcDate(range.to);
+  if (!from || !to || from > to) throw new Error('วันที่เริ่มต้องไม่เกินวันที่สิ้นสุด');
+  const days = Math.floor((to.getTime() - from.getTime()) / 86400000) + 1;
+  if (days > 366) throw new Error('เลือกช่วงเวลาได้ไม่เกิน 366 วัน');
+
+  const payload = {
+    lineUserId: window.state.lineUserId,
+    date_from: range.from,
+    date_to: range.to,
+  };
+  if (SCOPE_MODE === 'department') {
+    payload.departments = selectedValues('report-department');
+    if (!payload.departments.length) throw new Error('กรุณาเลือกอย่างน้อย 1 แผนก');
+  } else if (SCOPE_MODE === 'person') {
+    payload.user_ids = selectedValues('report-person');
+    if (!payload.user_ids.length) throw new Error('กรุณาเลือกอย่างน้อย 1 คน');
+  }
+  return payload;
+}
+
+function selectedDateRange() {
+  if (PERIOD_MODE === 'day') {
+    const day = document.getElementById('day-input').value;
+    return { from: day, to: day };
+  }
+  if (PERIOD_MODE === 'month') {
+    const month = document.getElementById('month-input').value;
+    if (!/^\d{4}-\d{2}$/.test(month)) return { from: '', to: '' };
+    const parts = month.split('-');
+    const year = Number(parts[0]);
+    const monthNumber = Number(parts[1]);
+    const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+    return { from: month + '-01', to: month + '-' + String(lastDay).padStart(2, '0') };
+  }
+  return {
+    from: document.getElementById('date-from').value,
+    to: document.getElementById('date-to').value,
+  };
+}
+
+function utcDate(ymd) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return date;
+}
+
+async function loadReport() {
+  const button = document.getElementById('view-report');
+  clearReportError();
+  let payload;
+  try {
+    payload = buildReportPayload();
+  } catch (err) {
+    showReportError(err.message);
+    return;
+  }
+
+  setButtonLoading(button, true, 'กำลังจัดทำรายงาน...');
+  try {
+    const result = await window.api.post('getLeaveReport', payload);
+    if (!result.ok) {
+      showReportError(readableReportError(result));
+      return;
+    }
+    renderReport(result);
+  } catch (err) {
+    showReportError('ไม่สามารถโหลดรายงานได้ กรุณาลองใหม่');
+  } finally {
+    setButtonLoading(button, false, 'ดูรายงาน');
+  }
+}
+
+async function downloadReport() {
+  const button = document.getElementById('download-report');
+  clearReportError();
+  let payload;
+  try {
+    payload = buildReportPayload();
+  } catch (err) {
+    showReportError(err.message);
+    return;
+  }
+
+  setButtonLoading(button, true, 'กำลังสร้างไฟล์...');
+  try {
+    const result = await window.api.post('exportLeaveReportCsv', payload);
+    if (!result.ok) {
+      showReportError(readableReportError(result));
+      return;
+    }
+    if (window.liff && typeof liff.isInClient === 'function' && liff.isInClient()) {
+      liff.openWindow({ url: result.url, external: true });
+    } else {
+      window.open(result.url, '_blank', 'noopener');
+    }
+  } catch (err) {
+    showReportError('ไม่สามารถสร้างไฟล์ได้ กรุณาลองใหม่');
+  } finally {
+    setButtonLoading(button, false, 'ดาวน์โหลดไฟล์ Excel (CSV)');
+  }
+}
+
+function renderReport(report) {
+  const esc = window.utils.escapeHtml;
+  const summary = report.summary || [];
+  const rows = report.rows || [];
+  document.getElementById('summary-count').textContent = summary.length + ' คน';
+  document.getElementById('detail-count').textContent = rows.length + ' ใบลา';
+
+  document.getElementById('summary-rows').innerHTML = summary.length
+    ? summary.map(function (row) {
+        return '<tr>' +
+          '<td>' + esc(row.emp_code || '-') + '</td>' +
+          '<td class="wrap">' + esc(row.display_name || '-') + '</td>' +
+          '<td>' + esc(row.department || '-') + '</td>' +
+          '<td class="r">' + reportNumber(row.sick_days) + '</td>' +
+          '<td class="r">' + reportNumber(row.personal_days) + '</td>' +
+          '<td class="r">' + reportNumber(row.vacation_days) + '</td>' +
+          '<td class="r">' + reportNumber(row.other_legal_days) + '</td>' +
+          '<td class="r">' + reportNumber(row.hours) + '</td>' +
+          '<td class="r">' + reportNumber(row.emergency_count) + '</td>' +
+          '<td class="r">' + reportNumber(row.leave_count) + '</td>' +
+        '</tr>';
+      }).join('')
+    : '<tr><td colspan="10"><div class="empty">ไม่พบใบลาตามเงื่อนไข</div></td></tr>';
+
+  document.getElementById('detail-rows').innerHTML = rows.length
+    ? rows.map(function (row) {
+        const statusLabel = window.STATUS_LABELS[row.final_status] || row.final_status || '-';
+        const statusClass = ['pending', 'approved', 'rejected', 'withdrawn', 'cancelled'].indexOf(row.final_status) >= 0
+          ? row.final_status : 'skipped';
+        return '<tr>' +
+          '<td>' + esc(row.leave_id || '-') + '</td>' +
+          '<td>' + esc(row.emp_code || '-') + '</td>' +
+          '<td class="wrap">' + esc(row.display_name || '-') + '</td>' +
+          '<td>' + esc(row.department || '-') + '</td>' +
+          '<td class="wrap">' + esc(row.position || '-') + '</td>' +
+          '<td>' + esc(row.leave_type_label || row.leave_type || '-') + '</td>' +
+          '<td>' + esc(row.date_from || '-') + '</td>' +
+          '<td>' + esc(row.date_to || '-') + '</td>' +
+          '<td>' + (row.unit === 'hour' ? 'ชั่วโมง' : 'วัน') + '</td>' +
+          '<td class="r">' + reportNumber(row.days_in_period) + '</td>' +
+          '<td class="r">' + reportNumber(row.hours) + '</td>' +
+          '<td class="c">' + (row.is_emergency ? 'ใช่' : 'ไม่ใช่') + '</td>' +
+          '<td><span class="badge ' + statusClass + '">' + esc(statusLabel) + '</span></td>' +
+          '<td>' + esc(row.submitted_at ? window.utils.formatThaiDateTime(row.submitted_at) : '-') + '</td>' +
+        '</tr>';
+      }).join('')
+    : '<tr><td colspan="14"><div class="empty">ไม่พบรายละเอียดใบลา</div></td></tr>';
+
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function reportNumber(value) {
+  const number = Number(value || 0);
+  return number.toLocaleString('th-TH', { maximumFractionDigits: 2 });
+}
+
+function setButtonLoading(button, loading, label) {
+  button.disabled = loading;
+  button.textContent = label;
+}
+
+function showReportError(message) {
+  const alert = document.getElementById('report-alert');
+  alert.textContent = message;
+  alert.classList.remove('hidden');
+  alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function clearReportError() {
+  const alert = document.getElementById('report-alert');
+  alert.textContent = '';
+  alert.classList.add('hidden');
+}
+
+function readableReportError(result) {
+  const messages = {
+    forbidden: 'คุณไม่มีสิทธิ์ดูรายงานนี้',
+    invalid_dates: 'กรุณาเลือกช่วงเวลาให้ครบ',
+    invalid_date_range: 'วันที่เริ่มต้องไม่เกินวันที่สิ้นสุด',
+    range_too_large: 'เลือกช่วงเวลาได้ไม่เกิน 366 วัน',
+    drive_not_configured: 'ยังไม่ได้ตั้งค่าพื้นที่เก็บไฟล์ กรุณาติดต่อผู้ดูแลระบบ',
+    filters_failed: 'ไม่สามารถโหลดตัวเลือกพนักงานได้ กรุณาลองใหม่',
+    report_failed: 'ไม่สามารถจัดทำรายงานได้ กรุณาลองใหม่',
+    export_failed: 'ไม่สามารถสร้างไฟล์ได้ กรุณาลองใหม่',
+    network_error: 'เชื่อมต่อระบบไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+    invalid_response: 'ระบบตอบกลับไม่สมบูรณ์ กรุณาลองใหม่',
+  };
+  return messages[result && result.error] || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+}
+</script>
+</body>
+</html>

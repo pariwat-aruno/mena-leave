@@ -57,6 +57,18 @@ function getApprovalConditions(payload) {
     // ไม่งั้นสรุปก่อนส่งบอก 1 วัน แต่ระบบหักจริงคนละเลข
     work_days: workDaysIso_(cfg),
     count_weekends_as_leave: cfg.count_weekends_as_leave === true || cfg.count_weekends_as_leave === 'TRUE',
+    // ลาเป็นชั่วโมง — หน้าจอสร้างตัวเลือกเวลาจากค่าชุดเดียวกับที่ backend ตรวจ
+    hourly: (function () {
+      const hc = hourlyLeaveConfig_(cfg);
+      return {
+        types: hc.types, hours_per_day: hc.hoursPerDay,
+        work_start: minToHhmm_(hc.workStart), work_end: minToHhmm_(hc.workEnd),
+        lunch_start: hc.lunchStart == null ? '' : minToHhmm_(hc.lunchStart),
+        lunch_end: hc.lunchEnd == null ? '' : minToHhmm_(hc.lunchEnd),
+      };
+    })(),
+    // ประเภทที่ลาวันนี้/ย้อนหลังได้โดยไม่ต้องติ๊กฉุกเฉิน + แนบเอกสารทีหลังได้
+    unforeseeable_types: UNFORESEEABLE_LEAVE_TYPES,
   };
 }
 
@@ -199,6 +211,15 @@ function checkAdvanceNotice_(leaveType, dateFrom, isEmergency, emergencyReason) 
   const meta = LEAVE_TYPE_META[leaveType] || {};
   const label = meta.label || leaveType;
 
+  // ป่วยวางแผนล่วงหน้าไม่ได้ — ลาวันนี้/ย้อนหลังส่งได้เลย ไม่ต้องติ๊กหรือเขียนเหตุผลเพิ่ม
+  // ใบติดธง "ลากะทันหัน" ให้ผู้อนุมัติเห็นแทน (ลูกค้าแจ้ง 19 ก.ย. 69: ลาป่วยกะทันหันส่งไม่ได้)
+  if (UNFORESEEABLE_LEAVE_TYPES.indexOf(leaveType) >= 0) {
+    const r = String(emergencyReason || '').trim();
+    return { ok: true, emergency: true, auto: true,
+      reason: r || (label + 'กะทันหัน (แจ้งน้อยกว่า ' + advance + ' วัน)'),
+      advance_notice_days: advance, days_notice: daysNotice };
+  }
+
   if (!allowsEmergencyFor_(leaveType)) {
     return { ok: false, error: 'advance_notice_violation',
       message: label + 'ต้องเขียนใบลาล่วงหน้าอย่างน้อย ' + advance + ' วัน' };
@@ -217,8 +238,12 @@ function checkAdvanceNotice_(leaveType, dateFrom, isEmergency, emergencyReason) 
       advance_notice_days: advance };
   }
 
-  return { ok: true, emergency: true, advance_notice_days: advance, days_notice: daysNotice };
+  return { ok: true, emergency: true, reason: String(emergencyReason || '').trim(),
+           advance_notice_days: advance, days_notice: daysNotice };
 }
+
+/** ประเภทลาที่เกิดขึ้นโดยไม่รู้ล่วงหน้า — ยื่นวันเดียวกัน/ย้อนหลังได้โดยไม่ถูกบล็อก */
+const UNFORESEEABLE_LEAVE_TYPES = ['sick'];
 
 /**
  * validate ใบลาตาม rule ที่เหลือ (จำนวนวันติดกัน + เอกสารแนบ)
@@ -238,6 +263,11 @@ function validateAgainstRules_(leaveType, dateFrom, dateTo, days, hasAttachment)
   // doc_required_above_days
   const docAbove = Number(rule.doc_required_above_days || 0);
   if (docAbove > 0 && days >= docAbove && !hasAttachment) {
+    // ลาป่วย: ส่งใบลาไปก่อนได้ แล้วแนบใบรับรองแพทย์ทีหลังในหน้า "ใบลาของฉัน"
+    // (ใบรับรองแพทย์มักได้หลังไปหาหมอ — บล็อกไว้ = คนป่วยส่งใบลาไม่ได้)
+    if (UNFORESEEABLE_LEAVE_TYPES.indexOf(leaveType) >= 0) {
+      return { ok: true, docPending: true, doc_required_above_days: docAbove };
+    }
     return { ok: false, error: 'doc_required',
       message: 'ลา ' + days + ' วัน ต้องแนบเอกสาร (ใบรับรองแพทย์/ฯลฯ)' };
   }

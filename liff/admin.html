@@ -48,7 +48,8 @@
 
       <!-- TAB: users -->
       <div class="tab-content active" data-tab="users">
-        <button class="btn primary block mb-2" onclick="openInvite('USER')">+ เพิ่มพนักงานใหม่</button>
+        <!-- สร้างพนักงานใหม่ = หน้าเต็ม (กันรหัสซ้ำ + ตั้งสายอนุมัติ + ออกรหัสจับคู่ในขั้นเดียว) -->
+        <a class="btn primary block mb-2" href="./employee-new.html">+ สร้างพนักงานใหม่ (พร้อมรหัสผูกบัญชี)</a>
         <div id="users-list"></div>
       </div>
 
@@ -85,6 +86,7 @@
 
       <!-- TAB: report -->
       <div class="tab-content" data-tab="report">
+        <a class="btn primary block mb-2" href="./report.html">รายงาน / ส่งออกสถิติการลา (รายวัน · รายเดือน · กำหนดเอง)</a>
         <div class="form-group">
           <label>สถานะ</label>
           <select id="filter-status">

@@ -77,16 +77,38 @@
           <div class="hint" id="subtype-hint"></div>
         </div>
 
-        <div class="form-group">
-          <label>วันที่เริ่มลา <span class="required">*</span></label>
-          <input type="date" id="date_from">
+        <!-- ลาเป็นวัน / ลาเป็นชั่วโมง — โผล่เฉพาะประเภทที่ตั้งให้ลาเป็นชั่วโมงได้ -->
+        <div class="form-group hidden" id="unit-group">
+          <label>ลาเป็น</label>
+          <div class="btn-row" style="margin-top:0">
+            <button type="button" class="btn primary" id="unit-day" data-unit="day">ทั้งวัน</button>
+            <button type="button" class="btn ghost" id="unit-hour" data-unit="hour">เป็นชั่วโมง</button>
+          </div>
         </div>
 
         <div class="form-group">
+          <label id="date_from_label">วันที่เริ่มลา <span class="required">*</span></label>
+          <input type="date" id="date_from">
+        </div>
+
+        <div class="form-group" id="date-to-group">
           <label>วันที่สิ้นสุด <span class="required">*</span></label>
           <input type="date" id="date_to">
           <div class="hint" id="days-hint"></div>
         </div>
+
+        <div class="form-group hidden" id="time-group">
+          <label>ช่วงเวลาที่ลา <span class="required">*</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="time_from" style="flex:1"></select>
+            <span>ถึง</span>
+            <select id="time_to" style="flex:1"></select>
+          </div>
+          <div class="hint" id="hours-hint"></div>
+        </div>
+
+        <!-- ลาป่วยกะทันหัน — ส่งได้เลย ไม่ต้องติ๊ก -->
+        <div class="alert info hidden" id="sudden-notice"></div>
 
         <div class="form-group">
           <label>เหตุผล <span class="required">*</span></label>
@@ -104,6 +126,8 @@
             placeholder="เช่น ป่วยกะทันหันตั้งแต่เมื่อคืน / บริษัทเพิ่งแจ้งวันอบรมเมื่อวาน"></textarea>
           <div class="hint" id="emergency-hint"></div>
         </div>
+
+        <div class="alert info hidden" id="doc-later-notice"></div>
 
         <div class="form-group">
           <label>แนบไฟล์ (รูปภาพ)</label>
@@ -175,6 +199,7 @@ let PROXY_TARGETS = []; // รายชื่อพนักงานที่�
 // ค่าขั้นต่ำมาจาก Settings ฝั่ง backend — ตัวเลขข้างล่างเป็นแค่ค่าสำรองตอนโหลดไม่ทัน
 let EMERGENCY_REASON_MIN = 10;
 let GPS_MISSING_REASON_MIN = 5;
+let LEAVE_UNIT = 'day';   // 'day' | 'hour'
 
 (async function () {
   try { await window.auth.init(); }
@@ -320,6 +345,9 @@ function advanceCheckLocal() {
   const daysNotice = Math.floor((start - today) / (24 * 3600 * 1000));
   if (daysNotice >= advance) return { needed: false, advance: advance };
 
+  // ลาป่วย: ป่วยกะทันหันส่งได้เลย ระบบติดป้าย "ลากะทันหัน" ให้เอง ไม่ต้องติ๊ก/เขียนเหตุผลเพิ่ม
+  if (isUnforeseeable(lt)) return { needed: false, sudden: true, advance: advance };
+
   const allowEmergency = r ? !(r.allow_emergency === false || r.allow_emergency === 'FALSE') : true;
   return { needed: true, advance: advance, daysNotice: daysNotice, allowEmergency: allowEmergency,
            label: window.LEAVE_TYPE_LABELS[lt] || lt };
@@ -331,6 +359,14 @@ function updateEmergencyBox() {
   const group = document.getElementById('emergency-group');
   const notice = document.getElementById('emergency-notice');
   const hint = document.getElementById('emergency-hint');
+
+  const sudden = document.getElementById('sudden-notice');
+  sudden.classList.toggle('hidden', !chk.sudden);
+  if (chk.sudden) {
+    sudden.textContent = 'ลาป่วยกะทันหันส่งได้เลย — ใบลาจะติดป้าย "ลากะทันหัน" ให้ผู้อนุมัติเห็น ' +
+      'อย่าลืมโทรแจ้งหัวหน้างานด้วย';
+  }
+  updateDocLaterNotice();
 
   if (!chk.needed) {
     group.classList.add('hidden');
@@ -373,16 +409,128 @@ document.getElementById('btn-to-step2').onclick = () => showStep(2);
 document.getElementById('btn-back-step2').onclick = () => showStep(1);
 
 document.getElementById('leave_type').addEventListener('change', onLeaveTypeChange);
-document.getElementById('leave_subtype').addEventListener('change', () => { updateQuotaHint(); updateEmergencyBox(); });
-document.getElementById('date_from').addEventListener('change', () => { updateDateHints(); updateEmergencyBox(); });
-document.getElementById('date_to').addEventListener('change', updateDateHints);
+document.getElementById('leave_subtype').addEventListener('change', () => { updateUnitBox(); updateQuotaHint(); updateEmergencyBox(); });
+document.getElementById('date_from').addEventListener('change', () => {
+  if (LEAVE_UNIT === 'hour') document.getElementById('date_to').value = document.getElementById('date_from').value;
+  updateDateHints(); updateEmergencyBox();
+});
+document.getElementById('date_to').addEventListener('change', () => { updateDateHints(); updateDocLaterNotice(); });
 
 function onLeaveTypeChange() {
   const isOther = document.getElementById('leave_type').value === 'other';
   document.getElementById('subtype-group').classList.toggle('hidden', !isOther);
   if (!isOther) document.getElementById('leave_subtype').value = '';
+  updateUnitBox();
   updateQuotaHint();
   updateEmergencyBox();
+}
+
+function isUnforeseeable(lt) {
+  const list = (CONDITIONS && CONDITIONS.unforeseeable_types) || ['sick'];
+  return list.indexOf(lt) >= 0;
+}
+
+// ===== ลาเป็นชั่วโมง =====
+function hourlyCfg() {
+  return (CONDITIONS && CONDITIONS.hourly) ||
+    { types: ['sick', 'personal', 'vacation'], hours_per_day: 8, work_start: '08:30', work_end: '17:30',
+      lunch_start: '12:00', lunch_end: '13:00' };
+}
+function hhmmToMin(v) {
+  const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+function minToHhmm(n) {
+  return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+}
+/** ชั่วโมงลาสุทธิ หักพักเที่ยง — สูตรเดียวกับ computeLeaveHours_ ฝั่ง backend */
+function hoursBetween(f, t) {
+  const a = hhmmToMin(f), b = hhmmToMin(t);
+  if (a == null || b == null || b <= a) return 0;
+  const h = hourlyCfg();
+  let min = b - a;
+  const ls = hhmmToMin(h.lunch_start), le = hhmmToMin(h.lunch_end);
+  if (ls != null && le != null && le > ls) {
+    const ov = Math.min(b, le) - Math.max(a, ls);
+    if (ov > 0) min -= ov;
+  }
+  return Math.round(min / 60 * 100) / 100;
+}
+function fillTimeOptions() {
+  const h = hourlyCfg();
+  const ws = hhmmToMin(h.work_start) || 510, we = hhmmToMin(h.work_end) || 1050;
+  const opts = [];
+  for (let m = ws; m <= we; m += 30) opts.push(minToHhmm(m));
+  const from = document.getElementById('time_from');
+  const to = document.getElementById('time_to');
+  if (from.options.length) return;
+  from.innerHTML = '<option value="">เริ่ม</option>' + opts.slice(0, -1).map(o => '<option>' + o + '</option>').join('');
+  to.innerHTML = '<option value="">ถึง</option>' + opts.slice(1).map(o => '<option>' + o + '</option>').join('');
+}
+function updateUnitBox() {
+  const lt = getLeaveType();
+  const can = !!lt && hourlyCfg().types.indexOf(lt) >= 0;
+  document.getElementById('unit-group').classList.toggle('hidden', !can);
+  if (!can) setUnit('day');
+}
+function setUnit(unit) {
+  LEAVE_UNIT = unit;
+  const isHour = unit === 'hour';
+  document.getElementById('unit-day').className = 'btn ' + (isHour ? 'ghost' : 'primary');
+  document.getElementById('unit-hour').className = 'btn ' + (isHour ? 'primary' : 'ghost');
+  document.getElementById('date-to-group').classList.toggle('hidden', isHour);
+  document.getElementById('time-group').classList.toggle('hidden', !isHour);
+  document.getElementById('date_from_label').innerHTML = (isHour ? 'วันที่ลา' : 'วันที่เริ่มลา') + ' <span class="required">*</span>';
+  if (isHour) {
+    fillTimeOptions();
+    document.getElementById('date_to').value = document.getElementById('date_from').value;
+  }
+  updateHoursHint();
+  updateDocLaterNotice();
+}
+document.getElementById('unit-day').onclick = () => setUnit('day');
+document.getElementById('unit-hour').onclick = () => setUnit('hour');
+document.getElementById('time_from').addEventListener('change', updateHoursHint);
+document.getElementById('time_to').addEventListener('change', updateHoursHint);
+
+function updateHoursHint() {
+  const hint = document.getElementById('hours-hint');
+  if (LEAVE_UNIT !== 'hour') { hint.textContent = ''; return; }
+  const f = document.getElementById('time_from').value, t = document.getElementById('time_to').value;
+  const hrs = hoursBetween(f, t);
+  const h = hourlyCfg();
+  hint.textContent = hrs > 0
+    ? 'รวม ' + hrs + ' ชม. (หักโควตา ' + leaveDaysFromHours(hrs) + ' วัน · ' + h.hours_per_day + ' ชม. = 1 วัน' +
+      (h.lunch_start ? ' · ไม่นับพักเที่ยง ' + h.lunch_start + '-' + h.lunch_end : '') + ')'
+    : '';
+}
+function leaveDaysFromHours(hrs) {
+  return Math.round(hrs / (hourlyCfg().hours_per_day || 8) * 10000) / 10000;
+}
+/** จำนวนวันลาที่จะหักจริง (ลาเป็นชั่วโมง = เศษของวัน) */
+function currentLeaveDays() {
+  const f = document.getElementById('date_from').value;
+  if (LEAVE_UNIT === 'hour') {
+    if (!f || leaveDaysBetween(f, f) <= 0) return 0;
+    return leaveDaysFromHours(hoursBetween(document.getElementById('time_from').value, document.getElementById('time_to').value));
+  }
+  const t = document.getElementById('date_to').value;
+  return (f && t) ? leaveDaysBetween(f, t) : 0;
+}
+
+/** ลาป่วยถึงเกณฑ์ต้องมีใบรับรองแพทย์ แต่ยังไม่แนบ → บอกว่าส่งก่อนได้ แนบทีหลังได้ */
+function updateDocLaterNotice() {
+  const el = document.getElementById('doc-later-notice');
+  const lt = getLeaveType();
+  const r = ruleFor(lt);
+  const docAbove = r ? Number(r.doc_required_above_days || 0) : 0;
+  const days = currentLeaveDays();
+  const show = isUnforeseeable(lt) && docAbove > 0 && days >= docAbove && !ATTACHMENT;
+  el.classList.toggle('hidden', !show);
+  if (show) {
+    el.textContent = 'ลา ' + days + ' วันต้องมีใบรับรองแพทย์ — ยังไม่มีตอนนี้ส่งใบลาไปก่อนได้ ' +
+      'แล้วแนบทีหลังที่หน้า "ใบลาของฉัน"';
+  }
 }
 
 function updateQuotaHint() {
@@ -460,6 +608,7 @@ document.getElementById('attachment').addEventListener('change', async (e) => {
     ATTACHMENT = r;
     document.getElementById('attachment-img').src = r.base64;
     document.getElementById('attachment-preview-box').classList.remove('hidden');
+    updateDocLaterNotice();
   } catch (err) {
     window.utils.showToast('ไฟล์ไม่ถูกต้อง: ' + err.message);
   }
@@ -469,6 +618,7 @@ document.getElementById('btn-remove-attachment').onclick = () => {
   ATTACHMENT = null;
   document.getElementById('attachment').value = '';
   document.getElementById('attachment-preview-box').classList.add('hidden');
+  updateDocLaterNotice();
 };
 
 document.getElementById('btn-to-step3').onclick = () => {
@@ -484,13 +634,24 @@ document.getElementById('btn-to-step3').onclick = () => {
   if (mainSel === 'other' && !lt) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกประเภทลาอื่น ๆ', 'error');
   if (!f || !t) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกวันที่', 'error');
   if (new Date(t) < new Date(f)) return window.utils.showAlert('#alert-msg', 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม', 'error');
+  if (LEAVE_UNIT === 'hour') {
+    const tf = document.getElementById('time_from').value, tt = document.getElementById('time_to').value;
+    if (!tf || !tt) return window.utils.showAlert('#alert-msg', 'กรุณาเลือกช่วงเวลาที่ลา', 'error');
+    if (hhmmToMin(tt) <= hhmmToMin(tf)) return window.utils.showAlert('#alert-msg', 'เวลาสิ้นสุดต้องหลังเวลาเริ่ม', 'error');
+    const hrs = hoursBetween(tf, tt);
+    if (hrs < 0.5) return window.utils.showAlert('#alert-msg', 'ลาเป็นชั่วโมงได้ขั้นต่ำ 30 นาที (ไม่นับช่วงพักเที่ยง)', 'error');
+    if (hrs >= hourlyCfg().hours_per_day) return window.utils.showAlert('#alert-msg', 'ลาเท่ากับเต็มวันแล้ว — เลือก "ทั้งวัน" แทน', 'error');
+    if (leaveDaysBetween(f, f) <= 0) return window.utils.showAlert('#alert-msg', 'วันที่เลือกเป็นวันหยุดของบริษัท', 'error');
+  }
   if (reason.length < 3) return window.utils.showAlert('#alert-msg', 'กรุณาระบุเหตุผลอย่างน้อย 3 ตัวอักษร', 'error');
 
-  const days = leaveDaysBetween(f, t);
+  const days = currentLeaveDays();
   const isQuotaType = window.isQuotaLeaveType(lt);
 
   // check quota client-side — เฉพาะประเภทมีโควตา + ไม่ใช่ลาแทน (โควตาเป็นของอีกคน ให้ backend ตรวจ)
-  if (isQuotaType && !getProxyTargetId()) {
+  // โควตาที่โหลดมาเป็นของปีนี้ — ลาข้ามปี (ยื่นธันวาฯ ลามกราฯ) ให้ backend ตรวจกับโควตาปีนั้นเอง
+  const sameYear = String(f).slice(0, 4) === String(CONDITIONS && CONDITIONS.quota && CONDITIONS.quota.year || new Date().getFullYear());
+  if (isQuotaType && !getProxyTargetId() && sameYear) {
     const q = CONDITIONS.quota[lt];
     if (q && days > q.available) {
       return window.utils.showAlert('#alert-msg', 'โควตาคงเหลือ ' + q.available + ' วัน ลาได้ไม่เกินนี้', 'error');
@@ -537,21 +698,27 @@ function renderSummary() {
   const ltLabel = window.LEAVE_TYPE_LABELS[lt] || lt;
   const f = document.getElementById('date_from').value;
   const t = document.getElementById('date_to').value;
-  const days = leaveDaysBetween(f, t);
+  const days = currentLeaveDays();
+  const amountText = LEAVE_UNIT === 'hour'
+    ? hoursBetween(document.getElementById('time_from').value, document.getElementById('time_to').value) + ' ชม. (' +
+      document.getElementById('time_from').value + '-' + document.getElementById('time_to').value + ' น.)'
+    : days + ' วัน';
   const reason = document.getElementById('reason').value.trim();
   const proxyId = getProxyTargetId();
+  const sudden = advanceCheckLocal().sudden;
   const proxyTarget = proxyId ? PROXY_TARGETS.find(u => u.user_id === proxyId) : null;
   const html = [
     proxyTarget ? '<div class="card-row"><span class="label">ลาแทน</span><span class="value">' + window.utils.escapeHtml(proxyTarget.display_name || proxyId) + '</span></div>' : '',
     '<div class="card-row"><span class="label">ประเภท</span><span class="value">' + ltLabel + '</span></div>',
-    '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(f) + ' - ' + window.utils.formatThaiDateShort(t) + '</span></div>',
-    '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + days + ' วัน</span></div>',
+    '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(f) + (f === t ? '' : ' - ' + window.utils.formatThaiDateShort(t)) + '</span></div>',
+    '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + amountText + '</span></div>',
+    sudden ? '<div class="card-row"><span class="label">หมายเหตุ</span><span class="value">ลากะทันหัน</span></div>' : '',
     '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(reason) + '</span></div>',
     document.getElementById('is_emergency').checked
       ? '<div class="card-row"><span class="label">กรณีฉุกเฉิน</span><span class="value">' +
         window.utils.escapeHtml(document.getElementById('emergency_reason').value.trim()) + '</span></div>'
       : '',
-    '<div class="card-row"><span class="label">ไฟล์แนบ</span><span class="value">' + (ATTACHMENT ? 'มี' : 'ไม่มี') + '</span></div>',
+    '<div class="card-row"><span class="label">ไฟล์แนบ</span><span class="value">' + (ATTACHMENT ? 'มี' : 'ไม่มี (แนบเพิ่มทีหลังได้ที่หน้าใบลาของฉัน)') + '</span></div>',
   ].join('');
   document.getElementById('summary').innerHTML = html;
 }
@@ -618,6 +785,12 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
     date_to: document.getElementById('date_to').value,
     reason: document.getElementById('reason').value.trim(),
   };
+  if (LEAVE_UNIT === 'hour') {
+    payload.leave_unit = 'hour';
+    payload.date_to = payload.date_from;
+    payload.time_from = document.getElementById('time_from').value;
+    payload.time_to = document.getElementById('time_to').value;
+  }
   if (document.getElementById('is_emergency').checked) {
     payload.is_emergency = true;
     payload.emergency_reason = document.getElementById('emergency_reason').value.trim();
@@ -641,7 +814,8 @@ document.getElementById('btn-submit-leave').addEventListener('click', async () =
     return window.utils.showAlert('#alert-msg-3', r.message || ('ผิดพลาด: ' + r.error), 'error');
   }
   document.getElementById('done-msg').textContent = 'เลขที่ใบลา: ' + r.leave_id + ' · ระบบส่งต่อให้ผู้อนุมัติแล้ว' +
-    (GPS ? '' : ' (ใบลานี้ไม่มีพิกัดยืนยัน — ผู้อนุมัติจะเห็นเหตุผลที่คุณเขียน)');
+    (GPS ? '' : ' (ใบลานี้ไม่มีพิกัดยืนยัน — ผู้อนุมัติจะเห็นเหตุผลที่คุณเขียน)') +
+    (r.doc_pending ? ' · อย่าลืมแนบใบรับรองแพทย์ที่หน้า "ใบลาของฉัน" เมื่อได้มาแล้ว' : '');
   showStep(0);
 });
 </script>

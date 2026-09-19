@@ -154,6 +154,35 @@ function hourlyReminderTick(opts) {
     return { ok: true, skipped: 'outside_work_hours' };
   }
 
+  // ⭐ ถือล็อกเดียวกับ approveLeave ทั้งรอบ — ไม่งั้น tick ที่อ่านข้อมูลก่อนมีคนกดอนุมัติ
+  //    จะเขียน reminder_count ทับหลังชั้นเปลี่ยนแล้ว → HR ได้สิทธิ์แทนผู้บริหารทั้งที่ผู้บริหารยังไม่เคยโดนเตือน
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) {
+    logWarn('hourlyReminderTick', 'ล็อกไม่ได้ — ข้ามรอบนี้');
+    return { ok: false, error: 'lock_failed' };
+  }
+  const queue = [];
+  const outbox = { push: function (to, msg) { queue.push([to, msg]); } };
+  let res;
+  try {
+    res = hourlyReminderTickLocked_(wh, now, outbox);
+  } finally {
+    lock.releaseLock();
+  }
+  queue.forEach(function (q) {
+    try { pushMessage(q[0], q[1]); }
+    catch (e) { logError('hourlyReminderTick', 'push failed: ' + e.message, { to: q[0] }); }
+  });
+  return res;
+}
+
+/**
+ * ส่วนที่อ่าน/เขียนชีตใต้ล็อก — "ไม่ยิงไลน์ตรงนี้" เก็บไว้ใน outbox แล้วค่อยส่งหลังปล่อยล็อก
+ * (ยิงไลน์มี retry ช้าได้หลายวินาที ถ้าถือล็อกระหว่างนั้น คนกดอนุมัติจะได้ lock_failed)
+ */
+function hourlyReminderTickLocked_(wh, now, outbox) {
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
   if (sh.getLastRow() < 2) return { ok: true, reminded: 0 };
@@ -204,18 +233,36 @@ function hourlyReminderTick(opts) {
 
     let sent = 0;
     try {
-      if (pending.stage === 1) {
+      if (leave.doc_request_status === 'requested') {
+        // ผู้อนุมัติขอเอกสารเพิ่มไว้ — ตอนนี้รอผู้ลา ไม่ใช่รอผู้อนุมัติ → เตือนผู้ลาแทน
+        if (requester.line_user_id && requester.status === 'active') {
+          const asker = idx.byId[leave.doc_request_by] || {};
+          outbox.push(requester.line_user_id,
+            buildDocRequestCard(leave, requester, asker.display_name || '', leave.doc_request_note || '', true));
+          sent++;
+        }
+      } else if (pending.stage === 1) {
         const sup = resolveStage1Approver_(leave.user_id, idx);
-        if (sup && sup.line_user_id) { pushMessage(sup.line_user_id, card); sent++; }
+        if (sup && sup.line_user_id) { outbox.push(sup.line_user_id, card); sent++; }
       } else if (pending.stage === 2) {
         idx.list.forEach(function (u) {
           if (u.status === 'active' && u.role === ROLES.ADMIN && u.line_user_id) {
-            pushMessage(u.line_user_id, card); sent++;
+            outbox.push(u.line_user_id, card); sent++;
           }
         });
       } else if (pending.stage === 3) {
-        getExecutivesFor(leave.user_id, idx).users.forEach(function (u) {
-          if (u.line_user_id) { pushMessage(u.line_user_id, card); sent++; }
+        const route = getExecutivesFor(leave.user_id, idx);
+        route.users.forEach(function (u) {
+          if (u.line_user_id) { outbox.push(u.line_user_id, card); sent++; }
+        });
+        // ⭐ ผู้บริหารไม่กด → แจ้ง HR ทุกรอบที่เตือน (ลูกค้าสั่ง 19 ก.ย. 69)
+        //    HR อนุมัติ/ปฏิเสธแทนได้จากหน้าอนุมัติ (ดู hrMayActOnStage3_)
+        const hrCard = buildReminderCard(leave, requester, pending.stage, count,
+          Math.round(totalQuietMin / 60), { hrFallback: true, executivesUnreachable: route.hrFallback });
+        idx.list.forEach(function (u) {
+          if (u.status === 'active' && u.role === ROLES.ADMIN && u.line_user_id && u.user_id !== leave.user_id) {
+            outbox.push(u.line_user_id, hrCard); sent++;
+          }
         });
       }
     } catch (e) {
@@ -228,7 +275,7 @@ function hourlyReminderTick(opts) {
       logError('hourlyReminderTick', 'ใบลาค้างโดยไม่มีผู้อนุมัติที่ติดต่อได้',
         { leaveId: leave.leave_id, stage: pending.stage, userId: leave.user_id });
       try {
-        pushToAllAdmins(buildStuckLeaveCard(leave, requester, pending.stage));
+        getUsersByRole_(ROLES.ADMIN).forEach(function (u) { if (u.line_user_id) outbox.push(u.line_user_id, buildStuckLeaveCard(leave, requester, pending.stage)); });
       } catch (e) {}
     }
 

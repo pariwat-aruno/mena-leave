@@ -283,6 +283,10 @@ function issuePairingCode(payload) {
   const actor = findUserByLineId_(payload.lineUserId);
   const target = findUserByUserId_(payload.user_id);
   if (!target) return { ok: false, error: 'user_not_found', message: 'ไม่พบพนักงานคนนี้' };
+  // รหัสจับคู่ของแถวผู้บริหาร/HR = กุญแจเข้าบัญชีระดับนั้น → ผู้บริหารเท่านั้นออกได้
+  if ((target.role === ROLES.OWNER || target.role === ROLES.ADMIN) && !isOwner(payload.lineUserId)) {
+    return { ok: false, error: 'forbidden_owner_only', message: 'รหัสจับคู่ของบัญชีผู้บริหาร/HR ต้องให้ผู้บริหารเป็นผู้ออก' };
+  }
   // เช็คบัญชีปิดก่อนเสมอ — คนที่ปิดไปแล้วอาจเคยผูกไลน์ไว้ ถ้าเช็คไลน์ก่อนจะได้ข้อความ
   // "ผูกไลน์ไว้แล้ว" ซึ่งบอกสาเหตุผิด HR จะไม่รู้ว่าต้องไปเปิดบัญชีก่อน
   if (target.status === 'inactive') {
