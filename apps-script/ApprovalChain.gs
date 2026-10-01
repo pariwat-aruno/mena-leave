@@ -404,6 +404,12 @@ function setApprovalChain(payload) {
     }
 
     if (touchSupervisor) rerouteOwnerFirstLeaves_(payload.user_id);
+    else if (touchExecutives) {
+      // แก้แค่ผู้บริหารขั้น 3 — ใบที่ผู้บริหารขั้นแรกยังไม่กด ต้องคิดขั้น 3 ใหม่ (เพิ่ม/ถอดผู้บริหารคนถัดไป)
+      const firstId = getSupervisorFor(payload.user_id);
+      const first = firstId ? idx.byId[firstId] : null;
+      if (first && first.role === ROLES.OWNER) recomputeOwnerFirstStage3_(payload.user_id, firstId);
+    }
 
     audit(payload.lineUserId, 'set_approval_chain', 'Approvers', payload.user_id, {
       supervisor_user_id: touchSupervisor ? supId : '(ไม่แตะ)',

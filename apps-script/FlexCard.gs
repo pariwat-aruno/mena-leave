@@ -461,7 +461,7 @@ function buildStage1RejectReportCard(leave, requester, rejectedByName, note) {
           flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
           flexKV_('จำนวน', leaveAmountText_(leave)),
-          flexKV_('ปฏิเสธโดย', 'หัวหน้างาน (' + (rejectedByName || '-') + ')'),
+          flexKV_('ปฏิเสธโดย', who + ' (' + (rejectedByName || '-') + ')'),
           flexKV_('เหตุผลการปฏิเสธ', note || '(ไม่ได้ระบุ)'),
         ],
       },

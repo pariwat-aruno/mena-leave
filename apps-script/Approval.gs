@@ -574,7 +574,8 @@ function getPendingForMe(payload) {
       if (user.role === ROLES.OWNER) {
         const mine = route.users.some(function (u) { return u.user_id === user.user_id; });
         if (mine) pending.push(shapePendingItem_(obj, 3, idx));
-      } else if (user.role === ROLES.ADMIN && hrMayActOnStage3_(obj, route)) {
+      } else if (user.role === ROLES.ADMIN && hrMayActOnStage3_(obj, route) &&
+                 !(isOwnerFirstLeave_(obj) && obj.stage1_by === user.user_id)) {
         // HR เห็นใบชั้นผู้บริหารที่ค้าง — ผู้บริหารติดต่อไม่ได้ / เงียบเกินกำหนด
         const item = shapePendingItem_(obj, 3, idx);
         item.hr_fallback = true;

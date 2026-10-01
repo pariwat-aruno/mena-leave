@@ -221,7 +221,8 @@ function requestCancelLeave(payload) {
   if (flow.firstApprovalStage === 1) {
     try {
       const sup = resolveStage1Approver_(requester.user_id);
-      pushToAllAdmins(buildHrNoticeCard(cancelRow, requester, sup, 'รอหัวหน้างานตรวจ (ใบขอยกเลิก)'));
+      pushToAllAdmins(buildHrNoticeCard(cancelRow, requester, sup,
+        (flow.ownerFirst ? 'รอผู้บริหารตรวจ (อนุมัติในนามหัวหน้างาน)' : 'รอหัวหน้างานตรวจ') + ' (ใบขอยกเลิก)'));
     } catch (e) {
       logWarn('requestCancelLeave', 'cc HR failed: ' + e.message);
     }

@@ -382,5 +382,14 @@ check('เปลี่ยนขั้นแรกเป็นผู้บริ�
 const d14 = decide('Uboss', r14.leave_id, 1, 'approve');
 check('ผู้บริหารคนใหม่อนุมัติขั้นแรก → ไปขั้น 3', d14.ok && d14.moved_to_stage === 3, d14);
 
+console.log('\n=== 15) แก้แค่ผู้บริหารขั้น 3 ระหว่างใบรอขั้นแรก → คิดขั้น 3 ใหม่ ===');
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0015', supervisor_user_id: 'EMP-0002', executive_user_ids: ['EMP-0002'] });
+const r15 = submit('Usup2', { date_from: '2026-10-07', date_to: '2026-10-07' });
+check('เริ่มต้นขั้น 3 ข้าม', row(r15.leave_id).stage3_status === 'skipped', row(r15.leave_id));
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0015', executive_user_ids: ['EMP-0002', 'EMP-0001'] });
+check('เพิ่มผู้บริหารคนถัดไป → ขั้น 3 รอ', row(r15.leave_id).stage3_status === 'pending', row(r15.leave_id));
+const rej = JSON.stringify(sandbox.buildStage1RejectReportCard(row(r15.leave_id), { display_name: 'x' }, 'y', 'z'));
+check('รายงานปฏิเสธขั้นแรกบอกว่าในนามหัวหน้างานทั้งหัวและเนื้อ', (rej.match(/ในนามหัวหน้างาน/g) || []).length >= 3, rej);
+
 console.log(fails ? '\nตก ' + fails + ' ข้อ' : '\nผ่านทุกข้อ');
 process.exit(fails ? 1 : 0);
