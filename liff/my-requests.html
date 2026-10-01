@@ -114,9 +114,10 @@ async function showDetail(leaveId) {
   const l = r.leave;
   const body = document.getElementById('detail-body');
 
-  const ownerFirst = l.stage2_status === 'skipped' && l.stage3_status === 'skipped' && l.stage1_status !== 'skipped';
+  // ผู้บริหารเป็นผู้อนุมัติขั้นแรก = ชั้น HR ถูกข้ามแต่ชั้นหัวหน้าไม่ถูกข้าม (ชั้น 3 อาจรอผู้บริหารอีกคน)
+  const ownerFirst = l.stage2_status === 'skipped' && l.stage1_status !== 'skipped';
   const stages = [
-    { n: 1, label: ownerFirst ? 'ผู้บริหาร (ผู้อนุมัติขั้นแรก)' : 'หัวหน้างาน', status: l.stage1_status, at: l.stage1_at, note: l.stage1_note },
+    { n: 1, label: l.stage1_label || (ownerFirst ? 'ผู้บริหาร (อนุมัติในนามหัวหน้างาน)' : 'หัวหน้างาน'), status: l.stage1_status, at: l.stage1_at, note: l.stage1_note },
     { n: 2, label: 'ฝ่ายบุคคล (HR)', status: l.stage2_status, at: l.stage2_at, note: l.stage2_note },
     { n: 3, label: 'ผู้บริหาร', status: l.stage3_status, at: l.stage3_at, note: l.stage3_note },
   ];

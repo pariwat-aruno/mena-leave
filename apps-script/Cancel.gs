@@ -202,12 +202,14 @@ function requestCancelLeave(payload) {
     return { ok: true, cancel_id: cancelId, final_status: 'approved' };
   }
 
+  const cancelWaitingLabel = flow.ownerFirst && flow.firstApprovalStage === 1
+    ? 'รอผู้บริหารตรวจ (อนุมัติในนามหัวหน้างาน)' : stageWaitingLabel_(flow.firstApprovalStage);
   try {
     pushMessage(payload.lineUserId,
-      buildCancelSubmittedCard(cancelRow, parent, stageWaitingLabel_(flow.firstApprovalStage)));
+      buildCancelSubmittedCard(cancelRow, parent, cancelWaitingLabel));
     if (requester.line_user_id && requester.line_user_id !== payload.lineUserId) {
       pushMessage(requester.line_user_id,
-        buildCancelSubmittedCard(cancelRow, parent, stageWaitingLabel_(flow.firstApprovalStage)));
+        buildCancelSubmittedCard(cancelRow, parent, cancelWaitingLabel));
     }
   } catch (e) {
     logWarn('requestCancelLeave', 'push submitted card failed: ' + e.message);

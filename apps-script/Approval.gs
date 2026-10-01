@@ -80,6 +80,10 @@ function approveLeave(payload) {
     if (leave.stage3_status !== 'pending') {
       return { ok: false, error: 'stage3_not_pending', message: 'ใบลานี้ตัดสินไปแล้ว' };
     }
+    // คนที่อนุมัติขั้นแรก (ในนามหัวหน้างาน) ห้ามตัดสินขั้น 3 ซ้ำ — รวมกรณีถูกเปลี่ยนระดับเป็น HR ภายหลัง
+    if (isOwnerFirstLeave_(leave) && leave.stage1_by === approver.user_id) {
+      return { ok: false, error: 'forbidden', message: 'คุณอนุมัติใบนี้ในขั้นแรกไปแล้ว — ขั้นนี้ให้ผู้บริหารคนถัดไปเป็นผู้อนุมัติ' };
+    }
     if (approver.role === ROLES.ADMIN) {
       // HR อนุมัติแทนผู้บริหารได้ 2 กรณี: ผู้บริหารในสายยังรับใบไม่ได้ · ผู้บริหารเงียบจนโดนเตือนแล้ว
       if (leave.user_id === approver.user_id) {
@@ -349,11 +353,14 @@ function computeInitialStages_(requester) {
       logWarn('computeInitialStages_', 'ผู้บริหารที่เป็นผู้อนุมัติขั้นแรกยังรับใบไม่ได้ — ส่ง HR แทน',
         { userId: requester.user_id, ownerUserId: first.user_id });
     }
+    // ⭐ สายขั้น 3 มีผู้บริหาร "คนอื่น" → อนุมัติขั้นแรกแล้วไปต่อที่คนนั้น ไม่ผ่าน HR (ลูกค้าสั่ง 1 ต.ค. 69)
+    //    เช่น หัวหน้างานลา: คุณสุรศักดิ์ (ในนามหัวหน้างาน) → คุณแอน · ไม่มีคนอื่น = จบที่ขั้นแรกเหมือนเดิม
+    const s3 = hasOtherExecutive_(requester.user_id, first.user_id) ? 'pending' : 'skipped';
     return reachable
       ? { stage1Required: true, stage1Status: 'pending', stage2Status: 'skipped',
-          stage3Status: 'skipped', firstApprovalStage: 1, finalStatus: 'pending', ownerFirst: true }
+          stage3Status: s3, firstApprovalStage: 1, finalStatus: 'pending', ownerFirst: true }
       : { stage1Required: false, stage1Status: 'skipped', stage2Status: 'pending',
-          stage3Status: 'skipped', firstApprovalStage: 2, finalStatus: 'pending', ownerFirst: true };
+          stage3Status: s3, firstApprovalStage: 2, finalStatus: 'pending', ownerFirst: true };
   }
   if (requester.role === ROLES.ADMIN) {
     return { stage1Required: false, stage1Status: 'skipped', stage2Status: 'skipped',
@@ -371,6 +378,23 @@ function computeInitialStages_(requester) {
   }
   return { stage1Required: true, stage1Status: 'pending', stage2Status: 'pending',
            stage3Status: 'pending', firstApprovalStage: 1, finalStatus: 'pending' };
+}
+
+/** ผู้บริหารขั้น 3 ในสายของคนนี้ ที่ไม่ใช่คนที่อนุมัติขั้นแรก (ยังใช้งานอยู่) */
+function hasOtherExecutive_(userId, firstApproverId) {
+  return listActiveApprovers_(userId, APPROVER_LEVEL_EXECUTIVE).some(function (id) {
+    if (id === firstApproverId) return false;
+    const u = findUserByUserId_(id);
+    return !!u && u.status === 'active' && u.role === ROLES.OWNER;
+  });
+}
+
+/** ใบแบบผู้บริหารอนุมัติขั้นแรก — ห้ามคนเดิมอนุมัติซ้ำที่ขั้น 3 */
+function excludeFirstApprover_(route, leave) {
+  if (!route || !leave || !isOwnerFirstLeave_(leave) || !leave.stage1_by) return route;
+  const users = route.users.filter(function (u) { return u.user_id !== leave.stage1_by; });
+  if (users.length === route.users.length) return route;
+  return { users: users, fallback: route.fallback, hrFallback: route.hrFallback || users.length === 0 };
 }
 
 /** ป้ายบอกว่าใบนี้รอใครอยู่ */
@@ -416,7 +440,7 @@ function sendApprovalRequestStage_(leave, requester, stage) {
       pushToAllAdmins(card);
     } else if (stage === 3) {
       // เฉพาะผู้บริหารในสายงานของผู้ลา — ไม่ใช่ผู้บริหารทุกคนเหมือนเดิม
-      const res = getExecutivesFor(leave.user_id);
+      const res = excludeFirstApprover_(getExecutivesFor(leave.user_id), leave);
       if (res.hrFallback) {
         // ผู้บริหารในสายยังรับใบไม่ได้ → HR รับแทน (การ์ดบอกชัดว่าอนุมัติแทนผู้บริหาร)
         pushToAllAdmins(buildApprovalRequestCard(leave, requester, 3, { hrFallback: true }));
@@ -436,9 +460,18 @@ function sendApprovalRequestStage_(leave, requester, stage) {
 }
 
 /** push การ์ดหาผู้บริหารในสายงานของพนักงานคนนี้ (แทน pushToAllOwners เดิม) */
-/** ใบนี้ไหลแบบ "ผู้บริหารเป็นผู้อนุมัติขั้นแรก" ไหม (ดู computeInitialStages_) */
+/**
+ * ใบนี้ไหลแบบ "ผู้บริหารเป็นผู้อนุมัติขั้นแรก (ในนามหัวหน้างาน)" ไหม (ดู computeInitialStages_)
+ * ชั้น HR ถูกข้ามแต่ชั้นหัวหน้าไม่ถูกข้าม — สายปกติไม่มีทางเป็นแบบนี้
+ * ⭐ เดิมเช็คชั้น 3 ข้ามด้วย ตอนนี้ชั้น 3 รอผู้บริหารคนถัดไปได้ (1 ต.ค. 69)
+ */
 function isOwnerFirstLeave_(leave) {
-  return leave.stage1_status !== 'skipped' && leave.stage2_status === 'skipped' && leave.stage3_status === 'skipped';
+  return !!leave && leave.stage1_status !== 'skipped' && leave.stage2_status === 'skipped';
+}
+
+/** ป้ายผู้อนุมัติขั้นแรกของใบนี้ — ผู้บริหารกดแทนต้องบอกว่าทำในนามหัวหน้างาน */
+function stage1ApproverLabel_(leave) {
+  return isOwnerFirstLeave_(leave) ? 'ผู้บริหาร (อนุมัติในนามหัวหน้างาน)' : 'หัวหน้างาน';
 }
 
 /** ชั้นที่ขอกด ต้องเป็นชั้นแรกที่ยังรออยู่ — คืน error object ถ้าไม่ใช่ */
@@ -468,7 +501,7 @@ function pushToExecutivesOf_(userId, messages) {
 function hrMayActOnStage3_(leave, route) {
   if (!leave || leave.stage3_status !== 'pending') return false;
   if (leave.stage1_status === 'pending' || leave.stage2_status === 'pending') return false;
-  const r = route || getExecutivesFor(leave.user_id);
+  const r = route || excludeFirstApprover_(getExecutivesFor(leave.user_id), leave);
   if (r.hrFallback) return true;
   if (leave.doc_request_status === 'requested') return false;
   return Number(leave.reminder_count || 0) >= 1;
@@ -506,8 +539,8 @@ function getPendingForMe(payload) {
     }
   });
   // ผู้บริหารที่ยังใช้งานได้ ของพนักงานคนหนึ่ง — ว่าง = ยังไม่ผูกสาย → ผู้บริหารทุกคนรับได้
-  const routeOf = function (uid) {
-    return executiveRouteFrom_(execOf[uid] || [], idx, null);
+  const routeOf = function (uid, leave) {
+    return excludeFirstApprover_(executiveRouteFrom_(execOf[uid] || [], idx, null), leave);
   };
 
   const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -537,7 +570,7 @@ function getPendingForMe(payload) {
     // stage 3 — เฉพาะใบลาในสายงานของผู้บริหารคนนี้
     if (obj.stage3_status === 'pending' && obj.stage2_status !== 'pending' && obj.stage1_status !== 'pending' &&
         obj.user_id !== user.user_id) {
-      const route = routeOf(obj.user_id);
+      const route = routeOf(obj.user_id, obj);
       if (user.role === ROLES.OWNER) {
         const mine = route.users.some(function (u) { return u.user_id === user.user_id; });
         if (mine) pending.push(shapePendingItem_(obj, 3, idx));
@@ -593,7 +626,8 @@ function shapePendingItem_(leave, myStage, usersIndex) {
     extra_attachments: parseExtraAttachments_(leave.extra_attachments),
     doc_request_status: leave.doc_request_status || '',
     doc_request_note: leave.doc_request_note || '',
-    owner_first: leave.stage2_status === 'skipped' && leave.stage3_status === 'skipped' && myStage === 1,
+    owner_first: isOwnerFirstLeave_(leave) && myStage === 1,
+    stage1_label: stage1ApproverLabel_(leave),
   };
 }
 

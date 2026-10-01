@@ -124,7 +124,12 @@ function pendingStageOf_(leave) {
     return { stage: 2, since: leave.stage1_at || leave.submitted_at };
   }
   if (leave.stage3_status === 'pending') {
-    return { stage: 3, since: leave.stage2_at || leave.stage1_at || leave.submitted_at };
+    // ⭐ ใบผู้บริหารก่อน: ชั้น HR ถูกข้ามตั้งแต่ส่งใบ (stage2_at = เวลาส่ง) — นับจากเวลาที่ขั้นแรกกด
+    //    ไม่งั้นผู้บริหารคนถัดไปโดนเตือนทันที และ HR ได้สิทธิ์แทนก่อนครบเวลา
+    const since = leave.stage2_status === 'skipped'
+      ? (leave.stage1_at || leave.submitted_at)
+      : (leave.stage2_at || leave.stage1_at || leave.submitted_at);
+    return { stage: 3, since: since };
   }
   return null;
 }
@@ -305,7 +310,7 @@ function hourlyReminderTickLocked_(wh, now, outbox) {
           }
         });
       } else if (pending.stage === 3) {
-        const route = getExecutivesFor(leave.user_id, idx);
+        const route = excludeFirstApprover_(getExecutivesFor(leave.user_id, idx), leave);
         route.users.forEach(function (u) {
           if (u.line_user_id) { outbox.push(u.line_user_id, card); sent++; }
         });

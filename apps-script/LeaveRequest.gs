@@ -254,7 +254,7 @@ function submitLeave(payload) {
   // confirm card → ผู้ที่กดส่ง (operator) + ผู้ลา (ถ้าลาแทน)
   try {
     const nextStageLabel = flow.ownerFirst && firstApprovalStage === 1
-      ? 'รอผู้บริหารตรวจ' : stageWaitingLabel_(firstApprovalStage);
+      ? 'รอผู้บริหารตรวจ (อนุมัติในนามหัวหน้างาน)' : stageWaitingLabel_(firstApprovalStage);
     pushMessage(payload.lineUserId, buildLeaveSubmittedCard(leave, nextStageLabel));
     // ลาแทน → แจ้งผู้ลาด้วย (ถ้าผูก LINE ไว้)
     if (proxyNote && requester.line_user_id && requester.line_user_id !== payload.lineUserId) {
@@ -409,5 +409,6 @@ function shapeLeavePublic_(leave, includeSensitive) {
     doc_request_note: leave.doc_request_note || '',
     doc_request_at: leave.doc_request_at || '',
     hr_fallback: isTruthyCell_(leave.hr_fallback),
+    stage1_label: stage1ApproverLabel_(leave),
   };
 }

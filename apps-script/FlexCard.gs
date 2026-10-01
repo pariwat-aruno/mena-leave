@@ -244,9 +244,9 @@ function buildApprovalRequestCard(leave, requester, stage, opts) {
   const c = flexColors_();
   const isCancel = (leave.record_type || 'leave') === 'cancel';
   // ผู้อนุมัติขั้นแรกเป็นผู้บริหาร — ชั้น 2/3 ถูกข้าม (ดู computeInitialStages_)
-  const ownerFirst = stage === 1 && leave.stage2_status === 'skipped' && leave.stage3_status === 'skipped';
+  const ownerFirst = stage === 1 && isOwnerFirstLeave_(leave);
   const who = opts.hrFallback ? '(HR อนุมัติแทนผู้บริหาร)'
-    : ownerFirst ? '(ผู้บริหาร)'
+    : ownerFirst ? '(ผู้บริหาร · อนุมัติในนามหัวหน้างาน)'
     : stage === 1 ? '(หัวหน้างาน)' : stage === 2 ? '(HR)' : '(ผู้บริหาร)';
   const stageLabel = (isCancel ? 'ขออนุมัติยกเลิกวันลา ชั้น ' : 'ขออนุมัติชั้น ') + stage + ' ' + who;
 
@@ -378,7 +378,7 @@ function buildApprovalUpdateCard(leave, stagePassed, approverName, nextStageLabe
     type: 'flex', altText: 'ใบลา ' + leave.leave_id + ' ผ่านชั้น ' + stagePassed,
     contents: {
       type: 'bubble', size: 'mega',
-      header: flexHeader_(stageNames[stagePassed] + 'อนุมัติแล้ว', c.success),
+      header: flexHeader_((stagePassed === 1 ? stage1ApproverLabel_(leave) : stageNames[stagePassed]) + 'อนุมัติแล้ว', c.success),
       body: {
         type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
           flexKV_('เลขที่ใบลา', leave.leave_id),
@@ -430,7 +430,8 @@ function buildFinalRejectedCard(leave, requester, rejectedStage, rejectedByName,
           flexKV_('เลขที่ใบลา', leave.leave_id),
           flexKV_('ผู้ลา', requester.display_name || requester.user_id),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
-          flexKV_('ปฏิเสธโดย', (stageNames[rejectedStage] || '-') + ' (' + (rejectedByName || '-') + ')'),
+          flexKV_('ปฏิเสธโดย', (rejectedStage === 1 ? stage1ApproverLabel_(leave) : (stageNames[rejectedStage] || '-')) +
+            ' (' + (rejectedByName || '-') + ')'),
           note ? flexKV_('หมายเหตุ', note) : { type: 'filler' },
         ],
       },
@@ -444,11 +445,12 @@ function buildFinalRejectedCard(leave, requester, rejectedStage, rejectedByName,
  */
 function buildStage1RejectReportCard(leave, requester, rejectedByName, note) {
   const c = flexColors_();
+  const who = stage1ApproverLabel_(leave);
   return {
-    type: 'flex', altText: 'รายงาน: หัวหน้างานปฏิเสธใบลา ' + leave.leave_id,
+    type: 'flex', altText: 'รายงาน: ' + who + 'ปฏิเสธใบลา ' + leave.leave_id,
     contents: {
       type: 'bubble', size: 'mega',
-      header: flexHeader_('รายงาน: หัวหน้างานปฏิเสธใบลา', c.dark),
+      header: flexHeader_('รายงาน: ' + who + 'ปฏิเสธใบลา', c.dark),
       body: {
         type: 'box', layout: 'vertical', paddingAll: '12px', contents: [
           { type: 'text', text: 'ใบลานี้ถูกปฏิเสธที่ชั้นหัวหน้างาน จึงไม่ถูกส่งต่อมายัง HR/ผู้บริหาร แจ้งเพื่อรับทราบ',
@@ -680,7 +682,7 @@ function buildReminderCard(leave, requester, stage, count, quietHours, opts) {
   const c = flexColors_();
   const alert = '#b3261e';
   const isCancel = (leave.record_type || 'leave') === 'cancel';
-  const stageName = stage === 1 ? 'หัวหน้างาน' : stage === 2 ? 'HR' : 'ผู้บริหาร';
+  const stageName = stage === 1 ? stage1ApproverLabel_(leave) : stage === 2 ? 'HR' : 'ผู้บริหาร';
   // สำเนาถึง HR ตอนผู้บริหารเงียบ — HR ตัดสินแทนได้
   const headText = opts.hrFallback
     ? (opts.executivesUnreachable ? 'ผู้บริหารในสายยังรับใบไม่ได้ — HR ตัดสินแทนได้'
@@ -733,7 +735,7 @@ function buildReminderCard(leave, requester, stage, count, quietHours, opts) {
 /** ใบค้างแบบไม่มีผู้อนุมัติให้ส่งเลย — HR ต้องเข้าไปแก้ผังอำนาจ */
 function buildStuckLeaveCard(leave, requester, stage) {
   const c = flexColors_();
-  const stageName = stage === 1 ? 'หัวหน้างาน' : stage === 2 ? 'HR' : 'ผู้บริหาร';
+  const stageName = stage === 1 ? stage1ApproverLabel_(leave) : stage === 2 ? 'HR' : 'ผู้บริหาร';
   return {
     type: 'flex', altText: 'ใบลา ' + leave.leave_id + ' ค้างโดยไม่มีผู้อนุมัติ',
     contents: {

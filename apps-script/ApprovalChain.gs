@@ -551,7 +551,7 @@ function migrateSupervisorsToApprovers_(ss) {
 function rerouteOwnerFirstLeaves_(userId) {
   const newSupId = getSupervisorFor(userId);
   const newSup = newSupId ? findUserByUserId_(newSupId) : null;
-  if (newSup && newSup.role === ROLES.OWNER) return 0;
+  if (newSup && newSup.role === ROLES.OWNER) return recomputeOwnerFirstStage3_(userId, newSup.user_id);
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
   if (!sh || sh.getLastRow() < 2) return 0;
@@ -562,7 +562,7 @@ function rerouteOwnerFirstLeaves_(userId) {
     const o = {};
     hdr.forEach(function (h, j) { o[h] = r[j]; });
     if (o.user_id !== userId || o.final_status !== 'pending') return;
-    if (!(o.stage1_status === 'pending' && o.stage2_status === 'skipped' && o.stage3_status === 'skipped')) return;
+    if (!(o.stage1_status === 'pending' && o.stage2_status === 'skipped')) return;
     updateRowByHeader_(sh, i + 2, {
       stage1_status: newSup ? 'pending' : 'skipped',
       stage2_status: 'pending', stage2_at: '',
@@ -571,5 +571,30 @@ function rerouteOwnerFirstLeaves_(userId) {
     n++;
   });
   if (n) logInfo('rerouteOwnerFirstLeaves_', 'ใบแบบผู้บริหารก่อน ' + n + ' ใบ กลับเป็นสายปกติ', { userId: userId });
+  return n;
+}
+
+/**
+ * เปลี่ยนผู้บริหารขั้นแรกเป็นผู้บริหารอีกคน ระหว่างใบยังรอขั้นแรก
+ * → ขั้น 3 ต้องคิดใหม่ตามคนใหม่ (เช่น เดิมขั้น 3 มีแต่คนเก่าจึงถูกข้าม ตอนนี้คนเก่าคือ "ผู้บริหารอีกคน")
+ */
+function recomputeOwnerFirstStage3_(userId, newFirstId) {
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
+  if (!sh || sh.getLastRow() < 2) return 0;
+  const want = hasOtherExecutive_(userId, newFirstId) ? 'pending' : 'skipped';
+  const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  let n = 0;
+  data.forEach(function (r, i) {
+    const o = {};
+    hdr.forEach(function (h, j) { o[h] = r[j]; });
+    if (o.user_id !== userId || o.final_status !== 'pending') return;
+    if (!(o.stage1_status === 'pending' && o.stage2_status === 'skipped')) return;
+    if (o.stage3_status === want) return;
+    updateRowByHeader_(sh, i + 2, { stage3_status: want, stage3_at: '' });
+    n++;
+  });
+  if (n) logInfo('recomputeOwnerFirstStage3_', 'คิดขั้น 3 ใหม่ ' + n + ' ใบ', { userId: userId, stage3: want });
   return n;
 }

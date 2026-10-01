@@ -77,6 +77,7 @@ const users = makeSheet('Users', USERS_HDR, [
   U('EMP-0012', 'Uhrstaff', 'SUPERVISOR', 'เจ้าหน้าที่บุคคล', '6818', 'active', true), // หัวหน้าเป็นผู้บริหาร
   U('EMP-0013', 'Umaid', 'USER', 'แม่บ้าน', '6939', 'active'),                       // หัวหน้าเป็นผู้บริหารที่ยังไม่ผูกไลน์
   U('EMP-0014', 'Uemp2', 'USER', 'พนักงานคลัง', '7001', 'active'),                   // ผู้บริหารในสายรับได้
+  U('EMP-0015', 'Usup2', 'SUPERVISOR', 'หัวหน้าแผนกแพ็ค', '5600', 'active', true),    // หัวหน้างานลา: ผู้บริหารนอกสาย → ผู้บริหารเอ
   // แถวซ้ำที่ HR ปิดทิ้งแล้ว (เหมือน prod EMP-0070..0075)
   U('EMP-0070', '', 'SUPERVISOR', 'ผู้บริหารบี', '4501', 'inactive', true),
   U('EMP-0071', '', 'SUPERVISOR', 'ผู้บริหารบี', '4501', 'inactive', true),
@@ -89,6 +90,8 @@ const approvers = makeSheet('Approvers', APPROVERS_HDR, [
   A('APV-3', 'EMP-0012', 'EMP-0001', 1), A('APV-4', 'EMP-0012', 'EMP-0001', 3),   // HR-staff: หัวหน้าคือผู้บริหาร
   A('APV-5', 'EMP-0013', 'EMP-0003', 1),                                          // หัวหน้าคือผู้บริหารที่ยังไม่ผูกไลน์
   A('APV-6', 'EMP-0014', 'EMP-0010', 1), A('APV-7', 'EMP-0014', 'EMP-0001', 3),
+  // ขั้นแรกเป็นผู้บริหาร + ขั้น 3 มีทั้งผู้บริหารคนอื่นและคนเดิม (คนเดิมต้องไม่ได้กดซ้ำ)
+  A('APV-8', 'EMP-0015', 'EMP-0002', 1), A('APV-9', 'EMP-0015', 'EMP-0001', 3), A('APV-10', 'EMP-0015', 'EMP-0002', 3),
 ]);
 
 // ⭐ หัวตารางเก่า (ยังไม่มีคอลัมน์ใหม่) — โค้ดใหม่ต้องเติมให้เอง
@@ -276,7 +279,7 @@ const p7 = pushed.length;
 const r7 = submit('Uhrstaff', { date_from: '2026-09-25', date_to: '2026-09-25' });
 check('ไปหาผู้บริหารที่ชั้น 1 ชั้น 2/3 ข้าม', row(r7.leave_id).stage1_status === 'pending' &&
   row(r7.leave_id).stage2_status === 'skipped' && row(r7.leave_id).stage3_status === 'skipped', row(r7.leave_id));
-check('ผู้บริหารได้การ์ดขออนุมัติ', pushedTo('Uboss', p7).some(p => /ขออนุมัติชั้น 1 \(ผู้บริหาร\)/.test(alt(p))), pushed.slice(p7).map(alt));
+check('ผู้บริหารได้การ์ดขออนุมัติ', pushedTo('Uboss', p7).some(p => /ขออนุมัติชั้น 1 \(ผู้บริหาร · อนุมัติในนามหัวหน้างาน\)/.test(alt(p))), pushed.slice(p7).map(alt));
 check('HR ยังไม่ได้แจ้งตอนส่ง', pushedTo('Uhr', p7).length === 0, pushed.slice(p7).filter(p => p.to === 'Uhr').map(alt));
 const pb = sandbox.getPendingForMe({ lineUserId: 'Uboss' }).pending.find(p => p.leave_id === r7.leave_id);
 check('ผู้บริหารเห็นในหน้าอนุมัติ', pb && pb.my_stage === 1 && pb.owner_first === true, pb);
@@ -330,6 +333,54 @@ const reqCard = JSON.stringify(sandbox.buildApprovalRequestCard(lv11, { display_
 check('การ์ดขออนุมัติ: ลิงก์ไม่อนุมัติมี ?id=เลขใบ', reqCard.includes('approve.html?id=' + r10.leave_id), reqCard.match(/approve\.html[^"]*/));
 const remCard = JSON.stringify(sandbox.buildReminderCard(lv11, { display_name: 'x' }, 2, 1, 4));
 check('การ์ดเตือน: ลิงก์ไม่อนุมัติมี ?id=เลขใบ', remCard.includes('approve.html?id=' + r10.leave_id), remCard.match(/approve\.html[^"]*/));
+
+console.log('\n=== 12) หัวหน้างานลา: ผู้บริหารคนแรก (ในนามหัวหน้างาน) → ผู้บริหารคนถัดไป ไม่ผ่าน HR (ลูกค้าสั่ง 1 ต.ค. 69) ===');
+const p12 = pushed.length;
+const r12 = submit('Usup2', { date_from: '2026-10-02', date_to: '2026-10-02' });
+check('ส่งได้', r12.ok === true, r12);
+check('ขั้น 1 รอ · ข้าม HR · ขั้น 3 รอ', row(r12.leave_id).stage1_status === 'pending' &&
+  row(r12.leave_id).stage2_status === 'skipped' && row(r12.leave_id).stage3_status === 'pending', row(r12.leave_id));
+check('ผู้บริหารคนแรกได้การ์ด "ในนามหัวหน้างาน"', pushedTo('Uother', p12).some(p => /ในนามหัวหน้างาน/.test(alt(p))),
+  pushed.slice(p12).map(x => x.to + ':' + alt(x)));
+check('HR ยังไม่ได้อะไรตอนส่ง', pushedTo('Uhr', p12).length === 0, pushed.slice(p12).map(x => x.to + ':' + alt(x)));
+const pend12 = sandbox.getPendingForMe({ lineUserId: 'Uother' }).pending.find(p => p.leave_id === r12.leave_id);
+check('หน้าอนุมัติบอกว่าในนามหัวหน้างาน', pend12 && pend12.owner_first === true && /ในนามหัวหน้างาน/.test(pend12.stage1_label), pend12);
+const p12b = pushed.length;
+const d12 = decide('Uother', r12.leave_id, 1, 'approve');
+check('ผู้บริหารคนแรกอนุมัติ → ไปขั้น 3', d12.ok && d12.moved_to_stage === 3, d12);
+check('ผู้บริหารคนถัดไปได้การ์ดขออนุมัติ', pushedTo('Uboss', p12b).some(p => /ขออนุมัติชั้น 3/.test(alt(p))), pushed.slice(p12b).map(x => x.to + ':' + alt(x)));
+check('ผู้บริหารคนแรกไม่ได้การ์ดขั้น 3 ซ้ำ', !pushedTo('Uother', p12b).some(p => /ขออนุมัติชั้น 3/.test(alt(p))), pushed.slice(p12b).map(x => x.to + ':' + alt(x)));
+check('HR ยังไม่ได้อะไร (ไม่ผ่าน HR)', pushedTo('Uhr', p12b).length === 0, '');
+check('ผู้ลาเห็นว่าผู้บริหารอนุมัติในนามหัวหน้างาน', pushedTo('Usup2', p12b).some(p => JSON.stringify(p.msg).includes('ในนามหัวหน้างาน')), '');
+const pend12b = sandbox.getPendingForMe({ lineUserId: 'Uother' }).pending.find(p => p.leave_id === r12.leave_id);
+check('ผู้บริหารคนแรกไม่เห็นใบนี้ที่ขั้น 3', !pend12b, pend12b);
+const f12 = decide('Uother', r12.leave_id, 3, 'approve');
+check('ผู้บริหารคนแรกกดขั้น 3 ซ้ำไม่ได้', f12.ok === false && f12.error === 'forbidden', f12);
+const h12 = decide('Uhr', r12.leave_id, 3, 'approve');
+check('HR กดแทนทันทีไม่ได้', h12.ok === false, h12);
+const p12c = pushed.length;
+const e12 = decide('Uboss', r12.leave_id, 3, 'approve');
+check('ผู้บริหารคนถัดไปอนุมัติ → จบ', e12.ok && e12.final_status === 'approved', e12);
+check('แจ้ง HR ตอนจบ', pushedTo('Uhr', p12c).length === 1, pushed.slice(p12c).map(x => x.to + ':' + alt(x)));
+
+console.log('\n=== 13) ขั้นแรกเป็นผู้บริหาร ไม่มีผู้บริหารคนอื่นในสาย → จบที่ขั้นแรกเหมือนเดิม ===');
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0012', supervisor_user_id: 'EMP-0001' });
+const r13 = submit('Uhrstaff', { date_from: '2026-10-05', date_to: '2026-10-05' });
+check('ขั้น 3 ถูกข้าม', row(r13.leave_id).stage2_status === 'skipped' && row(r13.leave_id).stage3_status === 'skipped', row(r13.leave_id));
+const d13 = decide('Uboss', r13.leave_id, 1, 'approve');
+check('ผู้บริหารอนุมัติแล้วจบ', d13.ok && d13.final_status === 'approved', d13);
+
+console.log('\n=== 14) ใบผู้บริหารก่อน: เวลาเตือนขั้น 3 · เปลี่ยนผู้บริหารขั้นแรกกลางทาง ===');
+const ps = sandbox.pendingStageOf_({ stage1_status: 'approved', stage1_at: '2026-10-03T09:00:00+07:00',
+  stage2_status: 'skipped', stage2_at: '2026-10-01T09:00:00+07:00', stage3_status: 'pending', submitted_at: '2026-10-01T09:00:00+07:00' });
+check('ขั้น 3 เริ่มนับจากเวลาที่ขั้นแรกกด ไม่ใช่เวลาส่งใบ', ps.stage === 3 && ps.since === '2026-10-03T09:00:00+07:00', ps);
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0015', supervisor_user_id: 'EMP-0002', executive_user_ids: ['EMP-0002'] });
+const r14 = submit('Usup2', { date_from: '2026-10-06', date_to: '2026-10-06' });
+check('ขั้น 3 มีแต่คนเดียวกับขั้นแรก → ข้าม', row(r14.leave_id).stage3_status === 'skipped', row(r14.leave_id));
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0015', supervisor_user_id: 'EMP-0001' });
+check('เปลี่ยนขั้นแรกเป็นผู้บริหารอีกคน → ขั้น 3 กลับมารอคนเดิม', row(r14.leave_id).stage3_status === 'pending', row(r14.leave_id));
+const d14 = decide('Uboss', r14.leave_id, 1, 'approve');
+check('ผู้บริหารคนใหม่อนุมัติขั้นแรก → ไปขั้น 3', d14.ok && d14.moved_to_stage === 3, d14);
 
 console.log(fails ? '\nตก ' + fails + ' ข้อ' : '\nผ่านทุกข้อ');
 process.exit(fails ? 1 : 0);
