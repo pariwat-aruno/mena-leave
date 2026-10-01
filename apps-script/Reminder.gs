@@ -154,6 +154,15 @@ function hourlyReminderTick(opts) {
     return { ok: true, skipped: 'outside_work_hours' };
   }
 
+  // ⭐ โควตาไลน์เดือนนี้หมด → ไม่เตือน ไม่นับครั้ง (เดิมนับเพิ่มทุก 4 ชม. ทั้งที่ส่งไม่ออก
+  //    พอขึ้นเดือนใหม่ HR ได้การ์ด "เตือนครั้งที่ 14" เป็นข้อความแรก — ลูกค้าแจ้ง 1 ต.ค. 69)
+  const quota = getLineMessageQuota_();
+  if (quota.ok && quota.limited && quota.remaining <= 0) {
+    markLineMonthlyLimit_('ใช้ไป ' + quota.used + '/' + quota.limit);
+    logWarn('hourlyReminderTick', 'โควตาข้อความไลน์เดือนนี้หมด — ข้ามการเตือนรอบนี้', quota);
+    return { ok: true, skipped: 'line_quota_exhausted' };
+  }
+
   // ⭐ ถือล็อกเดียวกับ approveLeave ทั้งรอบ — ไม่งั้น tick ที่อ่านข้อมูลก่อนมีคนกดอนุมัติ
   //    จะเขียน reminder_count ทับหลังชั้นเปลี่ยนแล้ว → HR ได้สิทธิ์แทนผู้บริหารทั้งที่ผู้บริหารยังไม่เคยโดนเตือน
   const lock = LockService.getScriptLock();
@@ -164,18 +173,56 @@ function hourlyReminderTick(opts) {
     return { ok: false, error: 'lock_failed' };
   }
   const queue = [];
-  const outbox = { push: function (to, msg) { queue.push([to, msg]); } };
+  const outbox = { tag: null, push: function (to, msg) { queue.push([to, msg, this.tag]); } };
   let res;
   try {
     res = hourlyReminderTickLocked_(wh, now, outbox);
   } finally {
     lock.releaseLock();
   }
+  // ใบไหนส่งไม่ออกเลยสักข้อความเพราะโควตาหมด (เช่นโควตาเหลือ 1 แต่ต้องส่งหลายการ์ด) → คืนครั้งที่นับไป
+  const byTag = {};
   queue.forEach(function (q) {
-    try { pushMessage(q[0], q[1]); }
+    let r = null;
+    try { r = pushMessage(q[0], q[1]); }
     catch (e) { logError('hourlyReminderTick', 'push failed: ' + e.message, { to: q[0] }); }
+    if (!q[2]) return;
+    const k = q[2].leaveId;
+    if (!byTag[k]) byTag[k] = { tag: q[2], delivered: false, quotaFail: false };
+    if (r && r.ok) byTag[k].delivered = true;
+    else if (r && r.error === 'monthly_limit') byTag[k].quotaFail = true;
   });
+  const undo = Object.keys(byTag).map(function (k) { return byTag[k]; })
+    .filter(function (t) { return t.quotaFail && !t.delivered; })
+    .map(function (t) { return t.tag; });
+  if (undo.length) revertReminderCounts_(undo);
   return res;
+}
+
+/**
+ * คืน reminder_count / last_reminded_at ของใบที่การ์ดเตือนส่งไม่ออกเลยเพราะโควตาหมด
+ * ⭐ คืนเฉพาะแถวที่ค่ายังเป็นค่าที่รอบนี้เขียน — ถ้าระหว่างนั้นมีคนกดอนุมัติ (ล้างเป็น 0) ห้ามทับ
+ */
+function revertReminderCounts_(tags) {
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) { return; }
+  try {
+    const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+    const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
+    const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const iId = hdr.indexOf('leave_id');
+    const iAt = hdr.indexOf('last_reminded_at');
+    const iCount = hdr.indexOf('reminder_count');
+    tags.forEach(function (t) {
+      const row = sh.getRange(t.rowNumber, 1, 1, hdr.length).getValues()[0];
+      if (row[iId] !== t.leaveId || Number(row[iCount]) !== t.count) return;
+      sh.getRange(t.rowNumber, iCount + 1).setValue(t.prevCount);
+      sh.getRange(t.rowNumber, iAt + 1).setValue(t.prevAt);
+    });
+    logWarn('hourlyReminderTick', 'โควตาไลน์หมดกลางรอบ — ไม่นับการเตือนที่ส่งไม่ออก ' + tags.length + ' ใบ');
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /**
@@ -228,6 +275,9 @@ function hourlyReminderTickLocked_(wh, now, outbox) {
     }
 
     const count = Number(leave.reminder_count || 0) + 1;
+    outbox.tag = { leaveId: leave.leave_id, rowNumber: leave._rowNumber, count: count,
+                   prevCount: leave.reminder_count === '' ? '' : Number(leave.reminder_count || 0),
+                   prevAt: leave.last_reminded_at || '' };
     const totalQuietMin = workingMinutesBetween_(toDateSafe_(pending.since), now, wh);
     const card = buildReminderCard(leave, requester, pending.stage, count, Math.round(totalQuietMin / 60));
 

@@ -176,12 +176,41 @@ async function loadDashboard() {
   const r = await window.api.post('getAdminDashboard', { lineUserId: window.state.lineUserId });
   if (!r.ok) return;
   const s = r.summary;
-  document.getElementById('dashboard').innerHTML =
+  document.getElementById('dashboard').innerHTML = lineQuotaBanner(r.line_quota) +
     '<h2 class="section-title" style="margin-top:0">สรุประบบ</h2>' +
     '<div class="card-row"><span class="label">พนักงาน Active</span><span class="value">' + s.active_users + '</span></div>' +
     '<div class="card-row"><span class="label">รอ HR อนุมัติ register</span><span class="value">' + (s.pending_registers ? '<span class="badge pending">' + s.pending_registers + '</span>' : s.pending_registers) + '</span></div>' +
     '<div class="card-row"><span class="label">ใบลารออนุมัติ</span><span class="value">' + (s.pending_leaves ? '<span class="badge pending">' + s.pending_leaves + '</span>' : s.pending_leaves) + '</span></div>' +
     '<div class="card-row"><span class="label">การเปลี่ยนแปลงรอผู้บริหาร</span><span class="value">' + s.pending_changes + '</span></div>';
+}
+
+// โควตาข้อความไลน์ของ OA — หมดเมื่อไหร่ การ์ดขออนุมัติ/แจ้งเตือนทุกชนิดส่งไม่ออกทั้งบริษัท
+function lineQuotaBanner(q) {
+  if (!q || !q.ok) {
+    return q && q.blocked_at
+      ? '<div class="alert error">ไลน์ส่งข้อความไม่ออกตั้งแต่ ' + fmtQuotaTime(q.blocked_at) +
+        ' เพราะโควตาข้อความของบัญชีไลน์เดือนนี้หมด ผู้อนุมัติจะไม่ได้รับการ์ด ให้เปิดหน้า "อนุมัติ" ดูใบลาที่ค้างเอง</div>'
+      : '';
+  }
+  if (!q.limited) return '';
+  const pct = q.limit ? Math.round(q.used / q.limit * 100) : 100;
+  const used = 'ข้อความไลน์เดือนนี้ใช้ไป ' + Number(q.used) + ' จาก ' + Number(q.limit) + ' ข้อความ';
+  if (q.remaining <= 0) {
+    return '<div class="alert error"><b>ไลน์ส่งข้อความไม่ออกแล้ว</b> — ' + used +
+      '. หัวหน้างาน ผู้บริหาร และ HR จะไม่ได้รับการ์ดขออนุมัติหรือการแจ้งเตือนจนกว่าจะขึ้นเดือนใหม่ ' +
+      'ให้เปิดหน้า "อนุมัติ" ดูใบลาที่ค้างเอง หรืออัปเกรดแพ็กเกจบัญชีไลน์ที่ LINE Official Account Manager</div>';
+  }
+  if (pct >= 80) {
+    return '<div class="alert warning">' + used + ' (' + pct + '%) ใกล้หมดแล้ว — ' +
+      'ถ้าหมด ผู้อนุมัติจะไม่ได้รับการ์ดจนกว่าจะขึ้นเดือนใหม่</div>';
+  }
+  return '<div class="card-row"><span class="label">ข้อความไลน์เดือนนี้</span><span class="value">' +
+    Number(q.used) + ' / ' + Number(q.limit) + '</span></div>';
+}
+
+function fmtQuotaTime(v) {
+  const d = new Date(v);
+  return isNaN(d) ? window.utils.escapeHtml(String(v)) : d.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 async function loadUsers() {

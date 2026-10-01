@@ -69,6 +69,8 @@ function getAdminDashboard(payload) {
       rejected_leaves_this_month: rejectedLeaves,
       pending_changes: pendingChanges,
     },
+    // HR ต้องเห็นเองว่าไลน์ส่งไม่ออก — ไม่ใช่รอให้หัวหน้าบ่นว่าไม่เห็นใบลา
+    line_quota: getLineMessageQuota_(),
   };
 }
 

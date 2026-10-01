@@ -154,6 +154,7 @@ sandbox.nowBangkok = () => TODAY + 'T10:00:00+07:00';
 sandbox.todayBangkok = () => TODAY;
 sandbox.nextLeaveId = () => 'LV-T-' + (++leaveSeq);
 sandbox.currentYearBangkok_ = () => 2026;
+sandbox.getLineMessageQuota_ = () => ({ ok: false });   // ไม่ได้โหลด LineApi.gs — เทสโควตาอยู่ line-quota.test.js
 sandbox.uploadImage = (b64, name) => 'https://drive.google.com/file/d/FAKE-' + name + '/view';
 
 let fails = 0;
