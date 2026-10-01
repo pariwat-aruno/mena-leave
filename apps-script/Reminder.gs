@@ -216,6 +216,10 @@ function revertReminderCounts_(tags) {
     tags.forEach(function (t) {
       const row = sh.getRange(t.rowNumber, 1, 1, hdr.length).getValues()[0];
       if (row[iId] !== t.leaveId || Number(row[iCount]) !== t.count) return;
+      // มีคนแตะเวลาเตือนระหว่างนั้น (ขอ/ส่งเอกสาร) → ห้ามเขียนเวลาเก่าทับ
+      const at = toDateSafe_(row[iAt]);
+      const mine = toDateSafe_(t.writtenAt);
+      if (!at || !mine || at.getTime() !== mine.getTime()) return;
       sh.getRange(t.rowNumber, iCount + 1).setValue(t.prevCount);
       sh.getRange(t.rowNumber, iAt + 1).setValue(t.prevAt);
     });
@@ -330,7 +334,9 @@ function hourlyReminderTickLocked_(wh, now, outbox) {
     }
 
     // บันทึกว่าเตือนไปแล้ว แม้กรณีไม่มีผู้รับ — กันวนเตือน HR ทุกชั่วโมง
-    sh.getRange(leave._rowNumber, iRemindedAt + 1).setValue(nowBangkok());
+    const remindedAt = nowBangkok();
+    outbox.tag.writtenAt = remindedAt;
+    sh.getRange(leave._rowNumber, iRemindedAt + 1).setValue(remindedAt);
     sh.getRange(leave._rowNumber, iRemindCount + 1).setValue(count);
     reminded++;
   });

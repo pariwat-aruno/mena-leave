@@ -66,7 +66,7 @@ function callLineApi_(kind, body) {
       //    เดิมยิงซ้ำ 3 รอบต่อข้อความ (หน้าส่งใบลาค้างนาน) และไม่มีใครรู้ว่าไลน์ส่งไม่ออกทั้งระบบ
       //    (ลูกค้าแจ้ง 1 ต.ค. 69: ใบลาค้าง 4-5 วัน หัวหน้า/ผู้บริหารไม่ได้การ์ดเลย)
       if (isLineMonthlyLimitError_(code, lastErr)) {
-        markLineMonthlyLimit_(lastErr);
+        try { markLineMonthlyLimit_(lastErr); } catch (e) {}
         return { ok: false, error: 'monthly_limit' };
       }
       // 4xx (ยกเว้น 429) ไม่ retry
