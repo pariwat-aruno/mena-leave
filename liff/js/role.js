@@ -74,6 +74,15 @@ window.OTHER_LEAVE_TYPES = [
   { value: 'ordination',    label: 'ลาอุปสมบท' },
 ];
 
+/** จ่าย/ไม่จ่าย ค่าจ้างวันลา (mirror payStatusLabel_ ฝั่ง backend) — ว่าง = ยังไม่ระบุ */
+window.PAY_STATUS_LABELS = { paid: 'จ่าย', unpaid: 'ไม่จ่าย' };
+window.payStatusLabel = function (v) { return window.PAY_STATUS_LABELS[v] || 'ยังไม่ระบุ'; };
+/** สีป้าย: จ่าย=เขียว ไม่จ่าย=แดง ยังไม่ระบุ=เทา */
+window.payStatusBadge = function (v) {
+  return '<span class="badge ' + (v === 'paid' ? 'approved' : v === 'unpaid' ? 'rejected' : 'skipped') + '">' +
+    window.payStatusLabel(v) + '</span>';
+};
+
 window.STATUS_LABELS = {
   pending:   'รออนุมัติ',
   approved:  'อนุมัติแล้ว',

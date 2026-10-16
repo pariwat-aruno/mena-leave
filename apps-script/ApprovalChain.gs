@@ -140,6 +140,16 @@ function executiveRouteFrom_(ids, idx, userIdForLog) {
   const reachable = function (u) {
     return u && u.status === 'active' && u.role === ROLES.OWNER && !!u.line_user_id;
   };
+  // ⭐ ตั้งผู้บริหารขั้น 3 คนเดียวไว้ใน Settings → ไม่สนผังรายคน (ลูกค้าสั่ง 16 ต.ค. 69)
+  const sole = stage3SoleApprover_(idx);
+  if (sole) {
+    if (reachable(sole.user)) return { users: [sole.user], fallback: false, hrFallback: false };
+    if (userIdForLog) {
+      logWarn('getExecutivesFor', 'ผู้บริหารขั้น 3 ที่ตั้งไว้ (stage3_sole_approver) ยังรับใบไม่ได้ — ส่ง HR แทน',
+        { userId: userIdForLog, empCode: sole.emp_code, found: !!sole.user });
+    }
+    return { users: [], fallback: true, hrFallback: true };
+  }
   const linked = (ids || []).map(function (id) { return idx.byId[id]; }).filter(reachable);
   if (linked.length) return { users: linked, fallback: false, hrFallback: false };
 
@@ -153,6 +163,48 @@ function executiveRouteFrom_(ids, idx, userIdForLog) {
 
   const all = idx.list.filter(reachable);
   return { users: all, fallback: true, hrFallback: all.length === 0 };
+}
+
+/**
+ * ผู้บริหารคนเดียวที่อนุมัติขั้น 3 ให้ทุกคน — Settings `stage3_sole_approver` = รหัสพนักงาน
+ * return null = ไม่ได้ตั้ง (ใช้ผังรายคนตามเดิม) · { emp_code, user } — user null = หารหัสนี้ไม่เจอ
+ * จำผลไว้ใน index ที่ส่งมา — getPendingForMe เรียกทีละใบ ไม่ต้องอ่าน Settings ซ้ำ
+ */
+function stage3SoleApprover_(usersIndex) {
+  const idx = usersIndex || loadUsersIndex_();
+  if (idx._stage3Sole !== undefined) return idx._stage3Sole;
+  const code = normEmpCode_(getConfig().stage3_sole_approver);
+  let res = null;
+  if (code) {
+    // รหัสซ้ำกับแถวที่ปิดแล้วได้ (เคยเจอใน prod) — เอาแถวที่ยังไม่ปิด โดยให้แถวผู้บริหารที่ผูกไลน์แล้วมาก่อน
+    const rows = idx.list.filter(function (u) {
+      return u.status !== 'inactive' && normEmpCode_(u.emp_code) === code;
+    }).sort(function (a, b) {
+      const score = function (u) { return (u.role === ROLES.OWNER ? 2 : 0) + (u.line_user_id ? 1 : 0); };
+      return score(b) - score(a);
+    });
+    res = { emp_code: code, user: rows[0] || null };
+  }
+  idx._stage3Sole = res;
+  return res;
+}
+
+/** ข้อมูลผู้บริหารขั้น 3 คนเดียว สำหรับหน้าจอ — null = ไม่ได้ตั้ง */
+function stage3SoleInfo_(idx) {
+  const sole = stage3SoleApprover_(idx);
+  if (!sole) return null;
+  const u = sole.user;
+  return {
+    emp_code: sole.emp_code,
+    user_id: u ? u.user_id : '',
+    display_name: u ? (u.display_name || u.user_id) : '',
+    // รับใบไม่ได้ = ใบขั้น 3 ไปให้ HR อนุมัติแทน
+    problem: !u ? 'ไม่พบพนักงานรหัสนี้'
+      : u.role !== ROLES.OWNER ? 'ยังไม่ใช่ระดับผู้บริหาร'
+      : !u.line_user_id ? 'ยังไม่ผูกไลน์'
+      : u.status !== 'active' ? 'บัญชียังไม่เปิดใช้งาน'
+      : '',
+  };
 }
 
 /**
@@ -271,6 +323,8 @@ function getEmployeeDirectory(payload) {
     employees: employees,
     supervisor_options: supervisorOptions,
     executive_options: executiveOptions,
+    // ตั้งผู้บริหารขั้น 3 คนเดียวไว้ = ช่องผู้บริหารรายคนไม่มีผลแล้ว
+    stage3_sole: stage3SoleInfo_(idx),
   };
 }
 
@@ -421,7 +475,10 @@ function setApprovalChain(payload) {
     try {
       if (target.line_user_id) {
         const supUser = supId ? idx.byId[supId] : null;
-        const execUsers = execIds.map(function (id) { return idx.byId[id]; }).filter(Boolean);
+        // ตั้งผู้บริหารขั้น 3 คนเดียวไว้ → บอกพนักงานตามที่ใบลาจะวิ่งจริง ไม่ใช่ตามช่องรายคน
+        const sole = stage3SoleApprover_(idx);
+        const execUsers = sole ? (sole.user ? [sole.user] : [])
+          : execIds.map(function (id) { return idx.byId[id]; }).filter(Boolean);
         pushMessage(target.line_user_id, buildApprovalChainSetCard(target, supUser, execUsers));
       }
     } catch (e) {
@@ -460,10 +517,14 @@ function getMyOrgLine(payload) {
 
   const asSupervisor = [];
   const asExecutive = [];
+  const sole = stage3SoleApprover_(idx);
+  const iAmSole = !!(sole && sole.user && sole.user.user_id === me.user_id);
   idx.list.forEach(function (u) {
     if (u.status !== 'active') return;
     if (supOf[u.user_id] === me.user_id) asSupervisor.push(u);
-    if ((execOf[u.user_id] || []).indexOf(me.user_id) >= 0) asExecutive.push(u);
+    // ผู้บริหารขั้น 3 คนเดียว = ดูแลทุกคน (ยกเว้นผู้บริหารด้วยกันที่ลาแล้วอนุมัติอัตโนมัติ)
+    if (sole ? (iAmSole && u.user_id !== me.user_id && u.role !== ROLES.OWNER)
+             : (execOf[u.user_id] || []).indexOf(me.user_id) >= 0) asExecutive.push(u);
   });
 
   const shape = function (u) {
@@ -479,7 +540,7 @@ function getMyOrgLine(payload) {
   };
 
   // ผู้บริหารที่ยังไม่ถูกผูกสายเลย จะรับใบลาของ "ทุกคนที่ไม่มีสายผูกไว้" ตาม fallback
-  const unassigned = me.role === ROLES.OWNER
+  const unassigned = me.role === ROLES.OWNER && !sole
     ? idx.list.filter(function (u) {
         return u.status === 'active' && !(execOf[u.user_id] || []).length;
       }).map(shape)
@@ -492,6 +553,7 @@ function getMyOrgLine(payload) {
     as_supervisor: asSupervisor.map(shape),
     as_executive: asExecutive.map(shape),
     unassigned: unassigned,
+    stage3_sole: stage3SoleInfo_(idx),
   };
 }
 

@@ -124,7 +124,10 @@ function render() {
     '<div class="card-row"><span class="label">พนักงานทั้งหมด</span><span class="value">' + DIR.employees.length + ' คน</span></div>' +
     '<div class="card-row"><span class="label">ยังไม่ผูกไลน์</span><span class="value">' + noLine + ' คน</span></div>' +
     '<div class="card-row"><span class="label">ยังไม่มีหัวหน้างาน</span><span class="value">' + noSup + ' คน</span></div>' +
-    '<div class="card-row"><span class="label">ยังไม่มีผู้บริหาร</span><span class="value">' + noExec + ' คน</span></div>';
+    (DIR.stage3_sole
+      ? '<div class="card-row"><span class="label">ผู้บริหารขั้น 3</span><span class="value">' +
+        window.utils.escapeHtml(DIR.stage3_sole.display_name || DIR.stage3_sole.emp_code) + ' (ทุกคน)</span></div>'
+      : '<div class="card-row"><span class="label">ยังไม่มีผู้บริหาร</span><span class="value">' + noExec + ' คน</span></div>');
 
   const tbody = document.getElementById('rows');
   if (!list.length) {
@@ -137,7 +140,10 @@ function render() {
     const supCell = e.supervisor_name
       ? esc(e.supervisor_name)
       : '<span class="subtle">ยังไม่กำหนด</span>';
-    const execCell = e.executive_names.length
+    // ตั้งผู้บริหารขั้น 3 คนเดียวไว้ = ช่องรายคนไม่มีผล โชว์ตามที่ใบลาวิ่งจริง
+    const execCell = DIR.stage3_sole
+      ? esc(DIR.stage3_sole.display_name || DIR.stage3_sole.emp_code) + ' <span class="subtle">(ทุกคน)</span>'
+      : e.executive_names.length
       ? esc(e.executive_names.join(', '))
       : '<span class="subtle">ยังไม่กำหนด</span>';
     return '<tr onclick="goEdit(\'' + e.user_id + '\')">' +

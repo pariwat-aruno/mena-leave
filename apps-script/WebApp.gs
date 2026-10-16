@@ -91,6 +91,8 @@ function routeAction_(action, payload) {
     // approval
     'getPendingForMe':         function (p) { return getPendingForMe(p); },
     'approveLeave':            function (p) { return approveLeave(p); },
+    // HR ระบุ/แก้ จ่าย-ไม่จ่าย ค่าจ้างวันลา ภายหลัง
+    'setLeavePayStatus':       function (p) { return setLeavePayStatus(p); },
 
     // admin / supervisor
     'getAdminDashboard':       function (p) { return getAdminDashboard(p); },

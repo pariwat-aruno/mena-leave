@@ -37,6 +37,15 @@
         <h2 class="section-title" id="decision-title">ตัดสินใจ</h2>
         <div id="decision-body"></div>
 
+        <!-- ขั้น HR: ต้องเลือก จ่าย/ไม่จ่าย ก่อนอนุมัติ (ทุกประเภทการลา) -->
+        <div id="pay-choice" class="form-group mt-2 hidden">
+          <label>ค่าจ้างวันลา <span class="required">*</span> <span class="subtle">(ต้องเลือกก่อนกดอนุมัติ)</span></label>
+          <div class="btn-row">
+            <button type="button" class="btn ghost" data-pay="paid" aria-pressed="false">จ่าย</button>
+            <button type="button" class="btn ghost" data-pay="unpaid" aria-pressed="false">ไม่จ่าย</button>
+          </div>
+        </div>
+
         <div class="form-group mt-2">
           <label>หมายเหตุ <span class="subtle">(ไม่อนุมัติ / ขอเอกสารเพิ่ม ต้องระบุ)</span></label>
           <textarea id="decision-note" maxlength="200" placeholder="เช่น ขอใบรับรองแพทย์ฉบับจริง / ไม่อนุมัติเพราะ..."></textarea>
@@ -66,6 +75,8 @@
 <script>
 let CURRENT_LEAVE = null;
 let CURRENT_STAGE = 0;
+let PAY_CHOICE = '';      // จ่าย/ไม่จ่าย ที่ HR เลือกในกล่องตัดสินใจขั้น 2
+let ME = null;
 
 (async function () {
   try { await window.auth.init(); }
@@ -84,6 +95,7 @@ let CURRENT_STAGE = 0;
 
   document.getElementById('content').classList.remove('hidden');
   const u = status.user;
+  ME = u;
   document.getElementById('my-role').innerHTML =
     '<div><strong>' + window.utils.escapeHtml(u.display_name) + '</strong></div>' +
     '<div class="subtle">บทบาท: <span class="badge ' + window.getRoleBadgeClass(u.role, u.is_supervisor) + '">' +
@@ -137,6 +149,7 @@ async function explainNotMine(leaveId) {
   const box = document.getElementById('target-note');
   const one = await window.api.post('getOneRequest', { lineUserId: window.state.lineUserId, leave_id: leaveId });
   let msg = 'ใบลา ' + leaveId + ' ไม่ได้รอคุณตัดสินแล้ว';
+  if (one.ok && one.leave) renderPayPanel(one.leave);
   if (one.ok && one.leave) {
     const l = one.leave;
     const status = window.STATUS_LABELS[l.final_status] || l.final_status;
@@ -151,6 +164,56 @@ async function explainNotMine(leaveId) {
   }
   box.textContent = msg;
   box.classList.remove('hidden');
+}
+
+/**
+ * HR / ผู้บริหาร: ดูและระบุ จ่าย/ไม่จ่าย ของใบที่ไม่ได้รอตัดสิน (ใบข้ามขั้น HR หรืออยากแก้ค่า)
+ * เปิดจากรายงาน (ลิงก์เลขใบลา) หรือการ์ดไลน์ที่ ?id=
+ */
+function renderPayPanel(l) {
+  let box = document.getElementById('pay-panel');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'pay-panel';
+    box.className = 'card mb-2';
+    document.getElementById('target-note').after(box);
+  }
+  const isAdmin = ME && window.hasRole(ME.role, window.ROLES.ADMIN);
+  const closed = ['rejected', 'withdrawn', 'cancelled'].indexOf(l.final_status) >= 0;
+  if (!isAdmin || l.record_type !== 'leave' || closed) { box.remove(); return; }
+  const esc = window.utils.escapeHtml;
+  const own = ME.user_id === l.user_id;
+  const waitHr = l.stage2_status === 'pending';
+  const canSet = !own && !waitHr;
+  box.innerHTML =
+    '<div class="card-row"><span class="label">ใบลา</span><span class="value">' + esc(l.leave_id) + ' · ' +
+      esc(window.LEAVE_TYPE_LABELS[l.leave_type] || l.leave_type) + ' · ' + esc(l.amount_text || (l.days + ' วัน')) + '</span></div>' +
+    '<div class="card-row"><span class="label">ค่าจ้างวันลา</span><span class="value">' + window.payStatusBadge(l.pay_status) + '</span></div>' +
+    (own ? '<div class="subtle mt-1">ใบลาของคุณเอง — ให้ HR / ผู้บริหารคนอื่นเป็นผู้ระบุ</div>'
+      : waitHr ? '<div class="subtle mt-1">ใบนี้รอ HR อนุมัติ — เลือก จ่าย/ไม่จ่าย ตอนกดอนุมัติ</div>'
+      : '<div class="btn-row mt-1">' +
+          '<button type="button" class="btn ' + (l.pay_status === 'paid' ? 'primary' : 'ghost') + '" data-setpay="paid">จ่าย</button>' +
+          '<button type="button" class="btn ' + (l.pay_status === 'unpaid' ? 'primary' : 'ghost') + '" data-setpay="unpaid">ไม่จ่าย</button>' +
+        '</div>') +
+    '<div id="pay-panel-alert" class="hidden"></div>';
+  if (!canSet) return;
+  box.querySelectorAll('[data-setpay]').forEach(btn => {
+    btn.onclick = async () => {
+      const want = btn.dataset.setpay;
+      if (want === l.pay_status) return;
+      box.querySelectorAll('[data-setpay]').forEach(b => { b.disabled = true; });
+      const r = await window.api.post('setLeavePayStatus', {
+        lineUserId: window.state.lineUserId, leave_id: l.leave_id, pay_status: want,
+      });
+      box.querySelectorAll('[data-setpay]').forEach(b => { b.disabled = false; });
+      if (!r.ok) {
+        window.utils.showAlert('#pay-panel-alert', r.message || 'บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');
+        return;
+      }
+      window.utils.showToast('บันทึกแล้ว: ' + window.payStatusLabel(want));
+      renderPayPanel(Object.assign({}, l, { pay_status: want }));
+    };
+  });
 }
 
 function renderPending(pending) {
@@ -249,9 +312,29 @@ function openDecision(idx) {
     '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + window.utils.escapeHtml(p.amount_text || (p.days + ' วัน')) + '</span></div>' +
     '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>';
   document.getElementById('decision-note').value = '';
+  setPayChoice('');
+  document.getElementById('pay-choice').classList.toggle('hidden', !needsPayChoice());
   window.utils.clearAlert('#decision-alert');
   document.getElementById('decision-overlay').classList.remove('hidden');
 }
+
+/** ขั้น HR ของใบลา (ไม่ใช่ใบขอยกเลิก) ต้องเลือก จ่าย/ไม่จ่าย — ตรงกับด่านฝั่งเซิร์ฟเวอร์ */
+function needsPayChoice() {
+  return !!CURRENT_LEAVE && CURRENT_STAGE === 2 && CURRENT_LEAVE.record_type !== 'cancel';
+}
+
+function setPayChoice(v) {
+  PAY_CHOICE = v;
+  document.querySelectorAll('#pay-choice [data-pay]').forEach(b => {
+    const on = b.dataset.pay === v;
+    b.classList.toggle('primary', on);
+    b.classList.toggle('ghost', !on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+document.querySelectorAll('#pay-choice [data-pay]').forEach(b => {
+  b.onclick = () => { setPayChoice(b.dataset.pay); window.utils.clearAlert('#decision-alert'); };
+});
 
 document.getElementById('btn-close-decision').onclick = () => {
   document.getElementById('decision-overlay').classList.add('hidden');
@@ -273,6 +356,12 @@ async function decide(decision) {
     return;
   }
 
+  if (decision === 'approve' && needsPayChoice() && !PAY_CHOICE) {
+    window.utils.showAlert('#decision-alert', 'กรุณาเลือก จ่าย หรือ ไม่จ่าย ก่อนกดอนุมัติ', 'error');
+    document.getElementById('pay-choice').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   const btn1 = document.getElementById('btn-approve');
   const btn2 = document.getElementById('btn-reject');
   const btn3 = document.getElementById('btn-request-doc');
@@ -284,6 +373,7 @@ async function decide(decision) {
     stage: CURRENT_STAGE,
     decision: decision,
     note: note,
+    pay_status: decision === 'approve' && needsPayChoice() ? PAY_CHOICE : undefined,
   });
 
   btn1.disabled = false; btn2.disabled = false; btn3.disabled = false;

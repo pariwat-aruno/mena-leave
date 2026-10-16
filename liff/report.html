@@ -22,6 +22,7 @@
     font-size: 15px;
     cursor: pointer;
   }
+  .report-segment.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .report-segment button.active {
     color: var(--brand-primary);
     border-color: var(--brand-primary);
@@ -143,6 +144,20 @@
         </div>
       </section>
 
+      <!-- จ่าย/ไม่จ่าย ค่าจ้างวันลา — HR ใช้คิดเงินเดือน -->
+      <section class="card">
+        <div class="form-group">
+          <label>การจ่ายค่าจ้างวันลา</label>
+          <div id="pay-mode" class="report-segment four">
+            <button type="button" class="active" data-mode="" aria-pressed="true">ทั้งหมด</button>
+            <button type="button" data-mode="paid" aria-pressed="false">จ่าย</button>
+            <button type="button" data-mode="unpaid" aria-pressed="false">ไม่จ่าย</button>
+            <button type="button" data-mode="unset" aria-pressed="false">ยังไม่ระบุ</button>
+          </div>
+          <div class="hint">กดเลขที่ใบลาในตารางรายละเอียด เพื่อระบุหรือแก้ จ่าย/ไม่จ่าย</div>
+        </div>
+      </section>
+
       <div class="report-actions">
         <button type="button" id="view-report" class="btn primary block">ดูรายงาน</button>
         <button type="button" id="download-report" class="btn secondary block">ดาวน์โหลดไฟล์ Excel (CSV)</button>
@@ -167,6 +182,9 @@
                 <th class="r">ชั่วโมง</th>
                 <th class="r">ฉุกเฉิน (ครั้ง)</th>
                 <th class="r">จำนวนใบลา</th>
+                <th class="r">ไม่จ่าย (วัน)</th>
+                <th class="r">ไม่จ่าย (ชม.)</th>
+                <th class="r">ยังไม่ระบุ (ใบ)</th>
               </tr>
             </thead>
             <tbody id="summary-rows"></tbody>
@@ -194,6 +212,7 @@
                 <th class="r">ชั่วโมง</th>
                 <th class="c">ฉุกเฉิน</th>
                 <th>สถานะ</th>
+                <th>จ่าย/ไม่จ่าย</th>
                 <th>ส่งเมื่อ</th>
               </tr>
             </thead>
@@ -219,6 +238,7 @@
 let REPORT_FILTERS = { departments: [], people: [] };
 let PERIOD_MODE = 'day';
 let SCOPE_MODE = 'all';
+let PAY_MODE = '';
 
 (async function () {
   setInitialDates();
@@ -268,6 +288,16 @@ function bindControls() {
   });
   document.querySelectorAll('#scope-mode button').forEach(function (button) {
     button.addEventListener('click', function () { setScopeMode(button.dataset.mode); });
+  });
+  document.querySelectorAll('#pay-mode button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      PAY_MODE = button.dataset.mode;
+      document.querySelectorAll('#pay-mode button').forEach(function (b) {
+        const active = b === button;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    });
   });
   document.getElementById('people-search').addEventListener('input', filterPeopleList);
   document.getElementById('view-report').addEventListener('click', loadReport);
@@ -371,6 +401,7 @@ function buildReportPayload() {
     payload.user_ids = selectedValues('report-person');
     if (!payload.user_ids.length) throw new Error('กรุณาเลือกอย่างน้อย 1 คน');
   }
+  if (PAY_MODE) payload.pay_statuses = [PAY_MODE];
   return payload;
 }
 
@@ -481,9 +512,12 @@ function renderReport(report) {
           '<td class="r">' + reportNumber(row.hours) + '</td>' +
           '<td class="r">' + reportNumber(row.emergency_count) + '</td>' +
           '<td class="r">' + reportNumber(row.leave_count) + '</td>' +
+          '<td class="r">' + reportNumber(row.unpaid_days) + '</td>' +
+          '<td class="r">' + reportNumber(row.unpaid_hours) + '</td>' +
+          '<td class="r">' + reportNumber(row.pay_unset_count) + '</td>' +
         '</tr>';
       }).join('')
-    : '<tr><td colspan="10"><div class="empty">ไม่พบใบลาตามเงื่อนไข</div></td></tr>';
+    : '<tr><td colspan="13"><div class="empty">ไม่พบใบลาตามเงื่อนไข</div></td></tr>';
 
   document.getElementById('detail-rows').innerHTML = rows.length
     ? rows.map(function (row) {
@@ -491,7 +525,8 @@ function renderReport(report) {
         const statusClass = ['pending', 'approved', 'rejected', 'withdrawn', 'cancelled'].indexOf(row.final_status) >= 0
           ? row.final_status : 'skipped';
         return '<tr>' +
-          '<td>' + esc(row.leave_id || '-') + '</td>' +
+          // เปิดใบในหน้าอนุมัติ — HR ระบุ/แก้ จ่าย-ไม่จ่าย ได้ที่นั่น
+          '<td><a href="./approve.html?id=' + encodeURIComponent(row.leave_id || '') + '">' + esc(row.leave_id || '-') + '</a></td>' +
           '<td>' + esc(row.emp_code || '-') + '</td>' +
           '<td class="wrap">' + esc(row.display_name || '-') + '</td>' +
           '<td>' + esc(row.department || '-') + '</td>' +
@@ -504,10 +539,11 @@ function renderReport(report) {
           '<td class="r">' + reportNumber(row.hours) + '</td>' +
           '<td class="c">' + (row.is_emergency ? 'ใช่' : 'ไม่ใช่') + '</td>' +
           '<td><span class="badge ' + statusClass + '">' + esc(statusLabel) + '</span></td>' +
+          '<td>' + window.payStatusBadge(row.pay_status) + '</td>' +
           '<td>' + esc(row.submitted_at ? window.utils.formatThaiDateTime(row.submitted_at) : '-') + '</td>' +
         '</tr>';
       }).join('')
-    : '<tr><td colspan="14"><div class="empty">ไม่พบรายละเอียดใบลา</div></td></tr>';
+    : '<tr><td colspan="15"><div class="empty">ไม่พบรายละเอียดใบลา</div></td></tr>';
 
   document.getElementById('results').classList.remove('hidden');
   document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });

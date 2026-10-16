@@ -141,6 +141,10 @@ async function showDetail(leaveId) {
       '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + window.utils.escapeHtml(l.amount_text || (l.days + ' วัน')) + '</span></div>' +
       '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(l.reason || '-') + '</span></div>' +
       '<div class="card-row"><span class="label">สถานะ</span><span class="badge ' + l.final_status + '">' + (window.STATUS_LABELS[l.final_status] || l.final_status) + '</span></div>' +
+      // จ่าย/ไม่จ่าย ค่าจ้างวันลา — HR เป็นผู้ระบุ (ใบไม่อนุมัติ/ถอน/ยกเลิก ไม่มีความหมาย ไม่ต้องโชว์)
+      (!isCancel && ['rejected', 'withdrawn', 'cancelled'].indexOf(l.final_status) < 0
+        ? '<div class="card-row"><span class="label">ค่าจ้างวันลา</span><span class="value">' + window.payStatusBadge(l.pay_status) + '</span></div>'
+        : '') +
     '</div>' +
     attachmentLinks(l) +
     buildAttachBox(l) +

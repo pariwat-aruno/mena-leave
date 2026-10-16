@@ -410,5 +410,9 @@ function shapeLeavePublic_(leave, includeSensitive) {
     doc_request_at: leave.doc_request_at || '',
     hr_fallback: isTruthyCell_(leave.hr_fallback),
     stage1_label: stage1ApproverLabel_(leave),
+    // จ่าย/ไม่จ่าย ค่าจ้างวันลา — HR เลือกตอนอนุมัติขั้น 2 หรือระบุภายหลัง
+    pay_status: leave.pay_status || '',
+    pay_status_label: payStatusLabel_(leave.pay_status),
+    pay_decided_at: leave.pay_decided_at || '',
   };
 }

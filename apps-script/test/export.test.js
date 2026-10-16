@@ -69,7 +69,7 @@ const usersSheet = makeSheet('Users', USERS_HDR, [
 const LEAVE_HDR = [
   'leave_id', 'user_id', 'leave_type', 'date_from', 'date_to', 'days',
   'is_emergency', 'record_type', 'final_status', 'submitted_at',
-  'leave_unit', 'hours', 'time_from', 'time_to',
+  'leave_unit', 'hours', 'time_from', 'time_to', 'pay_status',
 ];
 const leave = values => objectRow(LEAVE_HDR, Object.assign({
   days: 1,
@@ -95,7 +95,7 @@ const leavesSheet = makeSheet('LeaveRequests', LEAVE_HDR, [
   // ศุกร์ถึงจันทร์มี 4 วันปฏิทิน แต่นับวันทำงานเพียง 2 วัน
   leave({
     leave_id: 'LV-WEEKEND', user_id: 'EMP-0002', leave_type: 'sick',
-    date_from: '2026-09-04', date_to: '2026-09-07', days: 2,
+    date_from: '2026-09-04', date_to: '2026-09-07', days: 2, pay_status: 'unpaid',
   }),
   leave({
     leave_id: 'LV-LEGAL', user_id: 'EMP-0003', leave_type: 'training',
@@ -104,7 +104,7 @@ const leavesSheet = makeSheet('LeaveRequests', LEAVE_HDR, [
   leave({
     leave_id: 'LV-HOUR', user_id: 'EMP-0003', leave_type: 'personal',
     date_from: '2026-09-11', date_to: '2026-09-11',
-    leave_unit: 'hour', hours: 4.5, time_from: '08:00', time_to: '12:30',
+    leave_unit: 'hour', hours: 4.5, time_from: '08:00', time_to: '12:30', pay_status: 'unpaid',
   }),
   leave({
     leave_id: 'LV-PENDING', user_id: 'EMP-0003', leave_type: 'vacation',
@@ -320,6 +320,20 @@ check('CSV มี UTF-8 BOM และสองส่วน', savedBlob && savedB
   savedBlob && savedBlob.content.slice(0, 80));
 check('แชร์เฉพาะไฟล์ ไม่แชร์ทั้งโฟลเดอร์รายงาน', !sharedFolder && sharedFile,
   { sharedFolder, sharedFile });
+check('CSV มีคอลัมน์ จ่าย/ไม่จ่าย และยอดไม่จ่าย', savedBlob.content.includes('จ่าย/ไม่จ่าย') &&
+  savedBlob.content.includes('ไม่จ่าย (วัน)') && savedBlob.content.includes('ยังไม่ระบุ'), savedBlob.content.slice(0, 400));
+
+console.log('\n=== 7) จ่าย/ไม่จ่าย (สำหรับคิดเงินเดือน) ===');
+check('แถวบอกค่า จ่าย/ไม่จ่าย', byId('LV-WEEKEND').pay_status === 'unpaid' && byId('LV-LEGAL').pay_status === '', byId('LV-WEEKEND'));
+const sum2 = all.summary.find(row => row.emp_code === 'TST-002');
+const sum3 = all.summary.find(row => row.emp_code === 'TST-003');
+check('สรุปรายคนรวมวัน/ชั่วโมงไม่จ่าย แยกจากยอดลา', sum2.unpaid_days === 2 && sum2.sick_days === 4 &&
+  sum3.unpaid_hours === 4.5 && sum3.unpaid_days === 0, [sum2, sum3]);
+check('นับใบที่ยังไม่ระบุ', sum2.pay_unset_count === 2 && sum3.pay_unset_count === 2, [sum2, sum3]);
+const unpaidOnly = sandbox.getLeaveReport(Object.assign({}, basePayload, { pay_statuses: ['unpaid'] }));
+check('กรองเฉพาะไม่จ่าย', unpaidOnly.ok && unpaidOnly.rows.map(r => r.leave_id).sort().join() === 'LV-HOUR,LV-WEEKEND', unpaidOnly.rows);
+const unsetOnly = sandbox.getLeaveReport(Object.assign({}, basePayload, { pay_statuses: ['unset'] }));
+check('กรองเฉพาะยังไม่ระบุ', unsetOnly.ok && unsetOnly.rows.length === 4 && unsetOnly.rows.every(r => !r.pay_status), unsetOnly.rows);
 check('ไม่มี error ถูก log ระหว่างทดสอบ', errors.length === 0, errors);
 
 console.log('\n' + (fails ? 'ตก ' + fails + ' ข้อ' : 'ผ่านทุกข้อ'));

@@ -65,6 +65,8 @@ const SHEET_HEADERS = {
     'doc_request_status', 'doc_request_stage', 'doc_request_by', 'doc_request_at', 'doc_request_note',
     // HR อนุมัติชั้นผู้บริหารแทน (ผู้บริหารติดต่อไม่ได้ / เงียบเกินกำหนด)
     'hr_fallback',
+    // HR เลือก จ่าย/ไม่จ่าย ตอนอนุมัติขั้น 2 (หรือระบุภายหลัง) — ธงให้ฝ่ายบุคคลคิดเงินเดือน ไม่แตะโควตา
+    'pay_status', 'pay_decided_by', 'pay_decided_at',
   ],
   'LeaveQuota': [
     'quota_id', 'user_id', 'year',
@@ -135,6 +137,8 @@ const SETTINGS_DEFAULTS = [
   ['lunch_start',                   '12:00',            'พักเที่ยงเริ่ม (ไม่นับเป็นชั่วโมงลา)'],
   ['lunch_end',                     '13:00',            'พักเที่ยงจบ'],
   ['hourly_leave_types',            'sick,personal,vacation', 'ประเภทที่ลาเป็นชั่วโมงได้ (คั่นด้วย ,)'],
+  // ว่าง = ใช้ผู้บริหารขั้น 3 ตามผังรายคน (แท็บ Approvers) เหมือนเดิม
+  ['stage3_sole_approver',          '',                 'รหัสพนักงานของผู้บริหารคนเดียวที่อนุมัติขั้น 3 ให้ทุกคน (ว่าง = ตามผังรายคน)'],
 ];
 
 /**

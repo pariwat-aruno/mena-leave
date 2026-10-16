@@ -120,6 +120,28 @@ function btnUri_(label, url) {
   };
 }
 
+/** ปุ่มหลักแบบเปิด URL — ใช้กับ "อนุมัติ" ขั้น HR ที่ต้องเลือก จ่าย/ไม่จ่าย ก่อน */
+function btnPrimaryUri_(label, url) {
+  return {
+    type: 'button', style: 'primary', height: 'sm', color: flexColors_().primary,
+    action: { type: 'uri', label: label, uri: url },
+  };
+}
+
+/**
+ * ปุ่มอนุมัติในการ์ด — ขั้น HR ของใบลา ต้องเลือก จ่าย/ไม่จ่าย ก่อน จึงเปิดหน้าอนุมัติแทนการกดในแชท
+ * (เซิร์ฟเวอร์ปฏิเสธการอนุมัติขั้น 2 ที่ไม่มีค่านี้อยู่แล้ว — ปุ่มนี้กันไม่ให้ HR กดแล้วเจอข้อความผิดพลาด)
+ */
+function approveButton_(leave, stage, label) {
+  const isLeave = (leave.record_type || 'leave') === 'leave';
+  if (stage === 2 && isLeave) {
+    return btnPrimaryUri_('✅ อนุมัติ (เลือก จ่าย/ไม่จ่าย)',
+      getLiffPageUrl('approve') + '?id=' + encodeURIComponent(leave.leave_id));
+  }
+  return btnPrimary_(label,
+    'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) + '&stage=' + stage + '&decision=approve');
+}
+
 /** ปุ่มสีเข้ม (danger) แบบเปิด URL — ใช้กับ "ไม่อนุมัติ" ที่ต้องเปิด LIFF ไปกรอกเหตุผล */
 function btnDangerUri_(label, url) {
   return {
@@ -361,9 +383,7 @@ function buildApprovalRequestCard(leave, requester, stage, opts) {
       body: body,
       // อนุมัติ = กดในแชทได้เลย · ไม่อนุมัติ = เปิด LIFF เพื่อ "บังคับระบุเหตุผล" (PDF ข้อ 2)
       footer: flexFooter_([
-        btnPrimary_(isCancel ? '✅ อนุมัติให้ยกเลิก' : '✅ อนุมัติ',
-          'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) +
-          '&stage=' + stage + '&decision=approve'),
+        approveButton_(leave, stage, isCancel ? '✅ อนุมัติให้ยกเลิก' : '✅ อนุมัติ'),
         btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve') + '?id=' + encodeURIComponent(leave.leave_id)),
       ]),
     },
@@ -408,6 +428,7 @@ function buildFinalApprovedCard(leave, requester) {
           flexKV_('ประเภท', leaveTypeLabel_(leave.leave_type)),
           flexKV_('วันที่', formatThaiDateShort(leave.date_from) + ' - ' + formatThaiDateShort(leave.date_to)),
           flexKV_('จำนวน', leaveAmountText_(leave)),
+          flexKV_('ค่าจ้างวันลา', payStatusLabel_(leave.pay_status)),
           flexSeparator_(),
           { type: 'text', text: '✓ ผ่านครบทุกชั้นแล้ว', size: 'sm', color: c.success, margin: 'md', weight: 'bold', wrap: true },
         ],
@@ -723,9 +744,7 @@ function buildReminderCard(leave, requester, stage, count, quietHours, opts) {
         ],
       },
       footer: flexFooter_([
-        btnPrimary_('✅ อนุมัติ',
-          'action=approve_leave&id=' + encodeURIComponent(leave.leave_id) +
-          '&stage=' + stage + '&decision=approve'),
+        approveButton_(leave, stage, '✅ อนุมัติ'),
         btnDangerUri_('❌ ไม่อนุมัติ (ระบุเหตุผล)', getLiffPageUrl('approve') + '?id=' + encodeURIComponent(leave.leave_id)),
       ]),
     },

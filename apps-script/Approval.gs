@@ -101,10 +101,23 @@ function approveLeave(payload) {
       // ผู้บริหารอนุมัติได้เฉพาะคนในสายงานตัวเอง
       // (พนักงานที่ยังไม่ถูกผูกสาย → getExecutivesFor คืนผู้บริหารทุกคน ใบลาจะได้ไม่ค้างตาย)
       if (!isExecutiveOf_(approver.user_id, leave.user_id)) {
+        const sole = stage3SoleInfo_();
         return { ok: false, error: 'forbidden',
-          message: 'ใบลานี้ไม่ได้อยู่ในสายงานของคุณ — ผู้บริหารที่ดูแลสายนี้เป็นผู้อนุมัติ' };
+          message: sole
+            ? 'ขั้นที่ 3 กำหนดให้' + (sole.display_name ? ' ' + sole.display_name : 'ผู้บริหารที่ตั้งไว้') + ' อนุมัติท่านเดียว'
+            : 'ใบลานี้ไม่ได้อยู่ในสายงานของคุณ — ผู้บริหารที่ดูแลสายนี้เป็นผู้อนุมัติ' };
       }
     }
+  }
+
+  // HR อนุมัติขั้น 2 ต้องเลือก จ่าย/ไม่จ่าย ทุกประเภทการลา (ลูกค้าสั่ง 16 ต.ค. 69)
+  // ⭐ บังคับที่นี่ ไม่ใช่แค่ที่จอ — ปุ่มอนุมัติในการ์ดไลน์รุ่นเก่ายิงตรงมาโดยไม่มีค่านี้
+  const recordTypeIn = leave.record_type || 'leave';
+  const payStatus = String(payload.pay_status || '');
+  const needsPay = stage === 2 && payload.decision === 'approve' && recordTypeIn === 'leave';
+  if (needsPay && PAY_STATUSES.indexOf(payStatus) < 0) {
+    return { ok: false, error: 'pay_status_required',
+      message: 'ขั้น HR ต้องเลือก จ่าย หรือ ไม่จ่าย ก่อนอนุมัติ — เปิดหน้าอนุมัติ (เมนู อนุมัติ) เพื่อเลือก' };
   }
 
   // === Apply decision (with locking) ===
@@ -187,6 +200,9 @@ function approveLeave(payload) {
     if (actingAsHrFallback && hdr.indexOf('hr_fallback') >= 0) {
       sh.getRange(row, hdr.indexOf('hr_fallback') + 1).setValue(true);
     }
+    if (needsPay) {
+      updateRowByHeader_(sh, row, { pay_status: payStatus, pay_decided_by: approver.user_id, pay_decided_at: nowBangkok() });
+    }
     // ตัดสินแล้ว = คำขอเอกสารที่ค้างอยู่จบไปด้วย
     if (hdr.indexOf('doc_request_status') >= 0 && leaveAfterLock.doc_request_status === 'requested') {
       sh.getRange(row, hdr.indexOf('doc_request_status') + 1).setValue('closed');
@@ -261,7 +277,19 @@ function approveLeave(payload) {
     }
 
     // approve → move to next stage
-    audit(payload.lineUserId, 'leave_approve_s' + stage, 'LeaveRequests', payload.leave_id);
+    audit(payload.lineUserId, 'leave_approve_s' + stage, 'LeaveRequests', payload.leave_id,
+      needsPay ? { pay_status: payStatus, pay_status_before: leaveAfterLock.pay_status || '' } : undefined);
+
+    // ใบแบบผู้บริหารก่อน: ขั้น 3 คิดสดตอนขั้นแรกกด — ผังหรือ Settings อาจเปลี่ยนหลังส่งใบ
+    // (เช่น ตั้งผู้บริหารขั้น 3 คนเดียวเป็นคนที่เพิ่งกดขั้นแรก → ขั้น 3 ต้องข้าม ไม่ให้อนุมัติซ้ำ)
+    if (stage === 1 && isOwnerFirstLeave_(leaveAfterLock) &&
+        (leaveAfterLock.stage3_status === 'pending' || leaveAfterLock.stage3_status === 'skipped')) {
+      const want3 = hasOtherExecutive_(leaveAfterLock.user_id, approver.user_id) ? 'pending' : 'skipped';
+      if (want3 !== leaveAfterLock.stage3_status) {
+        updateRowByHeader_(sh, row, { stage3_status: want3 });
+        leaveAfterLock.stage3_status = want3;
+      }
+    }
 
     const nextStage = computeNextPendingStage_(leaveAfterLock, stage);
 
@@ -382,6 +410,11 @@ function computeInitialStages_(requester) {
 
 /** ผู้บริหารขั้น 3 ในสายของคนนี้ ที่ไม่ใช่คนที่อนุมัติขั้นแรก (ยังใช้งานอยู่) */
 function hasOtherExecutive_(userId, firstApproverId) {
+  const sole = stage3SoleApprover_();
+  if (sole) {
+    const u = sole.user;
+    return !!u && u.user_id !== firstApproverId && u.status === 'active' && u.role === ROLES.OWNER;
+  }
   return listActiveApprovers_(userId, APPROVER_LEVEL_EXECUTIVE).some(function (id) {
     if (id === firstApproverId) return false;
     const u = findUserByUserId_(id);
@@ -689,4 +722,76 @@ function parseQueryString_(s) {
     result[k] = v;
   });
   return result;
+}
+
+// ========== จ่าย/ไม่จ่าย ระบุภายหลัง (ใบที่ไม่ผ่านขั้น HR หรือ HR ต้องการแก้) ==========
+
+/**
+ * payload = { lineUserId, leave_id, pay_status: 'paid'|'unpaid' }
+ * สิทธิ์: HR / ผู้บริหาร · ห้ามระบุใบของตัวเอง
+ * ใบที่ยังรอขั้น HR → ให้เลือกตอนกดอนุมัติแทน · ใบไม่อนุมัติ/ถอน/ยกเลิก → ไม่ต้องระบุ
+ * กดค่าเดิมซ้ำ = ไม่เขียนอะไร ไม่ลง audit ซ้ำ · เปลี่ยนค่า = audit เก็บค่าก่อน/หลัง
+ */
+function setLeavePayStatus(payload) {
+  try {
+    payload = payload || {};
+    if (!isAdmin(payload.lineUserId)) return { ok: false, error: 'forbidden', message: 'เฉพาะ HR / ผู้บริหาร' };
+    const actor = findUserByLineId_(payload.lineUserId);
+    if (!actor || actor.status !== 'active') return { ok: false, error: 'not_active' };
+    const want = String(payload.pay_status || '');
+    if (PAY_STATUSES.indexOf(want) < 0) {
+      return { ok: false, error: 'invalid_pay_status', message: 'กรุณาเลือก จ่าย หรือ ไม่จ่าย' };
+    }
+
+    const check = function (leave) {
+      if (!leave) return { ok: false, error: 'leave_not_found', message: 'ไม่พบใบลานี้' };
+      if ((leave.record_type || 'leave') !== 'leave') {
+        return { ok: false, error: 'not_leave', message: 'ระบุได้เฉพาะใบลา' };
+      }
+      if (leave.user_id === actor.user_id) {
+        return { ok: false, error: 'forbidden', message: 'ระบุ จ่าย/ไม่จ่าย ของใบลาตัวเองไม่ได้' };
+      }
+      if (['rejected', 'withdrawn', 'cancelled'].indexOf(leave.final_status) >= 0) {
+        return { ok: false, error: 'not_applicable', message: 'ใบที่ไม่อนุมัติ / ถอน / ยกเลิกแล้ว ไม่ต้องระบุ' };
+      }
+      if (leave.stage2_status === 'pending') {
+        return { ok: false, error: 'use_approval', message: 'ใบนี้รอ HR อนุมัติอยู่ — เลือก จ่าย/ไม่จ่าย ตอนกดอนุมัติ' };
+      }
+      return null;
+    };
+
+    const err0 = check(findLeaveById_(payload.leave_id));
+    if (err0) return err0;
+
+    ensureSheetColumns_('LeaveRequests');
+    const lock = LockService.getScriptLock();
+    try { lock.waitLock(10000); }
+    catch (e) { return { ok: false, error: 'lock_failed', message: 'ระบบกำลังประมวลผล กรุณาลองอีกครั้ง' }; }
+    try {
+      // อ่านใหม่หลังได้ล็อก — ระหว่างรอ ใบอาจถูกปฏิเสธ/ถอนไปแล้ว
+      const leave = findLeaveById_(payload.leave_id);
+      const err = check(leave);
+      if (err) return err;
+      const before = String(leave.pay_status || '');
+      if (before === want) return { ok: true, pay_status: want, unchanged: true };
+
+      const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+      const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
+      updateRowByHeader_(sh, leave._rowNumber, {
+        pay_status: want, pay_decided_by: actor.user_id, pay_decided_at: nowBangkok(),
+      });
+      audit(payload.lineUserId, 'leave_pay_status', 'LeaveRequests', payload.leave_id, {
+        from: before, to: want,
+        from_by: leave.pay_decided_by || '', from_at: leave.pay_decided_at || '',
+      });
+      logInfo('setLeavePayStatus', (before ? 'แก้' : 'ระบุ') + ' จ่าย/ไม่จ่าย',
+        { leaveId: payload.leave_id, from: before, to: want, by: actor.user_id });
+      return { ok: true, pay_status: want, changed_from: before };
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (err) {
+    logError('setLeavePayStatus', err.message || String(err), { leaveId: payload && payload.leave_id });
+    return { ok: false, error: 'pay_status_failed', message: 'บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง' };
+  }
 }

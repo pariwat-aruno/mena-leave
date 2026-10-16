@@ -281,3 +281,12 @@ function generate6DigitCode() {
   const n = Math.floor(Math.random() * 1000000);
   return padLeft_(n, 6);
 }
+
+// ========== จ่าย/ไม่จ่าย ค่าจ้างวันลา (HR เลือกตอนอนุมัติขั้น 2 หรือระบุภายหลัง) ==========
+// ⭐ เป็นธงให้ฝ่ายบุคคลคิดเงินเดือนเท่านั้น — ไม่แตะโควตาวันลา
+const PAY_STATUSES = ['paid', 'unpaid'];
+
+/** ป้ายภาษาไทย — ค่าว่าง/ค่าอื่น = ยังไม่ระบุ */
+function payStatusLabel_(v) {
+  return v === 'paid' ? 'จ่าย' : v === 'unpaid' ? 'ไม่จ่าย' : 'ยังไม่ระบุ';
+}

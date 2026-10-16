@@ -14,7 +14,8 @@
  *   date_to: 'yyyy-MM-dd',
  *   departments?: [string],
  *   user_ids?: [string],
- *   statuses?: [string]
+ *   statuses?: [string],
+ *   pay_statuses?: ['paid'|'unpaid'|'unset']   (ว่าง = ทุกแบบ)
  * }
  */
 function getLeaveReport(payload) {
@@ -43,12 +44,14 @@ function exportLeaveReportCsv(payload) {
       'รหัสพนักงาน', 'ชื่อพนักงาน', 'แผนก',
       'ลาป่วย (วัน)', 'ลากิจ (วัน)', 'ลาพักร้อน (วัน)', 'ลาอื่นตามกฎหมาย (วัน)',
       'ลาเป็นชั่วโมง', 'กรณีฉุกเฉิน (ครั้ง)', 'จำนวนใบลา',
+      'ไม่จ่าย (วัน)', 'ไม่จ่าย (ชั่วโมง)', 'ยังไม่ระบุจ่าย/ไม่จ่าย (ใบ)',
     ]));
     report.summary.forEach(function (row) {
       lines.push(reportCsvRow_([
         row.emp_code, row.display_name, row.department,
         row.sick_days, row.personal_days, row.vacation_days, row.other_legal_days,
         row.hours, row.emergency_count, row.leave_count,
+        row.unpaid_days, row.unpaid_hours, row.pay_unset_count,
       ]));
     });
 
@@ -58,6 +61,7 @@ function exportLeaveReportCsv(payload) {
       'เลขที่ใบลา', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'แผนก', 'ตำแหน่ง',
       'ประเภทการลา', 'วันที่เริ่ม', 'วันที่สิ้นสุด', 'หน่วย',
       'จำนวนวันในช่วงรายงาน', 'จำนวนชั่วโมง', 'กรณีฉุกเฉิน', 'สถานะ', 'ส่งเมื่อ',
+      'จ่าย/ไม่จ่าย',
     ]));
     report.rows.forEach(function (row) {
       lines.push(reportCsvRow_([
@@ -66,6 +70,7 @@ function exportLeaveReportCsv(payload) {
         row.unit === 'hour' ? 'ชั่วโมง' : 'วัน',
         row.days_in_period, row.hours, row.is_emergency ? 'ใช่' : 'ไม่ใช่',
         reportStatusLabel_(row.final_status), row.submitted_at,
+        payStatusLabel_(row.pay_status),
       ]));
     });
 
@@ -122,6 +127,8 @@ function buildLeaveReport_(payload) {
   const userIdSet = reportValueSet_(payload.user_ids);
   const statuses = reportValueList_(payload.statuses);
   const statusSet = reportValueSet_(statuses.length ? statuses : ['approved', 'pending']);
+  // 'unset' = ยังไม่ระบุ จ่าย/ไม่จ่าย
+  const paySet = reportValueSet_(payload.pay_statuses);
 
   const cfg = getConfig();
   const countAllDays = reportBoolean_(cfg.count_weekends_as_leave);
@@ -148,6 +155,8 @@ function buildLeaveReport_(payload) {
       const department = String(user.department || '');
       if (Object.keys(departmentSet).length && !departmentSet[department]) return;
       if (Object.keys(userIdSet).length && !userIdSet[String(leave.user_id || '')]) return;
+      const payStatus = PAY_STATUSES.indexOf(String(leave.pay_status || '')) >= 0 ? String(leave.pay_status) : '';
+      if (Object.keys(paySet).length && !paySet[payStatus || 'unset']) return;
 
       const leaveFrom = normalizeReportDate_(leave.date_from);
       const leaveTo = normalizeReportDate_(leave.date_to);
@@ -177,6 +186,7 @@ function buildLeaveReport_(payload) {
         hours: hours,
         is_emergency: reportBoolean_(leave.is_emergency),
         final_status: finalStatus,
+        pay_status: payStatus,
         submitted_at: normalizeReportDateTime_(leave.submitted_at),
         _user_id: String(leave.user_id || ''),
       });
@@ -204,6 +214,9 @@ function buildLeaveReport_(payload) {
         hours: 0,
         emergency_count: 0,
         leave_count: 0,
+        unpaid_days: 0,
+        unpaid_hours: 0,
+        pay_unset_count: 0,
       };
     }
     const item = summaryByUser[key];
@@ -220,6 +233,12 @@ function buildLeaveReport_(payload) {
     }
     if (row.is_emergency) item.emergency_count++;
     item.leave_count++;
+    if (row.pay_status === 'unpaid') {
+      if (row.unit === 'hour') item.unpaid_hours += row.hours;
+      else item.unpaid_days += row.days_in_period;
+    } else if (!row.pay_status) {
+      item.pay_unset_count++;
+    }
   });
 
   const summary = Object.keys(summaryByUser).map(function (key) { return summaryByUser[key]; });

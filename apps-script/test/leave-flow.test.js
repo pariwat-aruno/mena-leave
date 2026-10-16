@@ -172,8 +172,10 @@ const alt = p => (p.msg && p.msg.altText) || '';
 const submit = (line, extra) => sandbox.submitLeave(Object.assign({
   lineUserId: line, leave_type: 'sick', date_from: TODAY, date_to: TODAY, reason: 'ปวดหัวมาก',
 }, extra));
-const decide = (line, id, stage, decision, note) =>
-  sandbox.approveLeave({ lineUserId: line, leave_id: id, stage, decision, note });
+// ขั้น HR ต้องเลือก จ่าย/ไม่จ่าย (16 ต.ค. 69) — เทสเดิมไม่ได้สนเรื่องนี้ ใส่ 'paid' ให้เป็นค่าตั้งต้น
+const decide = (line, id, stage, decision, note, pay) =>
+  sandbox.approveLeave({ lineUserId: line, leave_id: id, stage, decision, note,
+    pay_status: pay !== undefined ? pay : (stage === 2 ? 'paid' : undefined) });
 
 console.log('=== 1) ลาป่วยวันนี้ ไม่ต้องติ๊กฉุกเฉิน ===');
 const r1 = submit('Uemp2');
@@ -390,6 +392,144 @@ sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0015', executive_u
 check('เพิ่มผู้บริหารคนถัดไป → ขั้น 3 รอ', row(r15.leave_id).stage3_status === 'pending', row(r15.leave_id));
 const rej = JSON.stringify(sandbox.buildStage1RejectReportCard(row(r15.leave_id), { display_name: 'x' }, 'y', 'z'));
 check('รายงานปฏิเสธขั้นแรกบอกว่าในนามหัวหน้างานทั้งหัวและเนื้อ', (rej.match(/ในนามหัวหน้างาน/g) || []).length >= 3, rej);
+
+// ---------- ข้อ 1 (16 ต.ค. 69): ผู้บริหารขั้น 3 คนเดียวจาก Settings ----------
+settings.appendRow(['stage3_sole_approver', '', 'ทดสอบ']);
+const setSole = v => { const i = settings._objects().findIndex(r => r.key === 'stage3_sole_approver') + 2;
+  settings.getRange(i, 2).setValue(v); };
+const audits = [];
+sandbox.audit = (actor, action, ent, id, payload) => audits.push({ actor, action, id, payload });
+
+console.log('\n=== 16) ค่าว่าง = ผังรายคนเหมือนเดิม ===');
+check('ค่าว่าง: ผู้บริหารขั้น 3 ของพนักงานคลัง = ผู้บริหารเอ ตามผัง',
+  sandbox.getExecutivesFor('EMP-0014').users.map(u => u.user_id).join() === 'EMP-0001', sandbox.getExecutivesFor('EMP-0014'));
+const r16 = submit('Uemp2', { date_from: '2026-10-12', date_to: '2026-10-12' });
+decide('Usup', r16.leave_id, 1, 'approve'); decide('Uhr', r16.leave_id, 2, 'approve');
+check('ค่าว่าง: ผู้บริหารเอเห็นใบขั้น 3', sandbox.getPendingForMe({ lineUserId: 'Uboss' }).pending.some(p => p.leave_id === r16.leave_id), '');
+
+console.log('\n=== 17) ตั้งผู้บริหารขั้น 3 คนเดียว → ใบที่ค้างอยู่ย้ายไปหาคนนั้นทันที · คนอื่นกดไม่ได้ ===');
+setSole(1001);   // ชีตเก็บรหัสเป็นตัวเลขได้ — EMP-0002 ผู้บริหารนอกสาย
+check('ผู้บริหารขั้น 3 ของทุกคน = คนที่ตั้งไว้', ['EMP-0014', 'EMP-0011', 'EMP-0013'].every(uid =>
+  sandbox.getExecutivesFor(uid).users.map(u => u.user_id).join() === 'EMP-0002'), '');
+check('ใบที่ค้างขั้น 3 อยู่แล้ว ไปโผล่ที่คนที่ตั้งไว้', sandbox.getPendingForMe({ lineUserId: 'Uother' }).pending.some(p => p.leave_id === r16.leave_id && p.my_stage === 3), '');
+check('ผู้บริหารตามผังเดิมไม่เห็นแล้ว', !sandbox.getPendingForMe({ lineUserId: 'Uboss' }).pending.some(p => p.leave_id === r16.leave_id), '');
+const f17 = decide('Uboss', r16.leave_id, 3, 'approve');
+check('ผู้บริหารคนอื่นกดขั้น 3 → เซิร์ฟเวอร์ปฏิเสธ พร้อมบอกว่าใครอนุมัติ', f17.ok === false && f17.error === 'forbidden' &&
+  /ผู้บริหารนอกสาย อนุมัติท่านเดียว/.test(f17.message), f17);
+const i17 = leaves._objects().findIndex(l => l.leave_id === r16.leave_id) + 2;
+sandbox.updateRowByHeader_(leaves, i17, { stage2_at: '2026-09-14T09:00:00+07:00', last_reminded_at: '' });
+const p17 = pushed.length;
+sandbox.hourlyReminderTick({ force: true });
+check('ตัวเตือนเตือนคนที่ตั้งไว้ ไม่ใช่ผู้บริหารตามผัง', pushedTo('Uother', p17).length >= 1 && pushedTo('Uboss', p17).length === 0,
+  pushed.slice(p17).map(x => x.to));
+const e17 = decide('Uother', r16.leave_id, 3, 'approve');
+check('คนที่ตั้งไว้อนุมัติได้ → จบ', e17.ok && e17.final_status === 'approved', e17);
+const org = sandbox.getMyOrgLine({ lineUserId: 'Uother' });
+check('สายงานของฉัน: คนที่ตั้งไว้ดูแลทุกคน · ไม่มีกลุ่มยังไม่ผูก', org.ok && org.as_executive.length > 5 && org.unassigned.length === 0 &&
+  org.stage3_sole && org.stage3_sole.display_name === 'ผู้บริหารนอกสาย', org.stage3_sole);
+check('สายงานของผู้บริหารคนอื่นว่าง', sandbox.getMyOrgLine({ lineUserId: 'Uboss' }).as_executive.length === 0, '');
+const dir17 = sandbox.getEmployeeDirectory({ lineUserId: 'Uhr' });
+check('ฐานข้อมูลพนักงานส่งชื่อผู้บริหารขั้น 3 คนเดียวให้หน้าผัง', dir17.stage3_sole && dir17.stage3_sole.user_id === 'EMP-0002' &&
+  dir17.stage3_sole.problem === '', dir17.stage3_sole);
+
+console.log('\n=== 18) คนที่ตั้งไว้เป็นผู้อนุมัติขั้นแรกเอง → ขั้น 3 ข้าม ===');
+// หัวหน้าแผนกแพ็ค: ขั้นแรก = ผู้บริหารนอกสาย (EMP-0002) — ตอนนี้ผังขั้น 3 มีผู้บริหารเอด้วย
+setSole('');
+const r18a = submit('Usup2', { date_from: '2026-10-08', date_to: '2026-10-08' });
+check('(ก่อนตั้งค่า) ขั้น 3 รอผู้บริหารเอ', row(r18a.leave_id).stage3_status === 'pending', row(r18a.leave_id));
+setSole('1001');
+const r18 = submit('Usup2', { date_from: '2026-10-09', date_to: '2026-10-09' });
+check('ใบใหม่: ขั้น 3 ข้ามทันที', row(r18.leave_id).stage1_status === 'pending' && row(r18.leave_id).stage3_status === 'skipped', row(r18.leave_id));
+const d18 = decide('Uother', r18.leave_id, 1, 'approve');
+check('ขั้นแรกอนุมัติแล้วจบ ไม่ต้องอนุมัติซ้ำ', d18.ok && d18.final_status === 'approved', d18);
+const d18a = decide('Uother', r18a.leave_id, 1, 'approve');
+check('ใบที่ส่งก่อนตั้งค่า: คิดขั้น 3 ใหม่ตอนกด → จบที่ขั้นแรก ไม่ไปหาผู้บริหารเอ', d18a.ok && d18a.final_status === 'approved' &&
+  row(r18a.leave_id).stage3_status === 'skipped', [d18a, row(r18a.leave_id).stage3_status]);
+
+console.log('\n=== 19) คนที่ตั้งไว้ยังรับใบไม่ได้ (ยังไม่ผูกไลน์) → HR อนุมัติแทน ===');
+users.appendRow(U('EMP-0020', '', 'OWNER', 'ผู้บริหารซี', '8801', 'invited'));
+setSole('8801');
+const r19 = submit('Uemp', { date_from: '2026-10-13', date_to: '2026-10-13' });
+decide('Usup', r19.leave_id, 1, 'approve');
+const p19 = pushed.length;
+const d19 = decide('Uhr', r19.leave_id, 2, 'approve');
+check('ขั้น HR ผ่าน → ขั้น 3', d19.ok && d19.moved_to_stage === 3, d19);
+check('การ์ดขั้น 3 ไป HR (อนุมัติแทน) ไม่ไปผู้บริหารคนอื่น', pushedTo('Uhr', p19).some(p => /ขออนุมัติชั้น 3/.test(alt(p)) || /แทน/.test(JSON.stringify(p.msg))) &&
+  pushedTo('Uboss', p19).length === 0 && pushedTo('Uother', p19).length === 0, pushed.slice(p19).map(x => x.to + ':' + alt(x)));
+const it19 = sandbox.getPendingForMe({ lineUserId: 'Uhr' }).pending.find(p => p.leave_id === r19.leave_id);
+check('HR เห็นใบพร้อมป้ายแทนผู้บริหาร', it19 && it19.hr_fallback === true, it19);
+check('ผู้บริหารคนอื่นกดไม่ได้', decide('Uother', r19.leave_id, 3, 'approve').error === 'forbidden', '');
+const dir19 = sandbox.getEmployeeDirectory({ lineUserId: 'Uhr' });
+check('หน้าผังบอกว่าคนที่ตั้งไว้ยังไม่ผูกไลน์', dir19.stage3_sole && dir19.stage3_sole.problem === 'ยังไม่ผูกไลน์', dir19.stage3_sole);
+const h19 = decide('Uhr', r19.leave_id, 3, 'approve');
+check('HR อนุมัติแทนได้ → จบ', h19.ok && h19.final_status === 'approved' && row(r19.leave_id).hr_fallback === true, h19);
+setSole('');
+
+// ---------- ข้อ 2 (16 ต.ค. 69): จ่าย/ไม่จ่าย ----------
+console.log('\n=== 20) HR อนุมัติขั้น 2 ต้องเลือก จ่าย/ไม่จ่าย ===');
+const r20 = submit('Uemp2', { leave_type: 'personal', date_from: '2026-10-14', date_to: '2026-10-14', is_emergency: true,
+  emergency_reason: 'ธุระด่วนที่ธนาคาร' });
+check('ส่งลากิจได้', r20.ok, r20);
+decide('Usup', r20.leave_id, 1, 'approve');
+const n20 = decide('Uhr', r20.leave_id, 2, 'approve', '', '');
+check('ไม่เลือก → ปฏิเสธ ใบยังรอ HR', n20.ok === false && n20.error === 'pay_status_required' &&
+  row(r20.leave_id).stage2_status === 'pending', n20);
+const x20 = decide('Uhr', r20.leave_id, 2, 'approve', '', 'maybe');
+check('ค่าแปลก → ปฏิเสธ', x20.ok === false && x20.error === 'pay_status_required', x20);
+const replies = [];
+sandbox.replyText = (tok, msg) => replies.push(msg);
+sandbox.handlePostback_({ source: { userId: 'Uhr' }, replyToken: 't',
+  postback: { data: 'action=approve_leave&id=' + r20.leave_id + '&stage=2&decision=approve' } });
+check('ปุ่มอนุมัติในการ์ดรุ่นเก่า (ยิงตรง) ถูกปฏิเสธ + บอกให้เปิดหน้าอนุมัติ', row(r20.leave_id).stage2_status === 'pending' &&
+  /จ่าย/.test(replies[replies.length - 1] || ''), replies);
+const lv20 = row(r20.leave_id);
+const hrCard20 = JSON.stringify(sandbox.buildApprovalRequestCard(lv20, { display_name: 'x' }, 2));
+check('การ์ดขั้น HR: ปุ่มอนุมัติเปิดหน้าอนุมัติใบนั้น ไม่ใช่ยิงในแชท', !hrCard20.includes('decision=approve') &&
+  hrCard20.includes('เลือก จ่าย/ไม่จ่าย') && hrCard20.includes('approve.html?id=' + r20.leave_id), hrCard20.match(/"uri":"[^"]*"/g));
+const rem2 = JSON.stringify(sandbox.buildReminderCard(lv20, { display_name: 'x' }, 2, 1, 4));
+check('การ์ดเตือนขั้น HR: เหมือนกัน', !rem2.includes('decision=approve') && rem2.includes('approve.html?id=' + r20.leave_id), '');
+check('การ์ดขั้น 1/3 ยังกดอนุมัติในแชทได้เหมือนเดิม',
+  JSON.stringify(sandbox.buildApprovalRequestCard(lv20, { display_name: 'x' }, 1)).includes('decision=approve') &&
+  JSON.stringify(sandbox.buildApprovalRequestCard(lv20, { display_name: 'x' }, 3)).includes('decision=approve'), '');
+const quotaBefore = JSON.stringify(q('EMP-0014'));
+const ok20 = decide('Uhr', r20.leave_id, 2, 'approve', '', 'unpaid');
+check('เลือกไม่จ่าย → อนุมัติได้ → ขั้น 3', ok20.ok && ok20.moved_to_stage === 3, ok20);
+check('บันทึก ไม่จ่าย + ใครเลือก + เมื่อไร', row(r20.leave_id).pay_status === 'unpaid' && row(r20.leave_id).pay_decided_by === 'EMP-0004' &&
+  !!row(r20.leave_id).pay_decided_at, row(r20.leave_id));
+check('audit ขั้น 2 เก็บค่าที่เลือก', audits.some(a => a.action === 'leave_approve_s2' && a.id === r20.leave_id && a.payload.pay_status === 'unpaid'), audits.slice(-3));
+check('ไม่แตะโควตา', JSON.stringify(q('EMP-0014')) === quotaBefore, [quotaBefore, q('EMP-0014')]);
+const dup20 = decide('Uhr', r20.leave_id, 2, 'approve', '', 'paid');
+check('กดซ้ำ (เลือกจ่าย) ไม่ทับค่าเดิม', dup20.ok === false && row(r20.leave_id).pay_status === 'unpaid', dup20);
+const p20 = pushed.length;
+decide('Uboss', r20.leave_id, 3, 'approve');
+check('การ์ดแจ้งผลสุดท้ายถึงผู้ลาบอก ไม่จ่าย', pushedTo('Uemp2', p20).some(p => /ได้รับอนุมัติ/.test(alt(p)) &&
+  JSON.stringify(p.msg).includes('ค่าจ้างวันลา') && JSON.stringify(p.msg).includes('ไม่จ่าย')), pushed.slice(p20).map(alt));
+const one20 = sandbox.getOneRequest({ lineUserId: 'Uemp2', leave_id: r20.leave_id });
+check('ผู้ลาเห็นป้าย ไม่จ่าย ในใบของตัวเอง', one20.ok && one20.leave.pay_status === 'unpaid' && one20.leave.pay_status_label === 'ไม่จ่าย', one20.leave);
+
+console.log('\n=== 21) ระบุ/แก้ จ่าย-ไม่จ่าย ภายหลัง (ใบที่ไม่ผ่านขั้น HR) ===');
+const setPay = (line, id, v) => sandbox.setLeavePayStatus({ lineUserId: line, leave_id: id, pay_status: v });
+check('ใบสายผู้บริหารก่อน (ข้ามขั้น HR) ยังไม่ระบุ', row(r18.leave_id).pay_status === '', row(r18.leave_id).pay_status);
+check('หัวหน้างานระบุไม่ได้', setPay('Usup', r18.leave_id, 'paid').error === 'forbidden', '');
+check('พนักงานระบุไม่ได้', setPay('Uemp', r18.leave_id, 'paid').error === 'forbidden', '');
+check('ค่าแปลกถูกปฏิเสธ', setPay('Uhr', r18.leave_id, 'half').error === 'invalid_pay_status', '');
+const a21 = audits.length;
+const s21 = setPay('Uhr', r18.leave_id, 'paid');
+check('HR ระบุ จ่าย ได้', s21.ok && row(r18.leave_id).pay_status === 'paid' && row(r18.leave_id).pay_decided_by === 'EMP-0004', [s21, row(r18.leave_id)]);
+const s21b = setPay('Uhr', r18.leave_id, 'paid');
+check('กดค่าเดิมซ้ำ = ไม่เขียน ไม่ลง audit ซ้ำ', s21b.ok && s21b.unchanged === true &&
+  audits.slice(a21).filter(a => a.action === 'leave_pay_status').length === 1, audits.slice(a21));
+const s21c = setPay('Uboss', r18.leave_id, 'unpaid');
+check('ผู้บริหารแก้เป็น ไม่จ่าย ได้ + audit เก็บค่าเดิม', s21c.ok && s21c.changed_from === 'paid' && row(r18.leave_id).pay_status === 'unpaid' &&
+  audits.some(a => a.action === 'leave_pay_status' && a.payload.from === 'paid' && a.payload.to === 'unpaid' && a.payload.from_by === 'EMP-0004'),
+  audits.slice(a21));
+const r21 = sandbox.submitLeave({ lineUserId: 'Uhr', leave_type: 'sick', date_from: '2026-10-15', date_to: '2026-10-15', reason: 'ป่วยมีไข้' });
+check('HR ลาเอง: ระบุใบตัวเองไม่ได้', r21.ok && setPay('Uhr', r21.leave_id, 'paid').error === 'forbidden', r21);
+check('ผู้บริหารระบุใบของ HR ได้ (ใบรออยู่ขั้น 3)', setPay('Uboss', r21.leave_id, 'paid').ok === true, row(r21.leave_id));
+const r21r = submit('Uemp', { date_from: '2026-10-16', date_to: '2026-10-16' });
+check('ใบที่ยังรอขั้น HR → ให้เลือกตอนอนุมัติ', setPay('Uhr', r21r.leave_id, 'paid').error === 'use_approval', '');
+decide('Usup', r21r.leave_id, 1, 'reject', 'งานด่วน');
+check('ใบไม่อนุมัติ → ไม่ต้องระบุ', setPay('Uhr', r21r.leave_id, 'paid').error === 'not_applicable', '');
 
 console.log(fails ? '\nตก ' + fails + ' ข้อ' : '\nผ่านทุกข้อ');
 process.exit(fails ? 1 : 0);

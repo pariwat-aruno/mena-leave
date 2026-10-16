@@ -34,6 +34,8 @@
     <!-- ===== ตั้งผังอำนาจ (HR / ผู้บริหาร) ===== -->
     <div id="editor" class="hidden">
       <h2 class="section-title mt-2">ตั้งสายอนุมัติให้พนักงาน</h2>
+      <!-- ตั้งผู้บริหารขั้น 3 คนเดียวไว้ใน Settings → ช่องผู้บริหารรายคนไม่มีผล -->
+      <div id="sole-banner" class="alert info mb-2 hidden"></div>
 
       <div class="form-group">
         <label>เลือกพนักงาน <span class="required">*</span></label>
@@ -48,7 +50,7 @@
           <div class="hint">พนักงาน 1 คนมีหัวหน้างานได้ 1 คน</div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="exec-group">
           <label>ผู้บริหาร (ผู้อนุมัติชั้น 3)</label>
           <div class="pick-list" id="pick-executives"></div>
           <div class="hint">เลือกได้หลายคน — ใบลาชั้น 3 จะเข้าเฉพาะคนที่ติ๊กไว้ ใครกดก่อนถือว่าจบ</div>
@@ -140,9 +142,16 @@ function renderMyLine(line) {
 
   const isExec = line.me.role === window.ROLES.OWNER;
   const isSup = line.as_supervisor.length > 0;
+  const sole = line.stage3_sole;
 
+  if (sole) {
+    html += '<div class="alert info mb-2">ขั้นที่ 3 ทุกคน = <strong>' + esc(sole.display_name || sole.emp_code) + '</strong>' +
+      (sole.problem ? ' — ' + esc(sole.problem) + ' ตอนนี้ HR อนุมัติขั้น 3 แทน' : '') + '</div>';
+  }
   if (isSup) html += block('ลูกน้องที่คุณเป็นหัวหน้างาน', line.as_supervisor, '');
-  if (isExec) {
+  if (isExec && sole) {
+    if (line.as_executive.length) html += block('พนักงานที่คุณอนุมัติชั้น 3 (ทุกคน)', line.as_executive, '');
+  } else if (isExec) {
     html += block('พนักงานในสายที่คุณอนุมัติชั้น 3', line.as_executive,
       'ยังไม่มีใครถูกผูกกับคุณ — ใบลาชั้น 3 จะกระจายให้ผู้บริหารทุกคนไปก่อน');
     if (line.unassigned.length) {
@@ -151,7 +160,7 @@ function renderMyLine(line) {
     }
   }
 
-  if (!isSup && !isExec) {
+  if (!isSup && !(isExec && (!sole || line.as_executive.length))) {
     html += '<div class="card muted"><div class="subtle">คุณยังไม่ได้เป็นผู้อนุมัติของใคร</div></div>';
   }
 
@@ -175,6 +184,16 @@ function setupEditor() {
 
 function renderEditorOptions() {
   const esc = window.utils.escapeHtml;
+  // ผู้บริหารขั้น 3 คนเดียว: บอกชัด + ซ่อนช่องรายคน (บันทึกก็ไม่แตะค่าเดิม เผื่อกลับไปใช้ผังรายคน)
+  const sole = DIR.stage3_sole;
+  const banner = document.getElementById('sole-banner');
+  banner.classList.toggle('hidden', !sole);
+  document.getElementById('exec-group').classList.toggle('hidden', !!sole);
+  if (sole) {
+    banner.innerHTML = 'ขั้นที่ 3 ทุกคน = <strong>' + esc(sole.display_name || ('รหัส ' + sole.emp_code)) + '</strong>' +
+      (sole.problem ? '<div class="mt-1">⚠️ ' + esc(sole.problem) + ' — ระหว่างนี้ HR อนุมัติขั้น 3 แทน</div>' : '') +
+      '<div class="subtle mt-1">ช่องผู้บริหารรายคนไม่มีผลแล้ว · เปลี่ยนได้ที่แท็บ Settings แถว stage3_sole_approver</div>';
+  }
   document.getElementById('pick-employee').innerHTML =
     '<option value="">— เลือก —</option>' +
     DIR.employees.map(e => '<option value="' + e.user_id + '">' +
@@ -252,7 +271,8 @@ function renderPreview() {
       (supId ? esc(nameOf(supId)) : 'ไม่มี (ข้ามไปชั้น HR)') + '</span></div>' +
     '<div class="card-row"><span class="label">ชั้น 2 HR</span><span class="value">HR ทุกคน</span></div>' +
     '<div class="card-row"><span class="label">ชั้น 3 ผู้บริหาร</span><span class="value">' +
-      (execIds.length ? esc(execIds.map(nameOf).join(', ')) : 'ยังไม่กำหนด — จะส่งให้ผู้บริหารทุกคน') + '</span></div>';
+      (DIR.stage3_sole ? esc(DIR.stage3_sole.display_name || DIR.stage3_sole.emp_code) + ' (ทุกคน)'
+        : execIds.length ? esc(execIds.map(nameOf).join(', ')) : 'ยังไม่กำหนด — จะส่งให้ผู้บริหารทุกคน') + '</span></div>';
 }
 
 async function save() {
@@ -272,12 +292,13 @@ async function save() {
   const btn = document.getElementById('btn-save');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
-  const r = await window.api.post('setApprovalChain', {
+  const body = {
     lineUserId: window.state.lineUserId,
     user_id: CURRENT.user_id,
     supervisor_user_id: supId,
-    executive_user_ids: execIds,
-  });
+  };
+  if (!DIR.stage3_sole) body.executive_user_ids = execIds;
+  const r = await window.api.post('setApprovalChain', body);
 
   btn.disabled = false; btn.textContent = 'บันทึกสายอนุมัติ';
 
