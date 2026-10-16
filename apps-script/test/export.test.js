@@ -98,8 +98,9 @@ const leavesSheet = makeSheet('LeaveRequests', LEAVE_HDR, [
     date_from: '2026-09-04', date_to: '2026-09-07', days: 2, pay_status: 'unpaid',
   }),
   leave({
+    // บันทึกไว้ครึ่งวันตอนส่ง — ยอดไม่จ่ายต้องใช้ค่าที่บันทึก ไม่คำนวณวันทำงานใหม่ (P3)
     leave_id: 'LV-LEGAL', user_id: 'EMP-0003', leave_type: 'training',
-    date_from: '2026-09-10', date_to: '2026-09-10',
+    date_from: '2026-09-10', date_to: '2026-09-10', days: 0.5, pay_status: 'unpaid',
   }),
   leave({
     leave_id: 'LV-HOUR', user_id: 'EMP-0003', leave_type: 'personal',
@@ -108,11 +109,11 @@ const leavesSheet = makeSheet('LeaveRequests', LEAVE_HDR, [
   }),
   leave({
     leave_id: 'LV-PENDING', user_id: 'EMP-0003', leave_type: 'vacation',
-    date_from: '2026-09-14', date_to: '2026-09-14', final_status: 'pending',
+    date_from: '2026-09-14', date_to: '2026-09-14', final_status: 'pending', pay_status: 'unpaid',
   }),
   leave({
     leave_id: 'LV-REJECTED', user_id: 'EMP-0002', leave_type: 'personal',
-    date_from: '2026-09-15', date_to: '2026-09-15', final_status: 'rejected',
+    date_from: '2026-09-15', date_to: '2026-09-15', final_status: 'rejected', pay_status: 'unpaid',
   }),
   leave({
     leave_id: 'LV-WITHDRAWN', user_id: 'EMP-0002', leave_type: 'personal',
@@ -324,16 +325,20 @@ check('CSV มีคอลัมน์ จ่าย/ไม่จ่าย แล
   savedBlob.content.includes('ไม่จ่าย (วัน)') && savedBlob.content.includes('ยังไม่ระบุ'), savedBlob.content.slice(0, 400));
 
 console.log('\n=== 7) จ่าย/ไม่จ่าย (สำหรับคิดเงินเดือน) ===');
-check('แถวบอกค่า จ่าย/ไม่จ่าย', byId('LV-WEEKEND').pay_status === 'unpaid' && byId('LV-LEGAL').pay_status === '', byId('LV-WEEKEND'));
+check('แถวบอกค่า จ่าย/ไม่จ่าย', byId('LV-WEEKEND').pay_status === 'unpaid' && byId('LV-EDGE-END').pay_status === '', byId('LV-WEEKEND'));
 const sum2 = all.summary.find(row => row.emp_code === 'TST-002');
 const sum3 = all.summary.find(row => row.emp_code === 'TST-003');
 check('สรุปรายคนรวมวัน/ชั่วโมงไม่จ่าย แยกจากยอดลา', sum2.unpaid_days === 2 && sum2.sick_days === 4 &&
-  sum3.unpaid_hours === 4.5 && sum3.unpaid_days === 0, [sum2, sum3]);
-check('นับใบที่ยังไม่ระบุ', sum2.pay_unset_count === 2 && sum3.pay_unset_count === 2, [sum2, sum3]);
+  sum3.unpaid_hours === 4.5, [sum2, sum3]);
+check('P2: ยอดไม่จ่ายไม่รวมใบรออนุมัติ · P3: ใช้วันที่บันทึกในใบ (0.5) ไม่คำนวณใหม่', sum3.unpaid_days === 0.5, sum3);
+const withRejected = sandbox.getLeaveReport(Object.assign({}, basePayload, { statuses: ['approved', 'rejected'] }));
+check('P2: ส่งสถานะรวมไม่อนุมัติ → ยอดไม่จ่ายยังนับเฉพาะใบอนุมัติแล้ว',
+  withRejected.summary.find(r => r.emp_code === 'TST-002').unpaid_days === 2, withRejected.summary);
+check('นับใบที่ยังไม่ระบุ (เฉพาะใบอนุมัติแล้ว)', sum2.pay_unset_count === 2 && sum3.pay_unset_count === 0, [sum2, sum3]);
 const unpaidOnly = sandbox.getLeaveReport(Object.assign({}, basePayload, { pay_statuses: ['unpaid'] }));
-check('กรองเฉพาะไม่จ่าย', unpaidOnly.ok && unpaidOnly.rows.map(r => r.leave_id).sort().join() === 'LV-HOUR,LV-WEEKEND', unpaidOnly.rows);
+check('กรองเฉพาะไม่จ่าย (ตารางยังแสดงใบรออนุมัติได้)', unpaidOnly.ok && unpaidOnly.rows.map(r => r.leave_id).sort().join() === 'LV-HOUR,LV-LEGAL,LV-PENDING,LV-WEEKEND', unpaidOnly.rows);
 const unsetOnly = sandbox.getLeaveReport(Object.assign({}, basePayload, { pay_statuses: ['unset'] }));
-check('กรองเฉพาะยังไม่ระบุ', unsetOnly.ok && unsetOnly.rows.length === 4 && unsetOnly.rows.every(r => !r.pay_status), unsetOnly.rows);
+check('กรองเฉพาะยังไม่ระบุ', unsetOnly.ok && unsetOnly.rows.length === 2 && unsetOnly.rows.every(r => !r.pay_status), unsetOnly.rows);
 check('ไม่มี error ถูก log ระหว่างทดสอบ', errors.length === 0, errors);
 
 console.log('\n' + (fails ? 'ตก ' + fails + ' ข้อ' : 'ผ่านทุกข้อ'));

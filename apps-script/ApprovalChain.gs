@@ -173,7 +173,7 @@ function executiveRouteFrom_(ids, idx, userIdForLog) {
 function stage3SoleApprover_(usersIndex) {
   const idx = usersIndex || loadUsersIndex_();
   if (idx._stage3Sole !== undefined) return idx._stage3Sole;
-  const code = normEmpCode_(getConfig().stage3_sole_approver);
+  const code = readStage3SoleCode_();
   let res = null;
   if (code) {
     // รหัสซ้ำกับแถวที่ปิดแล้วได้ (เคยเจอใน prod) — เอาแถวที่ยังไม่ปิด โดยให้แถวผู้บริหารที่ผูกไลน์แล้วมาก่อน
@@ -187,6 +187,22 @@ function stage3SoleApprover_(usersIndex) {
   }
   idx._stage3Sole = res;
   return res;
+}
+
+/**
+ * อ่าน `stage3_sole_approver` สดจากชีตทุกครั้ง (ไม่ผ่านแคช getConfig 300 วิ)
+ * ⭐ ค่านี้คุมสิทธิ์อนุมัติ — แก้ชีตแล้วคนเดิมต้องหมดสิทธิ์ทันที · จอกับด่านอ่านจากที่เดียวกันนี้
+ * ⭐ อ่านเป็นข้อความที่แสดงในชีต — getConfig แปลง '0012' เป็นเลข 12 ทำศูนย์นำหน้าหาย
+ */
+function readStage3SoleCode_() {
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  const sh = SpreadsheetApp.openById(sheetId).getSheetByName('Settings');
+  if (!sh || sh.getLastRow() < 2) return '';
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getDisplayValues();
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === 'stage3_sole_approver') return normEmpCode_(rows[i][1]);
+  }
+  return '';
 }
 
 /** ข้อมูลผู้บริหารขั้น 3 คนเดียว สำหรับหน้าจอ — null = ไม่ได้ตั้ง */

@@ -44,7 +44,7 @@ function exportLeaveReportCsv(payload) {
       'รหัสพนักงาน', 'ชื่อพนักงาน', 'แผนก',
       'ลาป่วย (วัน)', 'ลากิจ (วัน)', 'ลาพักร้อน (วัน)', 'ลาอื่นตามกฎหมาย (วัน)',
       'ลาเป็นชั่วโมง', 'กรณีฉุกเฉิน (ครั้ง)', 'จำนวนใบลา',
-      'ไม่จ่าย (วัน)', 'ไม่จ่าย (ชั่วโมง)', 'ยังไม่ระบุจ่าย/ไม่จ่าย (ใบ)',
+      'ไม่จ่าย (วัน) เฉพาะใบอนุมัติแล้ว', 'ไม่จ่าย (ชั่วโมง) เฉพาะใบอนุมัติแล้ว', 'ยังไม่ระบุจ่าย/ไม่จ่าย (ใบอนุมัติแล้ว)',
     ]));
     report.summary.forEach(function (row) {
       lines.push(reportCsvRow_([
@@ -188,6 +188,10 @@ function buildLeaveReport_(payload) {
         final_status: finalStatus,
         pay_status: payStatus,
         submitted_at: normalizeReportDateTime_(leave.submitted_at),
+        // ยอดไม่จ่าย: ใบที่อยู่ในช่วงทั้งใบใช้จำนวนวันที่บันทึกตอนส่ง (ตามกติกาวันทำงานตอนนั้น)
+        // ใบคร่อมขอบช่วงใช้วันที่คำนวณเฉพาะส่วนในช่วง — แบ่งจากยอดบันทึกไม่ได้ว่าวันไหนนับ
+        _pay_days: (leaveFrom === clippedFrom && leaveTo === clippedTo && leave.days !== '' && !isNaN(Number(leave.days)))
+          ? Number(leave.days) : days,
         _user_id: String(leave.user_id || ''),
       });
     });
@@ -233,11 +237,14 @@ function buildLeaveReport_(payload) {
     }
     if (row.is_emergency) item.emergency_count++;
     item.leave_count++;
-    if (row.pay_status === 'unpaid') {
-      if (row.unit === 'hour') item.unpaid_hours += row.hours;
-      else item.unpaid_days += row.days_in_period;
-    } else if (!row.pay_status) {
-      item.pay_unset_count++;
+    // ยอดสำหรับคิดเงินเดือน นับเฉพาะใบอนุมัติแล้ว — ใบรออนุมัติ/ไม่อนุมัติ/ยกเลิก ห้ามปน
+    if (row.final_status === 'approved') {
+      if (row.pay_status === 'unpaid') {
+        if (row.unit === 'hour') item.unpaid_hours += row.hours;
+        else item.unpaid_days += row._pay_days;
+      } else if (!row.pay_status) {
+        item.pay_unset_count++;
+      }
     }
   });
 
@@ -248,7 +255,7 @@ function buildLeaveReport_(payload) {
       a.display_name.localeCompare(b.display_name);
   });
 
-  rows.forEach(function (row) { delete row._user_id; });
+  rows.forEach(function (row) { delete row._user_id; delete row._pay_days; });
   return {
     ok: true,
     period: { from: validation.date_from, to: validation.date_to },

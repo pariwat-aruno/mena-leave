@@ -150,7 +150,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 ['Utils.gs', 'Setup.gs', 'Config.gs', 'DriveStore.gs', 'Import.gs', 'Register.gs', 'Claim.gs', 'Quota.gs', 'Rules.gs',
- 'FlexCard.gs', 'LeaveExtras.gs', 'ApprovalChain.gs', 'Approval.gs', 'LeaveRequest.gs', 'Reminder.gs']
+ 'FlexCard.gs', 'LeaveExtras.gs', 'ApprovalChain.gs', 'Approval.gs', 'LeaveRequest.gs', 'Reminder.gs', 'Cancel.gs']
   .forEach(f => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f }));
 // stub หลังโหลด — ของจริงใน Utils ใช้เวลาเครื่อง
 sandbox.nowBangkok = () => TODAY + 'T10:00:00+07:00';
@@ -530,6 +530,76 @@ const r21r = submit('Uemp', { date_from: '2026-10-16', date_to: '2026-10-16' });
 check('ใบที่ยังรอขั้น HR → ให้เลือกตอนอนุมัติ', setPay('Uhr', r21r.leave_id, 'paid').error === 'use_approval', '');
 decide('Usup', r21r.leave_id, 1, 'reject', 'งานด่วน');
 check('ใบไม่อนุมัติ → ไม่ต้องระบุ', setPay('Uhr', r21r.leave_id, 'paid').error === 'not_applicable', '');
+
+// ---------- แก้ตามที่ astra ตรวจ 7647494 ----------
+const userRow = uid => users._objects().findIndex(u => u.user_id === uid) + 2;
+const setUserCell = (uid, col, v) => sandbox.updateRowByHeader_(users, userRow(uid), { [col]: v });
+// ล็อกจำลองที่รู้ว่ากำลังถืออยู่ไหม + แทรกเหตุการณ์ระหว่างรอล็อกได้
+let lockHeld = false, onWaitLock = null;
+sandbox.LockService = { getScriptLock: () => ({
+  waitLock() { if (onWaitLock) { const f = onWaitLock; onWaitLock = null; f(); } lockHeld = true; },
+  releaseLock() { lockHeld = false; } }) };
+
+console.log('\n=== 22) A1: ตั้งค่าไว้แต่คนนั้นรับไม่ได้ → สายผู้บริหารก่อน ขั้น 3 ต้องรอ (HR แทน) ไม่จบเงียบ ===');
+setSole('9001');   // รหัสของ HR — ไม่ใช่ระดับผู้บริหาร
+const r22 = submit('Usup2', { date_from: '2026-10-19', date_to: '2026-10-19' });
+check('ขั้น 3 = รอ ไม่ใช่ข้าม', row(r22.leave_id).stage3_status === 'pending', row(r22.leave_id));
+const d22 = decide('Uother', r22.leave_id, 1, 'approve');
+check('ขั้นแรกอนุมัติ → ไปขั้น 3 (HR รับแทน) ไม่จบใบ', d22.ok && d22.moved_to_stage === 3 &&
+  sandbox.getPendingForMe({ lineUserId: 'Uhr' }).pending.some(p => p.leave_id === r22.leave_id && p.hr_fallback), d22);
+
+console.log('\n=== 23) A2: ค่าตั้งว่าง → ไม่คิดขั้น 3 ใหม่ (ผู้บริหารคนถัดไปถูกปิดกลางทาง ใบต้องไป HR ไม่จบเงียบ) ===');
+setSole('');
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0015', supervisor_user_id: 'EMP-0002', executive_user_ids: ['EMP-0002', 'EMP-0001'] });
+const r23 = submit('Usup2', { date_from: '2026-10-20', date_to: '2026-10-20' });
+check('เริ่ม: ขั้น 3 รอผู้บริหารเอ', row(r23.leave_id).stage3_status === 'pending', row(r23.leave_id));
+setUserCell('EMP-0001', 'status', 'inactive');
+const d23 = decide('Uother', r23.leave_id, 1, 'approve');
+check('ขั้นแรกอนุมัติ → ยังไปขั้น 3 (HR แทน) ไม่ใช่จบใบ', d23.ok && d23.moved_to_stage === 3 && row(r23.leave_id).stage3_status === 'pending', [d23, row(r23.leave_id).stage3_status]);
+setUserCell('EMP-0001', 'status', 'active');
+
+console.log('\n=== 24) A3: แก้ค่าในชีตแล้วมีผลทันที (ไม่รอแคช) ===');
+const realCache = sandbox.CacheService;
+sandbox.CacheService = { getScriptCache: () => ({ get: () => JSON.stringify({ stage3_sole_approver: 1001 }), put() {}, remove() {} }) };
+check('แคชเก่าบอก 1001 แต่ชีตว่างแล้ว → ใช้ผังรายคน', sandbox.getExecutivesFor('EMP-0014').users.map(u => u.user_id).join() === 'EMP-0001',
+  sandbox.getExecutivesFor('EMP-0014').users.map(u => u.user_id));
+sandbox.CacheService = realCache;
+
+console.log('\n=== 25) A6: รหัสมีศูนย์นำหน้า ===');
+users.appendRow(U('EMP-0021', 'Uzero', 'OWNER', 'ผู้บริหารศูนย์', '0012', 'active'));
+setSole('0012');
+check('รหัส 0012 หาเจอ ไม่กลายเป็น 12', sandbox.getExecutivesFor('EMP-0014').users.map(u => u.user_id).join() === 'EMP-0021',
+  sandbox.getExecutivesFor('EMP-0014'));
+
+console.log('\n=== 26) A4: สายผู้บริหารก่อนที่เริ่มที่ HR · เปลี่ยนค่าตั้งแล้ว HR อนุมัติ → ต้องไปหาคนที่ตั้งไว้ ===');
+setSole('');
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0013', supervisor_user_id: 'EMP-0020' });   // ผู้บริหารซี ยังไม่ผูกไลน์
+const r26 = submit('Umaid', { date_from: '2026-10-21', date_to: '2026-10-21' });
+check('เริ่ม: ข้ามขั้นแรก รอ HR ขั้น 3 ข้าม', row(r26.leave_id).stage1_status === 'skipped' && row(r26.leave_id).stage2_status === 'pending' &&
+  row(r26.leave_id).stage3_status === 'skipped', row(r26.leave_id));
+setSole('1001');
+const d26 = decide('Uhr', r26.leave_id, 2, 'approve');
+check('HR อนุมัติ → ไปขั้น 3 หาคนที่ตั้งไว้', d26.ok && d26.moved_to_stage === 3 &&
+  sandbox.getPendingForMe({ lineUserId: 'Uother' }).pending.some(p => p.leave_id === r26.leave_id), d26);
+
+console.log('\n=== 27) A5: ค่าตั้งเปลี่ยนระหว่างรอล็อก → สิทธิ์ขั้น 3 ตรวจซ้ำ ===');
+onWaitLock = () => setSole('0012');
+const d27 = decide('Uother', r26.leave_id, 3, 'approve');
+check('คนเดิมหมดสิทธิ์แล้ว → ปฏิเสธ ใบยังรอ', d27.ok === false && d27.error === 'forbidden' && row(r26.leave_id).final_status === 'pending', d27);
+
+console.log('\n=== 28) P5: ขั้น 3 เห็นธง จ่าย/ไม่จ่าย ที่ HR เลือก ===');
+const it28 = sandbox.getPendingForMe({ lineUserId: 'Uzero' }).pending.find(p => p.leave_id === r26.leave_id);
+check('รายการขั้น 3 มีค่า จ่าย ที่ HR เลือก + ผู้ลา', it28 && it28.pay_status === 'paid' && it28.user_id === 'EMP-0013', it28);
+setSole('');
+
+console.log('\n=== 29) P4: ผู้บริหารยกเลิกใบตัวเอง (ผ่านอัตโนมัติ) ปิดใบเดิมภายใต้ล็อก ===');
+const r29 = submit('Uboss', { date_from: '2026-10-22', date_to: '2026-10-22' });
+const origApply = sandbox.applyCancelToParent_;
+let appliedUnderLock = null;
+sandbox.applyCancelToParent_ = c => { appliedUnderLock = lockHeld; return origApply(c); };
+const c29 = sandbox.requestCancelLeave({ lineUserId: 'Uboss', leave_id: r29.leave_id, reason: 'ติดประชุมด่วน' });
+sandbox.applyCancelToParent_ = origApply;
+check('ยกเลิกได้ + ปิดใบเดิมตอนถือล็อก', c29.ok && row(r29.leave_id).final_status === 'cancelled' && appliedUnderLock === true, [c29, appliedUnderLock]);
 
 console.log(fails ? '\nตก ' + fails + ' ข้อ' : '\nผ่านทุกข้อ');
 process.exit(fails ? 1 : 0);

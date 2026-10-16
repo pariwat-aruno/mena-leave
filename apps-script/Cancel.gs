@@ -195,7 +195,12 @@ function requestCancelLeave(payload) {
 
   // อนุมัติครบตั้งแต่ต้น (ผู้บริหารทำรายการเอง) → ปิดใบเดิมเลย
   if (flow.firstApprovalStage === 0) {
-    applyCancelToParent_(cancelRow);
+    // ล็อกเดียวกับ setLeavePayStatus / approveLeave — กันระบุจ่าย/ไม่จ่ายแทรกกลางตอนปิดใบเดิม
+    const lock = LockService.getScriptLock();
+    try { lock.waitLock(10000); }
+    catch (e) { return { ok: false, error: 'lock_failed', message: 'ระบบกำลังประมวลผล กรุณาลองอีกครั้ง' }; }
+    try { applyCancelToParent_(cancelRow); }
+    finally { lock.releaseLock(); }
     try {
       pushMessage(payload.lineUserId, buildCancelResultCard(cancelRow, parent, requester, true));
     } catch (e) {}

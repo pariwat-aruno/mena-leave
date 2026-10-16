@@ -144,6 +144,12 @@ function approveLeave(payload) {
     if (actingAsHrFallback && !hrMayActOnStage3_(leaveAfterLock)) {
       return { ok: false, error: 'race_lost', message: 'ผู้บริหารเพิ่งดำเนินการกับใบนี้ — กรุณาโหลดหน้าใหม่' };
     }
+    // สิทธิ์ผู้บริหารขั้น 3 ตรวจซ้ำหลังได้ล็อก — ระหว่างรอ ค่าตั้ง/ผังอาจเปลี่ยนไปเป็นคนอื่นแล้ว
+    if (stage === 3 && !actingAsHrFallback &&
+        ((isOwnerFirstLeave_(leaveAfterLock) && leaveAfterLock.stage1_by === approver.user_id) ||
+         !isExecutiveOf_(approver.user_id, leaveAfterLock.user_id))) {
+      return { ok: false, error: 'forbidden', message: 'สิทธิ์อนุมัติขั้น 3 ของใบนี้เปลี่ยนไปแล้ว — กรุณาโหลดหน้าใหม่' };
+    }
 
     const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
     const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -280,11 +286,14 @@ function approveLeave(payload) {
     audit(payload.lineUserId, 'leave_approve_s' + stage, 'LeaveRequests', payload.leave_id,
       needsPay ? { pay_status: payStatus, pay_status_before: leaveAfterLock.pay_status || '' } : undefined);
 
-    // ใบแบบผู้บริหารก่อน: ขั้น 3 คิดสดตอนขั้นแรกกด — ผังหรือ Settings อาจเปลี่ยนหลังส่งใบ
-    // (เช่น ตั้งผู้บริหารขั้น 3 คนเดียวเป็นคนที่เพิ่งกดขั้นแรก → ขั้น 3 ต้องข้าม ไม่ให้อนุมัติซ้ำ)
-    if (stage === 1 && isOwnerFirstLeave_(leaveAfterLock) &&
+    // ตั้งผู้บริหารขั้น 3 คนเดียวไว้ → ขั้น 3 คิดสดตอนขั้น 1/2 กด (ใบอาจส่งก่อนเปลี่ยนค่าตั้ง)
+    //   ขั้นแรกของผู้ลาคือคนที่ตั้งไว้เอง → ข้าม · กรณีอื่น → รอ (รับไม่ได้ก็ไป HR แทน ไม่จบใบเงียบ ๆ)
+    // ค่าตั้งว่าง = ไม่แตะ ใช้ค่าที่คิดไว้ตอนส่งใบตามเดิม
+    if ((stage === 1 || stage === 2) && stage3SoleApprover_() &&
         (leaveAfterLock.stage3_status === 'pending' || leaveAfterLock.stage3_status === 'skipped')) {
-      const want3 = hasOtherExecutive_(leaveAfterLock.user_id, approver.user_id) ? 'pending' : 'skipped';
+      // ขั้นแรกของสายผู้บริหารก่อน = คนที่กดขั้น 1 · ถ้าเริ่มที่ HR (ผู้บริหารขั้นแรกรับไม่ได้) = หัวหน้าที่ผูกไว้
+      const firstId = stage === 1 ? approver.user_id : (leaveAfterLock.stage1_by || getSupervisorFor(leaveAfterLock.user_id));
+      const want3 = hasOtherExecutive_(leaveAfterLock.user_id, firstId) ? 'pending' : 'skipped';
       if (want3 !== leaveAfterLock.stage3_status) {
         updateRowByHeader_(sh, row, { stage3_status: want3 });
         leaveAfterLock.stage3_status = want3;
@@ -412,8 +421,9 @@ function computeInitialStages_(requester) {
 function hasOtherExecutive_(userId, firstApproverId) {
   const sole = stage3SoleApprover_();
   if (sole) {
-    const u = sole.user;
-    return !!u && u.user_id !== firstApproverId && u.status === 'active' && u.role === ROLES.OWNER;
+    // ข้ามขั้น 3 ได้กรณีเดียว: คนที่ตั้งไว้คือคนที่อนุมัติขั้นแรกเอง
+    // คนที่ตั้งไว้รับใบไม่ได้ (หาไม่เจอ/ปิด/ไม่ใช่ผู้บริหาร) → ขั้น 3 ต้องรอ แล้ว HR รับแทน ห้ามจบใบเงียบ ๆ
+    return !(sole.user && sole.user.user_id === firstApproverId);
   }
   return listActiveApprovers_(userId, APPROVER_LEVEL_EXECUTIVE).some(function (id) {
     if (id === firstApproverId) return false;
@@ -662,6 +672,10 @@ function shapePendingItem_(leave, myStage, usersIndex) {
     doc_request_note: leave.doc_request_note || '',
     owner_first: isOwnerFirstLeave_(leave) && myStage === 1,
     stage1_label: stage1ApproverLabel_(leave),
+    // ขั้น 3 ต้องเห็นธง จ่าย/ไม่จ่าย ที่ HR เลือกไว้
+    user_id: leave.user_id,
+    final_status: leave.final_status,
+    pay_status: leave.pay_status || '',
   };
 }
 

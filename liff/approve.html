@@ -170,13 +170,15 @@ async function explainNotMine(leaveId) {
  * HR / ผู้บริหาร: ดูและระบุ จ่าย/ไม่จ่าย ของใบที่ไม่ได้รอตัดสิน (ใบข้ามขั้น HR หรืออยากแก้ค่า)
  * เปิดจากรายงาน (ลิงก์เลขใบลา) หรือการ์ดไลน์ที่ ?id=
  */
-function renderPayPanel(l) {
+function renderPayPanel(l, host) {
   let box = document.getElementById('pay-panel');
+  if (box && host && box.parentNode !== host) { box.remove(); box = null; }
   if (!box) {
     box = document.createElement('div');
     box.id = 'pay-panel';
     box.className = 'card mb-2';
-    document.getElementById('target-note').after(box);
+    // host = กล่องตัดสินขั้น 3 · ไม่ส่ง = ใต้ข้อความใบที่ไม่ได้รอเรา
+    if (host) host.appendChild(box); else document.getElementById('target-note').after(box);
   }
   const isAdmin = ME && window.hasRole(ME.role, window.ROLES.ADMIN);
   const closed = ['rejected', 'withdrawn', 'cancelled'].indexOf(l.final_status) >= 0;
@@ -211,7 +213,8 @@ function renderPayPanel(l) {
         return;
       }
       window.utils.showToast('บันทึกแล้ว: ' + window.payStatusLabel(want));
-      renderPayPanel(Object.assign({}, l, { pay_status: want }));
+      l.pay_status = want;
+      renderPayPanel(l, host);
     };
   });
 }
@@ -311,6 +314,13 @@ function openDecision(idx) {
     '<div class="card-row"><span class="label">วันที่</span><span class="value">' + window.utils.formatThaiDateShort(p.date_from) + ' - ' + window.utils.formatThaiDateShort(p.date_to) + '</span></div>' +
     '<div class="card-row"><span class="label">จำนวน</span><span class="value">' + window.utils.escapeHtml(p.amount_text || (p.days + ' วัน')) + '</span></div>' +
     '<div class="card-row"><span class="label">เหตุผล</span><span class="value">' + window.utils.escapeHtml(p.reason || '-') + '</span></div>';
+  // ขั้น 3: เห็นธง จ่าย/ไม่จ่าย เดิม และแก้ได้ตามที่เซิร์ฟเวอร์อนุญาต (HR/ผู้บริหาร · ไม่ใช่ใบตัวเอง)
+  if (p.my_stage === 3 && !isCancel) {
+    const host = document.createElement('div');
+    host.className = 'mt-1';
+    document.getElementById('decision-body').appendChild(host);
+    renderPayPanel(p, host);
+  }
   document.getElementById('decision-note').value = '';
   setPayChoice('');
   document.getElementById('pay-choice').classList.toggle('hidden', !needsPayChoice());
