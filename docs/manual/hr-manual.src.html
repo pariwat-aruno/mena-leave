@@ -1,0 +1,610 @@
+<title>คู่มือฝ่ายบุคคล — ระบบลางาน MENA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f3f5f8; --surface:#ffffff; --surface-2:#f8fafc;
+  --ink:#161d2b; --ink-2:#586374; --ink-3:#8592a3;
+  --line:#e0e5ec; --line-2:#eef1f5;
+  --brand:#a01560;
+  --ok:#0e7062; --ok-bg:#e6f4f1;
+  --warn:#a4590a; --warn-bg:#fdf1e0;
+  --crit:#bd2f28; --crit-bg:#fceceb;
+  --block:#5b4a94; --block-bg:#efecf8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+    --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+    --line:#2b313d; --line-2:#232935;
+    --brand:#b9c3e2;
+    --ok:#4ecfb4; --ok-bg:#12302c;
+    --warn:#e9a94f; --warn-bg:#33270f;
+    --crit:#f0837a; --crit-bg:#361a19;
+    --block:#a99ae0; --block-bg:#25203a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+  --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+  --line:#2b313d; --line-2:#232935;
+  --brand:#b9c3e2;
+  --ok:#4ecfb4; --ok-bg:#12302c;
+  --warn:#e9a94f; --warn-bg:#33270f;
+  --crit:#f0837a; --crit-bg:#361a19;
+  --block:#a99ae0; --block-bg:#25203a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  font-size:15.5px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px 100px}
+h1,h2,h3,.disp{font-family:"Sarabun",system-ui,sans-serif;text-wrap:balance}
+code,.mono,.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ── หัวเรื่อง ── */
+header.top{padding:56px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+h1{font-size:clamp(30px,4.4vw,44px);line-height:1.2;font-weight:700;margin:10px 0 8px;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0}
+.stamp{margin-top:18px;font-size:13px;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+/* ── แถบตัวเลข ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:28px 0 0}
+.tile{background:var(--surface);padding:16px 18px}
+.tile .k{font-size:11.5px;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+.tile .v{font-size:26px;font-weight:600;font-family:"Sarabun",sans-serif;line-height:1.25;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.crit{color:var(--crit)}
+
+/* ── สารบัญ ── */
+nav.toc{position:sticky;top:0;z-index:5;background:var(--ground);border-bottom:1px solid var(--line);margin:34px 0 0;padding:10px 0;overflow-x:auto}
+nav.toc ul{display:flex;gap:4px;list-style:none;margin:0;padding:0;white-space:nowrap}
+nav.toc a{font-size:13px;color:var(--ink-2);text-decoration:none;padding:5px 11px;border-radius:2px;display:block}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--surface);color:var(--ink);outline:none}
+nav.toc a:focus-visible{box-shadow:0 0 0 2px var(--brand)}
+
+/* ── ส่วน ── */
+section{padding-top:46px}
+.sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:0}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);letter-spacing:.08em}
+h2{font-size:23px;font-weight:600;margin:0;flex:1}
+h3{font-size:17px;font-weight:600;margin:0}
+
+/* ── การ์ดหมวด ── */
+.item{border-bottom:1px solid var(--line);padding:22px 0}
+.item-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.item-head h3{flex:1;min-width:200px}
+.where{font-size:12.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.rows{display:grid;grid-template-columns:104px 1fr;gap:6px 16px;align-items:start}
+.rows dt{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;padding-top:5px}
+.rows dd{margin:0;color:var(--ink)}
+.rows dd.q{color:var(--ink-2)}
+@media (max-width:640px){.rows{grid-template-columns:1fr;gap:2px 0}.rows dt{padding-top:10px}}
+
+/* ── ชิปสถานะ ── */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.chip::before{content:"";width:6px;height:6px;border-radius:99px;background:currentColor;flex:none}
+.chip.ok{color:var(--ok);background:var(--ok-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.chip.crit{color:var(--crit);background:var(--crit-bg)}
+.chip.block{color:var(--block);background:var(--block-bg)}
+.chip.none{color:var(--ink-3);background:var(--line-2)}
+
+/* ── กล่องเน้น ── */
+.alert{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--crit);padding:20px 22px;margin:22px 0}
+.alert.warn{border-top-color:var(--warn)}
+.alert h3{margin-bottom:6px}
+.alert p{margin:6px 0;color:var(--ink-2)}
+.alert p b{color:var(--ink)}
+.chain{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);padding:10px 12px;margin-top:12px;overflow-x:auto;white-space:nowrap}
+
+/* ── ตาราง ── */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface);margin:16px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th{text-align:left;font-weight:600;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+   font-family:"IBM Plex Mono",monospace;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r{text-align:right;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace}
+td.nw{white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+
+/* ── ขั้นตอน ── */
+ol.steps{list-style:none;counter-reset:s;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);padding:16px 20px 16px 58px;position:relative}
+ol.steps>li::before{content:counter(s,decimal-leading-zero);position:absolute;left:20px;top:16px;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-3);font-weight:500}
+ol.steps b{display:block;font-family:"Sarabun",sans-serif;font-size:16px;font-weight:600;margin-bottom:2px}
+ol.steps small{color:var(--ink-2);font-size:13.5px;line-height:1.65;display:block}
+ol.steps .who{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--ink-3);letter-spacing:.05em}
+
+ul.plain{margin:8px 0 0;padding-left:18px;color:var(--ink-2)}
+ul.plain li{margin:3px 0}
+ul.plain b{color:var(--ink)}
+p.note{color:var(--ink-2);margin:14px 0 0;font-size:14px}
+.kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;white-space:nowrap;color:var(--ink)}
+
+figure{margin:18px 0 0;background:var(--surface);border:1px solid var(--line);padding:10px}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--line-2)}
+figcaption{font-size:12.5px;color:var(--ink-2);padding:10px 4px 2px;line-height:1.6}
+figcaption b{color:var(--ink)}
+.figs{display:grid;gap:14px}
+@media (min-width:820px){.figs.two{grid-template-columns:1fr 1fr}}
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px}
+a{color:var(--ink);text-underline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── ปรับเฉพาะเล่มนี้ ── */
+/* ห้ามให้ข้อความไทยตกไปอยู่ในฟอนต์ mono — ไม่มีสระ/วรรณยุกต์ไทย จะกลายเป็น fallback ที่อ่านยาก */
+th, .rows dt, .where, .eyebrow, .tile .k, ol.steps .who { font-family:"Sarabun",sans-serif !important; letter-spacing:.02em }
+th, .rows dt, .tile .k { text-transform:none }
+.num, code, td.r { font-family:"IBM Plex Mono",monospace }
+figure img { max-width:340px; margin:0 auto }
+figure.wide img { max-width:520px }
+.sec-head { border-bottom-color:#d51f7d }
+ol.steps>li::before { color:#d51f7d; font-weight:700 }
+.alert { border-top-color:#d51f7d }
+h1 { color:#a01560 }
+
+/* ── เพิ่มสำหรับชุด 3 เล่ม (พนักงาน / ผู้อนุมัติ / ฝ่ายบุคคล) ── */
+section h3{margin:22px 0 4px}
+ol.steps small b{display:inline;font-size:inherit;margin:0;font-weight:600}
+.figs.two figure img{max-width:100%}
+.figs.two>div{min-width:0}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px;break-inside:avoid}
+.signbox{border:1px solid var(--line);background:var(--surface);padding:18px 20px}
+.signbox .sl{font-weight:600;margin-bottom:14px}
+.signbox .dots{margin:18px 0 0;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+td code{font-size:12px;background:var(--surface-2);padding:0 4px;border:1px solid var(--line-2)}
+@media (max-width:640px){.sign{grid-template-columns:1fr}}
+@media print{
+  figure img{max-width:400px !important}
+  figure.tall img{max-height:205mm !important}
+  .figs.two figure img{max-width:100% !important}
+  td code{font-size:9pt}
+  table{font-size:9.5pt}
+  .tbl-wrap{break-inside:auto !important}
+  tr{break-inside:avoid}
+}
+</style><div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">MENA COSMETICS · เล่ม 3 จาก 3</div>
+  <h1>คู่มือฝ่ายบุคคล — ดูแลระบบลางาน</h1>
+  <p class="lede">สำหรับ HR และผู้บริหารที่ดูแลระบบ — ทะเบียนพนักงาน ผังอำนาจอนุมัติ เงื่อนไขการลา โควตา รายงาน
+  และบท <b>ส่งมอบระบบ</b> ท้ายเล่ม บอกว่าระบบประกอบด้วยอะไร ข้อมูลอยู่ที่ไหน และต้องดูแลอะไรเป็นรอบ</p>
+  <div class="stamp"><b>ฉบับวันที่</b> 16 ตุลาคม 2569 <span>·</span> <b>ระบบ</b> ลางาน MENA COSMETICS</div>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="k">เข้าหน้าจัดการ</div><div class="v">เมนู "จัดการ"</div><div class="s">HR และผู้บริหารเท่านั้น</div></div>
+  <div class="tile"><div class="k">HR แก้กฎ/โควตา</div><div class="v warn">รอผู้บริหาร</div><div class="s">ผู้บริหารแก้แล้วมีผลทันที</div></div>
+  <div class="tile"><div class="k">โควตารีเซ็ต</div><div class="v">1 ม.ค.</div><div class="s">อัตโนมัติ ไม่ยกยอด</div></div>
+  <div class="tile"><div class="k">ข้อความไลน์</div><div class="v crit">มีโควตารายเดือน</div><div class="s">หมด = การ์ดไม่เด้ง</div></div>
+</div>
+
+<nav class="toc"><ul>
+  <li><a href="#s1">1. หน้าจัดการระบบ</a></li>
+  <li><a href="#s2">2. แถบโควตาไลน์</a></li>
+  <li><a href="#s3">3. ทะเบียนพนักงาน</a></li>
+  <li><a href="#s4">4. สร้างพนักงานใหม่</a></li>
+  <li><a href="#s5">5. รหัสจับคู่ 6 หลัก</a></li>
+  <li><a href="#s6">6. ผังอำนาจอนุมัติ</a></li>
+  <li><a href="#s7">7. กฎการลา</a></li>
+  <li><a href="#s8">8. โควตา</a></li>
+  <li><a href="#s9">9. Settings + รออนุมัติ</a></li>
+  <li><a href="#s10">10. รายงาน</a></li>
+  <li><a href="#s11">11. ส่งมอบระบบ</a></li>
+  <li><a href="#s12">12. Google Sheet</a></li>
+  <li><a href="#s13">13. งานตามรอบ</a></li>
+  <li><a href="#s14">14. ตรวจรับ</a></li>
+</ul></nav>
+
+<section id="s1">
+  <div class="sec-head"><span class="sec-num">01</span><h2>หน้าจัดการระบบ</h2></div>
+  <p class="note">กดเมนู <b>จัดการ</b> ด้านล่างแชท — เปิดได้เฉพาะ <b>HR</b> และ <b>ผู้บริหาร</b> คนอื่นจะเห็น <b>คุณไม่มีสิทธิ์เข้าถึงหน้านี้</b></p>
+  <figure class="tall"><img src="img/hr-01-admin.jpg" alt="หน้าจัดการระบบ">
+    <figcaption><b>หน้าจัดการระบบ</b> — ปุ่มบน <b>ฐานข้อมูลพนักงาน</b> · <b>ผังอำนาจอนุมัติ</b> · กล่อง <b>สรุประบบ</b> ·
+    แท็บ <b>พนักงาน / หัวหน้างาน / โควตา / กฎ / Settings / รายงาน</b> (ผู้บริหารเห็นแท็บ <b>รออนุมัติ</b> เพิ่ม)</figcaption></figure>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ในกล่องสรุประบบ</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>ข้อความไลน์เดือนนี้</td><td>ใช้ไปกี่ข้อความจากโควตาเดือนนี้ของไลน์บริษัท (หัวข้อ 2)</td></tr>
+      <tr><td>พนักงาน Active</td><td>จำนวนคนที่ใช้งานได้</td></tr>
+      <tr><td>รอ HR อนุมัติ register</td><td>คนที่ใช้รหัสจับคู่แล้ว รอ HR กดอนุมัติ (หัวข้อ 5)</td></tr>
+      <tr><td>ใบลารออนุมัติ</td><td>ใบลาทั้งบริษัทที่ยังไม่ตัดสินครบ</td></tr>
+      <tr><td>การเปลี่ยนแปลงรอผู้บริหาร</td><td>สิ่งที่ HR แก้ (กฎ / โควตา / Settings) ที่รอผู้บริหารอนุมัติ</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">แท็บ <b>พนักงาน</b> กด <b>แก้ไข</b> ที่ชื่อใดก็ได้ เพื่อเปลี่ยน <b>ระดับพนักงาน</b> → <b>บันทึกระดับ</b>
+  หรือกด <b>พ้นสภาพ / ลาออก (ปิดการเข้าถึง)</b> — คนที่พ้นสภาพเข้าระบบไม่ได้อีก ประวัติใบลายังอยู่
+  และกด <b>รับกลับเข้าทำงาน (เปิดใช้อีกครั้ง)</b> ได้ภายหลัง ผังอำนาจอนุมัติของเขาไม่ถูกลบ ระหว่างปิดบัญชีระบบข้ามเขาไปเอง</p>
+  <figure><img src="img/hr-04-user-edit.jpg" alt="แก้ไขพนักงาน">
+    <figcaption><b>กล่องแก้ไขพนักงาน</b> — HR ตั้งระดับได้ถึง HR · ระดับ <b>ผู้บริหาร</b> ตั้งหรือแก้ได้เฉพาะผู้บริหาร (ผู้บริหารจะเห็นปุ่ม <b>⭑ มอบสิทธิ์ผู้บริหาร</b> เพิ่ม)</figcaption></figure>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ระดับ</th><th>ทำอะไรได้</th></tr></thead>
+    <tbody>
+      <tr><td>พนักงาน</td><td>ส่งใบลา ดูใบลาของตัวเอง</td></tr>
+      <tr><td>พนักงานพิเศษ</td><td>เหมือนพนักงาน + กดลาแทนคนอื่นได้</td></tr>
+      <tr><td>หัวหน้างาน</td><td>อนุมัติชั้น 1 ของลูกน้องในผัง</td></tr>
+      <tr><td>HR</td><td>อนุมัติชั้น 2 ทุกใบ · เข้าหน้าจัดการ · ลาแทนคนอื่น · แก้กฎ/โควตา/Settings ต้องรอผู้บริหารอนุมัติ</td></tr>
+      <tr><td>ผู้บริหาร</td><td>อนุมัติชั้น 3 ของคนในสาย · ทำทุกอย่างของ HR แบบมีผลทันที · อนุมัติข้อเสนอของ HR · ตั้งผู้บริหารคนอื่น · ลาเองอนุมัติอัตโนมัติ</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s2">
+  <div class="sec-head"><span class="sec-num">02</span><h2>แถบเตือนโควตาข้อความไลน์</h2></div>
+  <p class="note">ทุกการ์ดที่ระบบส่ง (ขออนุมัติ แจ้งผล เตือนซ้ำ) นับเป็นข้อความของบัญชีไลน์บริษัท แพ็กเกจของไลน์บริษัทกำหนดจำนวนข้อความต่อเดือนไว้
+  <b>ถ้าหมด การ์ดทุกชนิดส่งไม่ออกทั้งบริษัท</b> จนกว่าจะขึ้นเดือนใหม่หรืออัปเกรดแพ็กเกจ ระบบจึงโชว์สถานะไว้บนกล่องสรุประบบ</p>
+  <div class="figs two">
+    <figure><img src="img/hr-02-line-quota-warn.jpg" alt="แถบเหลือง">
+      <figcaption><b>แถบเหลือง</b> — ใช้ไปตั้งแต่ 80% ขึ้นไป ใกล้หมดแล้ว (ตัวเลขในภาพเป็นตัวอย่าง)</figcaption></figure>
+    <figure><img src="img/hr-03-line-quota-out.jpg" alt="แถบแดง">
+      <figcaption><b>แถบแดง</b> — ไลน์ส่งข้อความไม่ออกแล้ว</figcaption></figure>
+  </div>
+  <ul class="plain">
+    <li>ต่ำกว่า 80% จะเห็นเป็นบรรทัด <b>ข้อความไลน์เดือนนี้ X / Y</b> ธรรมดา · แพ็กเกจไม่จำกัดจะไม่ขึ้นอะไร</li>
+    <li><b>เจอแถบแดง:</b> แจ้งหัวหน้างาน/ผู้บริหารให้เปิดเมนู <b>อนุมัติ</b> ดูใบที่ค้างเองทุกวัน (หน้าจอยังใช้ได้ปกติ แค่การ์ดไม่เด้ง)
+      แล้วให้ผู้ดูแลบัญชีไลน์บริษัทอัปเกรดแพ็กเกจที่ <b>LINE Official Account Manager</b> (หัวข้อ 13)</li>
+    <li>ระหว่างโควตาหมด ระบบหยุดส่งการ์ดเตือนซ้ำเอง ไม่ยิงซ้ำให้เปลือง พอส่งได้อีกครั้งระบบกลับมาเอง</li>
+  </ul>
+</section>
+
+<section id="s3">
+  <div class="sec-head"><span class="sec-num">03</span><h2>ฐานข้อมูลพนักงาน</h2></div>
+  <p class="note">หน้าจัดการ → <b>ฐานข้อมูลพนักงาน</b> ตารางทุกคน (ยกเว้นคนที่พ้นสภาพ) พร้อมหัวหน้างาน ผู้บริหาร ระดับ และสถานะผูกไลน์</p>
+  <figure class="tall"><img src="img/hr-06-employees.jpg" alt="ฐานข้อมูลพนักงาน">
+    <figcaption><b>ฐานข้อมูลพนักงาน</b> — ช่องค้นหา รหัส / ชื่อ / แผนก และตัวกรอง <b>ยังไม่มีหัวหน้างาน · ยังไม่มีผู้บริหาร · ยังไม่ผูกไลน์</b>
+    กล่องสรุปบอกว่าเหลือกี่คนที่ยังตั้งไม่ครบ · <b>แตะแถว</b> = ไปแก้สายอนุมัติของคนนั้น · บนมือถือเลื่อนตารางซ้าย-ขวาได้</figcaption></figure>
+  <p class="note">ชื่อ แผนก ตำแหน่ง ในตารางนี้ <b>ยังไม่มีหน้าจอให้แก้</b> — ถ้าต้องแก้ ให้แก้ในชีต <b>Users</b> (หัวข้อ 12)</p>
+</section>
+
+<section id="s4">
+  <div class="sec-head"><span class="sec-num">04</span><h2>สร้างพนักงานใหม่</h2></div>
+  <ol class="steps">
+    <li><b>กด "+ สร้างพนักงานใหม่"</b><small>จากหน้าฐานข้อมูลพนักงาน หรือปุ่ม <b>+ สร้างพนักงานใหม่ (พร้อมรหัสผูกบัญชี)</b> ในแท็บพนักงาน</small></li>
+    <li><b>กรอกข้อมูลพนักงาน</b><small><b>รหัสพนักงาน</b> และ <b>ชื่อ-นามสกุล</b> บังคับ — ใช้ชื่อจริงตามทะเบียน เพราะพนักงานต้องกรอกชื่อนี้ตอนผูกบัญชี
+      · <b>แผนก</b> เลือกจากรายชื่อที่มี หรือ <b>อื่น ๆ — พิมพ์เอง</b> · <b>ระดับ</b>: HR เลือกได้ พนักงาน / พนักงานพิเศษ / หัวหน้างาน (สร้าง HR หรือผู้บริหารต้องให้ผู้บริหารทำ)</small></li>
+    <li><b>ตั้งสายอนุมัติ (เว้นว่างได้)</b><small><b>หัวหน้างาน</b> พิมพ์ชื่อหรือรหัสแล้วเลือกจากรายชื่อที่ระบบแนะนำ · <b>ผู้บริหารในสาย</b> ติ๊กได้หลายคน</small></li>
+    <li><b>กด "ตรวจสอบข้อมูลก่อนสร้าง" → ตรวจ → "ยืนยันสร้างพนักงาน"</b><small>ระบบกันรหัสพนักงานซ้ำ (ไม่สร้างแถวใหม่ และบอกว่ารหัสนี้เป็นของใคร)
+      ถ้าชื่อซ้ำกับคนเดิมจะเตือนก่อน และปุ่มเปลี่ยนเป็น <b>ยืนยันสร้าง แม้ชื่อซ้ำ</b></small></li>
+    <li><b>ส่งข้อความเชิญให้พนักงาน</b><small>หน้าผลลัพธ์มี <b>รหัสจับคู่สำรอง 6 หลัก</b> และข้อความเชิญ กด <b>คัดลอกข้อความเชิญ</b> แล้ววางในแชทถึงพนักงาน</small></li>
+  </ol>
+  <div class="figs two">
+    <figure class="tall"><img src="img/hr-08-new-form.jpg" alt="ฟอร์มสร้างพนักงาน">
+      <figcaption><b>ฟอร์ม</b> — ข้อมูลในภาพเป็นตัวอย่าง</figcaption></figure>
+    <figure><img src="img/hr-09-new-preview.jpg" alt="ตรวจสอบก่อนสร้าง">
+      <figcaption><b>ตรวจสอบก่อนสร้าง</b> — ยังไม่บันทึกจนกว่าจะกดยืนยัน กด <b>กลับไปแก้ไข</b> ได้</figcaption></figure>
+  </div>
+  <figure class="tall"><img src="img/hr-10-new-done.jpg" alt="สร้างเรียบร้อย">
+    <figcaption><b>สร้างเรียบร้อย</b> — สถานะ <b>รอผูกบัญชี</b> ระบบสร้างโควตาปีนี้ให้แล้ว · พนักงานผูกด้วยรหัสพนักงาน + ชื่อได้ทันที ใช้รหัส 6 หลักเฉพาะเมื่อผูกเองไม่ผ่าน</figcaption></figure>
+  <div class="alert warn">
+    <h3>ข้อความเชิญเขียนว่า "กดเมนู ผูกบัญชี"</h3>
+    <p>เมนูด้านล่างแชทไม่มีปุ่มชื่อนั้น — ให้บอกพนักงานเพิ่มว่า <b>กดเมนู "ส่งใบลา" แล้วกดปุ่ม "ผูกบัญชีของฉัน"</b>
+    หรือกดปุ่มในข้อความต้อนรับที่ไลน์ส่งมาตอนเพิ่มเพื่อน</p>
+  </div>
+  <p class="note">นำเข้าพนักงานทั้งบริษัทจากไฟล์ทะเบียนเป็นงานของผู้ดูแลระบบ ไม่มีปุ่มในหน้าจอ — คนที่นำเข้ามาจะมีสถานะรอผูกบัญชีเหมือนกัน</p>
+</section>
+
+<section id="s5">
+  <div class="sec-head"><span class="sec-num">05</span><h2>รหัสจับคู่ 6 หลัก (ทางสำรองผูกบัญชี)</h2></div>
+  <p class="note">ใช้เมื่อพนักงานผูกด้วยรหัสพนักงาน + ชื่อไม่ผ่าน (เช่น ชื่อในทะเบียนสะกดไม่ตรง)</p>
+  <ol class="steps">
+    <li><b>ฐานข้อมูลพนักงาน → กรอง "ยังไม่ผูกไลน์" → กด "ออกรหัส" ที่ชื่อคนนั้น</b><small>ได้รหัส 6 หลัก วันเวลาหมดอายุ และข้อความเชิญ (กดซ้ำได้ ปุ่มเปลี่ยนเป็น <b>ออกรหัสใหม่</b>)</small></li>
+    <li><b>กด "คัดลอกข้อความเชิญ" ส่งให้พนักงานทางแชท</b><small>รหัสมีอายุ 24 ชั่วโมง (ค่าตั้งต้น) หมดอายุแล้วออกใหม่ได้</small></li>
+    <li><b>พนักงานกรอกรหัสในหน้าผูกบัญชี</b><small>หัวข้อ <b>ผูกไม่ได้ / ได้รับรหัส 6 หลักจากฝ่ายบุคคล</b> → <b>ใช้รหัสจับคู่</b></small></li>
+    <li><b>HR กดอนุมัติ</b><small>หน้าจัดการ → แท็บ <b>พนักงาน</b> → คนที่สถานะ <b>รออนุมัติ</b> → <b>แก้ไข</b> → <b>อนุมัติ</b> (หรือ <b>ปฏิเสธ</b>)
+      — ดูจำนวนที่รอได้ที่ <b>รอ HR อนุมัติ register</b> ในกล่องสรุประบบ</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/hr-07-issue-code.jpg" alt="ออกรหัสจับคู่">
+      <figcaption><b>ออกรหัสแล้ว</b> — รหัสในภาพเป็นตัวอย่าง</figcaption></figure>
+    <figure><img src="img/hr-05-register-approve.jpg" alt="อนุมัติลงทะเบียน">
+      <figcaption><b>คนที่ใช้รหัสแล้ว</b> — สถานะรออนุมัติ กด <b>อนุมัติ</b> แล้วพนักงานส่งใบลาได้</figcaption></figure>
+  </div>
+  <div class="alert warn">
+    <h3>เมื่อพนักงานทั่วไปใช้รหัสจับคู่ HR ไม่ได้การ์ดแจ้งในไลน์</h3>
+    <p>หลังส่งรหัสให้ใคร ให้กลับมาดูตัวเลข <b>รอ HR อนุมัติ register</b> ในหน้าจัดการ หรือแท็บพนักงาน แล้วกดอนุมัติ
+    (กรณีรหัสของคนระดับ HR / ผู้บริหาร ผู้บริหารจะได้การ์ดแจ้งให้ยืนยัน)</p>
+  </div>
+  <p class="note">พาพนักงานเข้าระบบครบทั้งบริษัทแล้ว ควรปิดการผูกบัญชีด้วยตัวเอง โดยตั้ง <b>self_claim_enabled</b> = <b>FALSE</b> ในชีต Settings
+  หลังจากนั้นคนใหม่ผูกได้ทางรหัสจับคู่อย่างเดียว (กันคนนอกเดารหัสพนักงาน + ชื่อ)</p>
+</section>
+
+<!-- ==== ส่วนผังอำนาจอนุมัติ: ถ้ากติกาชั้น 3 เปลี่ยน แก้ที่ section#s6 ==== -->
+<section id="s6">
+  <div class="sec-head"><span class="sec-num">06</span><h2>ผังอำนาจอนุมัติ</h2></div>
+  <p class="note">หน้าจัดการ → <b>ผังอำนาจอนุมัติ</b> (หรือแตะแถวในฐานข้อมูลพนักงาน) — ตั้งว่าใบลาของพนักงานแต่ละคนวิ่งไปหาใคร</p>
+  <ol class="steps">
+    <li><b>เลือกพนักงาน</b><small>ใต้ช่องบอกระดับ แผนก และว่าผูกไลน์แล้วหรือยัง</small></li>
+    <li><b>หัวหน้างาน (ผู้อนุมัติชั้น 1)</b><small>เลือกได้ 1 คน หรือ <b>ไม่มี — ใบลาเข้า HR โดยตรง</b> · เลือกผู้บริหารเป็นหัวหน้างานได้ = ผู้บริหารอนุมัติในนามหัวหน้างาน</small></li>
+    <li><b>ผู้บริหาร (ผู้อนุมัติชั้น 3)</b><small>ติ๊กได้หลายคน ใบลาชั้น 3 เข้าเฉพาะคนที่ติ๊ก คนไหนกดก่อนถือว่าจบ — ไม่ติ๊กใครเลย = ส่งให้ผู้บริหารทุกคน</small></li>
+    <li><b>ตรวจกล่องสรุป แล้วกด "บันทึกสายอนุมัติ"</b><small>พนักงานคนนั้นได้การ์ดแจ้งว่าใบลาจะวิ่งไปหาใคร · <b>ยกเลิกการแก้</b> = กลับไปค่าที่บันทึกไว้</small></li>
+  </ol>
+  <figure class="tall"><img src="img/hr-11-chain.jpg" alt="ตั้งสายอนุมัติ">
+    <figcaption><b>ตั้งสายอนุมัติให้พนักงาน</b> — กล่องชมพูสรุป ชั้น 1 / ชั้น 2 (HR ทุกคน) / ชั้น 3 ก่อนกดบันทึก</figcaption></figure>
+  <ul class="plain">
+    <li>เปลี่ยนผังแล้ว ใบที่ค้างอยู่ระบบปรับเส้นทางให้เอง (เช่น เปลี่ยนจากผู้บริหารเป็นหัวหน้าทั่วไป ใบกลับมาผ่าน HR ตามปกติ)</li>
+    <li>คนที่ถูกตั้งเป็นผู้บริหารในสายต้องมีระดับ <b>ผู้บริหาร</b> ก่อน · ตั้งตัวเองเป็นผู้อนุมัติของตัวเองไม่ได้</li>
+    <li>แท็บ <b>หัวหน้างาน</b> ในหน้าจัดการ (<b>+ ผูกหัวหน้างาน → ลูกน้อง</b> / <b>เลิกผูก</b>) แก้ชั้น 1 ได้เหมือนกัน แต่หน้านี้ครบกว่า แนะนำใช้หน้านี้</li>
+    <li>ลำดับขั้นทั้งหมดและกรณีพิเศษอธิบายไว้ใน <b>คู่มือผู้อนุมัติ หัวข้อ 1</b></li>
+  </ul>
+</section>
+<!-- ==== จบส่วนผังอำนาจอนุมัติ ==== -->
+
+<section id="s7">
+  <div class="sec-head"><span class="sec-num">07</span><h2>กฎการลา (เงื่อนไขแต่ละประเภท)</h2></div>
+  <p class="note">หน้าจัดการ → แท็บ <b>กฎ</b> — กฎที่นี่คือสิ่งที่พนักงานเห็นในขั้นที่ 1 ของการส่งใบลา และระบบใช้ตรวจตอนกดส่ง</p>
+  <div class="figs two">
+    <figure class="tall"><img src="img/hr-12-rules.jpg" alt="แท็บกฎ">
+      <figcaption><b>แท็บกฎ</b> — สรุปของแต่ละประเภท กด <b>แก้ไข</b> หรือ <b>+ เพิ่มกฎใหม่</b></figcaption></figure>
+    <figure><img src="img/hr-13-rule-edit.jpg" alt="แก้ไขกฎ">
+      <figcaption><b>แก้ไขกฎ</b> — HR บันทึกแล้วต้องรอผู้บริหารอนุมัติ</figcaption></figure>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ช่อง</th><th>ระบบใช้ยังไง</th></tr></thead>
+    <tbody>
+      <tr><td>แจ้งล่วงหน้า (วัน)</td><td>วันเริ่มลาต้องห่างจากวันนี้อย่างน้อยเท่านี้ ไม่ทัน = ต้องติ๊กฉุกเฉิน · <b>ลาป่วยยกเว้น</b> — ป่วยวันนี้หรือย้อนหลังส่งได้เลยไม่ต้องติ๊ก</td></tr>
+      <tr><td>ลาติดกันได้สูงสุด (วัน)</td><td>0 = ไม่จำกัด</td></tr>
+      <tr><td>ต้องแนบเอกสารถ้าลาเกิน (วัน)</td><td>ระบบนับแบบ <b>ตั้งแต่</b> จำนวนนี้ขึ้นไป (ตั้ง 3 = ลา 3 วันก็ต้องแนบ) · ลาป่วยส่งก่อนแนบทีหลังได้ ประเภทอื่นต้องแนบตอนส่ง · 0 = ไม่บังคับ</td></tr>
+      <tr><td>ติ๊ก "ยื่นไม่ทันกำหนดแล้วติ๊กเป็นกรณีฉุกเฉิน…"</td><td>ไม่ติ๊ก = ประเภทนั้นยื่นไม่ทันคือส่งไม่ได้เลย</td></tr>
+      <tr><td>หมายเหตุ (แสดงในหน้าลา)</td><td>ข้อความที่พนักงานเห็นใต้เงื่อนไข — แก้ให้ตรงกับตัวเลขจริงเสมอ</td></tr>
+      <tr><td>ใช้งาน</td><td>เอาติ๊กออก = ปิดกฎนั้น</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">กฎตั้งต้น: ลาป่วยแจ้งล่วงหน้า 1 วัน (กะทันหันส่งได้) แนบใบแพทย์ตั้งแต่ 3 วัน · ลากิจ 3 วัน · ลาพักร้อน 7 วัน ·
+  ลาคลอด 3 วัน · ลาช่วยภรรยาดูแลบุตร / ลาเพื่อทำหมัน / ลาเพื่อรับราชการทหาร 7 วัน · ลาเพื่อรับการฝึกอบรม 3 วัน · ลาอุปสมบท 15 วัน
+  — ลาย้อนหลังได้เฉพาะลาป่วยและลาคลอด (ฝังในระบบ ไม่ได้ตั้งที่กฎ)</p>
+</section>
+
+<section id="s8">
+  <div class="sec-head"><span class="sec-num">08</span><h2>โควตาวันลา</h2></div>
+  <ul class="plain">
+    <li>ทุกคนมีโควตาต่อปีปฏิทิน 3 ประเภท: <b>ลาป่วย · ลากิจ · ลาพักร้อน</b> (ลาอื่น ๆ ตามกฎหมายไม่หักโควตา)</li>
+    <li>ค่าตั้งต้นของคนใหม่มาจาก Settings: ลาป่วย 30 · ลากิจ 6 · ลาพักร้อน 10 วัน/ปี</li>
+    <li><b>คงเหลือ = โควตาทั้งปี − ใช้ไปแล้ว − รออนุมัติ</b> · ส่งใบ = กันวันไว้ · อนุมัติครบ = หักจริง · ปฏิเสธ/ถอน = คืน · ยกเลิกที่อนุมัติแล้ว = คืน</li>
+    <li>ลาเป็นชั่วโมงหักเป็นเศษวัน (8 ชั่วโมง = 1 วัน ค่าตั้งต้น) · ใบลาหักโควตาของ <b>ปีของวันเริ่มลา</b></li>
+  </ul>
+  <ol class="steps">
+    <li><b>หน้าจัดการ → แท็บ "โควตา" → แตะชื่อพนักงาน</b><small>กล่อง <b>โควตาวันลา</b> ตั้งโควตาปีปัจจุบัน</small></li>
+    <li><b>กรอกให้ครบทั้ง 3 ช่อง แล้วกด "บันทึก"</b><small>ช่องว่างจะถูกบันทึกเป็น 0 — กล่องนี้ไม่แสดงค่าเดิมให้ ต้องพิมพ์ใหม่ทุกช่อง · HR บันทึกแล้วรอผู้บริหารอนุมัติ พนักงานได้การ์ดแจ้งเมื่อมีผล</small></li>
+  </ol>
+  <figure><img src="img/hr-14-quota-edit.jpg" alt="ตั้งโควตา">
+    <figcaption><b>ตั้งโควตารายคน</b> — แถบเหลืองเตือนว่า HR ต้องรอผู้บริหารอนุมัติ</figcaption></figure>
+</section>
+
+<section id="s9">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Settings และแท็บ "รออนุมัติ" (ผู้บริหาร)</h2></div>
+  <p class="note">แท็บ <b>Settings</b> ทุกช่องขึ้นว่า <b>(ไม่เปลี่ยน)</b> — กรอกเฉพาะช่องที่จะเปลี่ยน แล้วกด <b>บันทึก</b> ช่องที่เว้นว่างไม่ถูกแตะ
+  (หน้านี้ไม่แสดงค่าปัจจุบัน ดูค่าปัจจุบันได้ในชีต Settings หัวข้อ 12)</p>
+  <div class="figs two">
+    <figure class="tall"><img src="img/hr-15-settings.jpg" alt="แท็บ Settings">
+      <figcaption><b>แท็บ Settings</b> — ช่อง <b>จำนวนชั้นอนุมัติ (1-3)</b> ไม่มีผลกับระบบปัจจุบัน ไม่ต้องแก้</figcaption></figure>
+    <figure><img src="img/hr-16-owner-pending.jpg" alt="แท็บรออนุมัติ">
+      <figcaption><b>แท็บรออนุมัติ (เห็นเฉพาะผู้บริหาร)</b> — ข้อเสนอที่ HR ส่งมา กด <b>อนุมัติ</b> = มีผลทันที / <b>ปฏิเสธ</b></figcaption></figure>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>อ่านการ์ดในแท็บรออนุมัติ</th><th>หมายถึง</th></tr></thead>
+    <tbody>
+      <tr><td><span class="kbd">LeaveQuota · update</span></td><td>HR ขอตั้งโควตา — ในกรอบ user_id = รหัสระบบของพนักงาน (EMP-xxxx), sick/personal/vacation_total = ลาป่วย/ลากิจ/ลาพักร้อน</td></tr>
+      <tr><td><span class="kbd">LeaveRules</span></td><td>HR ขอเพิ่มหรือแก้กฎการลา</td></tr>
+      <tr><td><span class="kbd">Settings · update</span></td><td>HR ขอแก้ค่าใน Settings ชื่อในกรอบคือชื่อค่าในชีต Settings</td></tr>
+      <tr><td>เสนอโดย EMP-xxxx</td><td>รหัสระบบของ HR ผู้เสนอ ดูชื่อได้จากฐานข้อมูลพนักงาน/ชีต Users</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s10">
+  <div class="sec-head"><span class="sec-num">10</span><h2>รายงานการลา</h2></div>
+  <ol class="steps">
+    <li><b>หน้าจัดการ → แท็บ "รายงาน" → ปุ่ม "รายงาน / ส่งออกสถิติการลา…"</b><small>หรือปุ่ม <b>รายงานการลา</b> ในหน้าฐานข้อมูลพนักงาน</small></li>
+    <li><b>เลือกช่วงเวลา</b><small><b>รายวัน</b> · <b>รายเดือน</b> · <b>กำหนดเอง</b> (ตั้งแต่วันที่ – ถึงวันที่)</small></li>
+    <li><b>เลือกขอบเขตพนักงาน</b><small><b>ทั้งหมด</b> · <b>เลือกแผนก</b> · <b>เลือกคน</b></small></li>
+    <li><b>กด "ดูรายงาน"</b><small>ได้ 2 ตาราง: <b>สรุปรายบุคคล</b> (วันลาแต่ละประเภท ชั่วโมง ครั้งที่ฉุกเฉิน จำนวนใบ) และ <b>รายละเอียดใบลา</b></small></li>
+    <li><b>กด "ดาวน์โหลดไฟล์ Excel (CSV)"</b><small>ระบบสร้างไฟล์ CSV เก็บใน Google Drive ของระบบ (โฟลเดอร์ reports) แล้วเปิดลิงก์ไฟล์ให้ เปิดด้วย Excel หรือ Google Sheets ได้</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/hr-17-report.jpg" alt="ตัวเลือกรายงาน">
+      <figcaption><b>ตัวเลือกรายงาน</b> — ข้อมูลเข้างาน/ออกงาน/มาสายไม่มีในระบบลางาน</figcaption></figure>
+    <figure><img src="img/hr-18-report-result.jpg" alt="ผลรายงาน">
+      <figcaption><b>สรุปรายบุคคล</b> — บนมือถือเลื่อนตารางซ้าย-ขวาเพื่อดูคอลัมน์ที่เหลือ</figcaption></figure>
+  </div>
+  <ul class="plain">
+    <li>รายงานนับใบที่ <b>อนุมัติแล้ว</b> และ <b>รออนุมัติ</b> (ไม่นับที่ปฏิเสธ/ถอน/ยกเลิก) · ใบที่คร่อมช่วงรายงาน นับเฉพาะวันที่อยู่ในช่วง</li>
+    <li>ไฟล์ CSV ที่สร้าง <b>ใครมีลิงก์ก็เปิดดูได้</b> — ส่งลิงก์ให้เฉพาะคนที่ควรเห็น</li>
+    <li>แท็บ <b>รายงาน</b> ในหน้าจัดการยังมีรายการใบลาแบบกรองสถานะ (ทั้งหมด / รออนุมัติ / อนุมัติแล้ว / ปฏิเสธ) กด <b>ค้นหา</b> ใช้ดูเร็ว ๆ ได้</li>
+  </ul>
+</section>
+
+<section id="s11">
+  <div class="sec-head"><span class="sec-num">11</span><h2>ส่งมอบระบบ — ระบบประกอบด้วยอะไร</h2></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ส่วน</th><th>ทำหน้าที่</th><th>ข้อมูลอยู่ที่ไหน / เข้าถึงยังไง</th></tr></thead>
+    <tbody>
+      <tr><td><b>LINE Official Account</b> @966nnfkr</td><td>ช่องทางเดียวที่พนักงานใช้ — เมนูด้านล่างแชท 5 ปุ่ม และการ์ดแจ้งเตือนทุกชนิด</td>
+        <td>จัดการที่ LINE Official Account Manager ด้วยบัญชีไลน์ของผู้ดูแล OA (เมนู แพ็กเกจข้อความ สมาชิก) · ตั้งค่าเชื่อมระบบอยู่ใน LINE Developers ช่องเดียวกัน</td></tr>
+      <tr><td><b>หน้าเว็บในไลน์</b></td><td>หน้าจอทุกหน้าในคู่มือ (ส่งใบลา อนุมัติ จัดการ ฯลฯ) เปิดผ่านไลน์เท่านั้น</td>
+        <td>เป็นหน้าเว็บ ไม่เก็บข้อมูลพนักงานในตัว ข้อมูลทุกอย่างอ่าน/เขียนผ่านตัวกลางไปที่ Google Sheet</td></tr>
+      <tr><td><b>ตัวกลาง (Google Apps Script)</b></td><td>สมองของระบบ — ตรวจสิทธิ์ ตรวจเงื่อนไข ส่งการ์ดไลน์ เตือนซ้ำทุกชั่วโมง รีเซ็ตโควตาทุกต้นปี</td>
+        <td>อยู่ในบัญชี Google ที่ติดตั้งระบบ เก็บกุญแจเชื่อมไลน์ไว้ข้างใน — ไม่ต้องเข้าไปแก้ ถ้าจะแก้ให้ติดต่อผู้พัฒนา</td></tr>
+      <tr><td><b>Google Sheet</b> "mena-leave - Database"</td><td>ฐานข้อมูลทั้งหมด: พนักงาน ผังอำนาจ ใบลา โควตา กฎ ค่าตั้ง ประวัติ</td>
+        <td>เปิดด้วย Google Sheets ของบัญชีที่ได้รับแชร์ · แต่ละแท็บเก็บอะไรดูหัวข้อ 12 · แชร์ให้เฉพาะคนที่ต้องดูแล เพราะมีข้อมูลส่วนตัวพนักงาน</td></tr>
+      <tr><td><b>Google Drive</b> โฟลเดอร์ "mena-leave - Storage"</td><td>เก็บรูปที่แนบใบลา (โฟลเดอร์ย่อย <b>leave-proofs</b>) และไฟล์รายงาน CSV (<b>reports</b>)</td>
+        <td>ไฟล์แต่ละไฟล์เปิดได้ด้วยลิงก์ (เพื่อให้รูปขึ้นในการ์ดไลน์) — อย่าแชร์ลิงก์โฟลเดอร์ทั้งโฟลเดอร์ให้คนนอก · ห้ามย้ายหรือเปลี่ยนชื่อโฟลเดอร์</td></tr>
+    </tbody>
+  </table></div>
+  <div class="alert">
+    <h3>สิ่งที่ห้ามทำ เพราะทำให้ระบบหยุดทั้งบริษัท</h3>
+    <p>ลบหรือเปลี่ยนชื่อแท็บในชีต · ลบ/สลับหัวคอลัมน์แถวแรก · ลบชีตหรือโฟลเดอร์ Drive ของระบบ · เปลี่ยนเจ้าของไฟล์โดยไม่แจ้งผู้พัฒนา ·
+    ลบบัญชีไลน์ OA หรือเปลี่ยนเมนูด้านล่างแชทเอง</p>
+  </div>
+</section>
+
+<section id="s12">
+  <div class="sec-head"><span class="sec-num">12</span><h2>ฐานข้อมูล Google Sheet — แท็บไหนเก็บอะไร</h2></div>
+  <p class="note">ชีตมี 11 แท็บ ชื่อแท็บและหัวคอลัมน์เป็นภาษาอังกฤษตามที่ระบบใช้ ห้ามเปลี่ยน · ป้ายในตาราง:
+  <span class="chip ok">แก้มือได้</span> แก้ในชีตได้เลย ระบบอ่านค่าใหม่เอง ·
+  <span class="chip warn">แก้ได้บางช่อง</span> ·
+  <span class="chip crit">ห้ามแก้มือ</span> แก้ผ่านหน้าจอเท่านั้น (ข้อมูลผูกกันหลายแท็บ แก้ช่องเดียวตัวเลขจะเพี้ยน)</p>
+
+  <h3>แท็บไหนอ้างถึงแท็บไหน</h3>
+  <div class="chain">Users.user_id (EMP-xxxx)  ←  Approvers.user_id / approver_user_id
+                      ←  LeaveRequests.user_id · stage1_by / stage2_by / stage3_by
+                      ←  LeaveQuota.user_id  (1 คน 1 แถวต่อปี)
+                      ←  Pairing_Codes.for_user_id
+LeaveRequests.leave_id (LV-…)  ←  LeaveRequests.parent_leave_id  (ใบขอยกเลิกชี้กลับใบลาเดิม)
+LeaveRules.leave_type  ↔  LeaveRequests.leave_type  (เงื่อนไขของประเภทลา)
+Settings  →  ค่าตั้งที่ทุกส่วนอ่าน  ·  Audit_Log / Logs  →  บันทึกอย่างเดียว</div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>แท็บ</th><th>เก็บอะไร · 1 แถว = อะไร</th><th>คอลัมน์สำคัญ</th><th>แก้มือ</th></tr></thead>
+    <tbody>
+      <tr><td class="nw"><b>Users</b></td><td>ทะเบียนพนักงาน · 1 แถว = พนักงาน 1 คน</td>
+        <td><code>user_id</code> รหัสระบบ EMP-xxxx (คนละอันกับรหัสพนักงาน) · <code>emp_code</code> รหัสพนักงานของบริษัท · <code>display_name</code> ชื่อ-นามสกุล (ใช้จับคู่ตอนผูกบัญชี) ·
+        <code>department</code> <code>position</code> <code>phone</code> <code>email</code> ·
+        <code>role</code> ระดับ: USER=พนักงาน · SPECIAL=พนักงานพิเศษ · SUPERVISOR=หัวหน้างาน · ADMIN=HR · OWNER=ผู้บริหาร ·
+        <code>status</code>: active=ใช้งาน · invited=รอผูกบัญชี · pending=ใช้รหัสจับคู่แล้วรออนุมัติ · inactive=พ้นสภาพ ·
+        <code>is_supervisor</code> TRUE = เป็นหัวหน้างาน · <code>line_user_id</code> บัญชีไลน์ที่ผูก (ว่าง = ยังไม่ผูก)</td>
+        <td><span class="chip warn">บางช่อง</span><br>แก้ได้: ชื่อ แผนก ตำแหน่ง เบอร์ อีเมล รหัสพนักงาน (ห้ามซ้ำ) · ห้ามแก้: user_id, line_user_id, role, status, is_supervisor (ใช้หน้าจอ)</td></tr>
+      <tr><td class="nw"><b>Approvers</b></td><td>ผังอำนาจอนุมัติ · 1 แถว = ผู้อนุมัติ 1 คนของพนักงาน 1 คนในชั้นหนึ่ง</td>
+        <td><code>user_id</code> พนักงาน · <code>approver_user_id</code> ผู้อนุมัติ · <code>level</code> 1 = หัวหน้างาน · 3 = ผู้บริหาร (ชั้น HR ไม่เก็บที่นี่) ·
+        <code>valid_to</code> ว่าง = ใช้อยู่ · มีวันที่ = เลิกใช้แล้ว (เก็บเป็นประวัติ)</td>
+        <td><span class="chip crit">ห้ามแก้มือ</span><br>ใช้หน้าผังอำนาจอนุมัติ — หน้าจอปรับใบที่ค้างอยู่ให้ด้วย</td></tr>
+      <tr><td class="nw"><b>LeaveRequests</b></td><td>ใบลาทุกใบ · 1 แถว = ใบลา 1 ใบ หรือใบขอยกเลิก 1 ใบ</td>
+        <td><code>leave_id</code> เลขที่ LV-ปีเดือนวัน-ลำดับ · <code>record_type</code> leave=ใบลา · cancel=ใบขอยกเลิก (ชี้ใบเดิมที่ <code>parent_leave_id</code>) ·
+        <code>leave_type</code> sick=ลาป่วย · personal=ลากิจ · vacation=ลาพักร้อน · maternity · paternity · sterilization · military · training · ordination = ลาอื่น ๆ ตามกฎหมาย ·
+        <code>date_from</code> <code>date_to</code> · <code>days</code> วันที่หัก (ลาชั่วโมงเป็นเศษ) · <code>leave_unit</code> day/hour + <code>time_from</code> <code>time_to</code> <code>hours</code> ·
+        <code>reason</code> (ลาแทนจะมี "(ลาแทนโดย …)") · <code>stage1_status</code>…<code>stage3_status</code>: pending=รอ · approved=อนุมัติ · rejected=ไม่อนุมัติ · skipped=ข้าม · withdrawn=ถอน ·
+        <code>stage1_by/_at/_note</code> ใครตัดสิน เมื่อไหร่ หมายเหตุ ·
+        <code>final_status</code>: pending · approved · rejected · withdrawn=ผู้ลาถอน · cancelled=ยกเลิกหลังอนุมัติ ·
+        <code>is_emergency</code> <code>emergency_reason</code> แจ้งไม่ทัน/ลากะทันหัน · <code>gps_missing_reason</code> ไม่ว่าง = ไม่มีพิกัด ·
+        <code>attachment_url</code> รูปตอนส่ง · <code>extra_attachments</code> รูปที่แนบเพิ่ม · <code>doc_pending</code> ลาป่วยรอใบแพทย์ ·
+        <code>doc_request_status</code> requested=ขอเอกสารอยู่ · submitted=ผู้ลาแนบแล้ว · closed=ปิด · <code>reminder_count</code> ถูกเตือนกี่ครั้ง · <code>hr_fallback</code> TRUE = HR ตัดสินแทนผู้บริหาร</td>
+        <td><span class="chip crit">ห้ามแก้มือ</span><br>สถานะผูกกับโควตาที่กันไว้ แก้เองแล้วโควตาเพี้ยน · อ่านอย่างเดียว</td></tr>
+      <tr><td class="nw"><b>LeaveQuota</b></td><td>โควตาวันลา · 1 แถว = พนักงาน 1 คนใน 1 ปี (<code>quota_id</code> = Q-ปี-EMP-xxxx)</td>
+        <td><code>year</code> · <code>sick_total</code> <code>personal_total</code> <code>vacation_total</code> โควตาทั้งปี ·
+        <code>*_used</code> ใช้ไปแล้ว (อนุมัติครบ) · <code>*_reserved</code> กันไว้ให้ใบที่รออนุมัติ ·
+        <b>คงเหลือที่พนักงานเห็น = total − used − reserved</b> (ไม่ติดลบ)</td>
+        <td><span class="chip warn">บางช่อง</span><br>แก้ได้: *_total (แนะนำแก้ผ่านแท็บโควตา) · ห้ามแก้: *_used, *_reserved, user_id, year</td></tr>
+      <tr><td class="nw"><b>LeaveRules</b></td><td>เงื่อนไขการลา · 1 แถว = กฎของประเภทลา 1 ประเภท (หรือ all = ทุกประเภท)</td>
+        <td><code>advance_notice_days</code> แจ้งล่วงหน้า · <code>max_consecutive_days</code> ลาติดกันสูงสุด (0=ไม่จำกัด) ·
+        <code>doc_required_above_days</code> ตั้งแต่กี่วันต้องแนบเอกสาร (0=ไม่บังคับ) · <code>note</code> ข้อความที่พนักงานเห็น ·
+        <code>is_active</code> · <code>allow_emergency</code> ยื่นไม่ทันติ๊กฉุกเฉินได้ไหม</td>
+        <td><span class="chip ok">แก้มือได้</span><br>ตัวเลข/ข้อความ/TRUE-FALSE · ห้ามแก้ rule_id, leave_type · แนะนำแก้ผ่านแท็บกฎเพื่อมีบันทึก</td></tr>
+      <tr><td class="nw"><b>Settings</b></td><td>ค่าตั้งของระบบ · 1 แถว = ค่า 1 ตัว (<code>key</code> ชื่อค่า · <code>value</code> ค่า · <code>note</code> คำอธิบาย)</td>
+        <td>ดูตารางค่าสำคัญด้านล่าง</td>
+        <td><span class="chip ok">แก้มือได้</span><br>แก้เฉพาะช่อง value · มีผลภายใน 5 นาที</td></tr>
+      <tr><td class="nw"><b>Pairing_Codes</b></td><td>รหัสจับคู่ 6 หลัก · 1 แถว = รหัสที่ออก 1 ครั้ง</td>
+        <td><code>code</code> · <code>for_user_id</code> ของใคร · <code>expires_at</code> หมดอายุ · <code>status</code>: active=ยังใช้ได้ · redeemed=ใช้แล้ว · expired=หมดอายุ</td>
+        <td><span class="chip crit">ห้ามแก้มือ</span><br>ออกรหัสใหม่จากหน้าจอแทน</td></tr>
+      <tr><td class="nw"><b>Pending_Changes</b></td><td>สิ่งที่ HR ขอเปลี่ยน รอผู้บริหาร · 1 แถว = ข้อเสนอ 1 ครั้ง</td>
+        <td><code>target_entity</code> เรื่องอะไร (LeaveQuota / LeaveRules / Settings) · <code>payload_json</code> ค่าที่ขอ · <code>status</code>: pending · approved · rejected · <code>decided_by</code></td>
+        <td><span class="chip crit">ห้ามแก้มือ</span><br>อนุมัติที่แท็บรออนุมัติ</td></tr>
+      <tr><td class="nw"><b>Audit_Log</b></td><td>ประวัติการกระทำ · 1 แถว = 1 การกระทำ (ใคร ทำอะไร กับอะไร เมื่อไหร่)</td>
+        <td><code>timestamp</code> · <code>actor_user_id</code> · <code>action</code> เช่น leave_submit · leave_approve_s1 · set_quota · <code>target_id</code></td>
+        <td><span class="chip crit">ห้ามแก้มือ</span><br>หลักฐานย้อนหลัง ห้ามลบ</td></tr>
+      <tr><td class="nw"><b>Logs</b></td><td>บันทึกการทำงาน/ข้อผิดพลาดของระบบ สำหรับผู้พัฒนาไล่ปัญหา</td>
+        <td><code>level</code> INFO / WARN / ERROR · <code>message</code></td>
+        <td><span class="chip ok">ไม่ต้องแตะ</span><br>ลบแถวเก่ามาก ๆ ได้ถ้าชีตใหญ่</td></tr>
+      <tr><td class="nw"><b>Supervisors</b></td><td>ผังหัวหน้างานแบบเก่า เลิกใช้แล้ว (ย้ายไป Approvers) เก็บไว้ดูย้อนหลัง</td>
+        <td>—</td><td><span class="chip crit">ห้ามแก้มือ</span><br>แก้แล้วไม่มีผล</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>ค่าใน Settings ที่ HR อาจต้องแก้</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>key</th><th>ค่าตั้งต้น</th><th>ใช้ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><code>default_sick_total</code> / <code>default_personal_total</code> / <code>default_vacation_total</code></td><td class="nw">30 / 6 / 10</td><td>โควตาที่ให้คนใหม่ และใช้สร้างโควตาปีใหม่ทุก 1 ม.ค.</td></tr>
+      <tr><td><code>work_days</code></td><td>1,2,3,4,5,6</td><td>วันทำงาน 1=จันทร์ … 7=อาทิตย์ — วันนอกนี้ไม่นับเป็นวันลา และไม่นับเวลาเตือน</td></tr>
+      <tr><td><code>count_weekends_as_leave</code></td><td>FALSE</td><td>TRUE = นับวันหยุดเป็นวันลาด้วย</td></tr>
+      <tr><td><code>work_start</code> / <code>work_end</code></td><td>08:30 / 17:30</td><td>เวลางาน — ใช้กับลาเป็นชั่วโมงและนับเวลาเตือนซ้ำ</td></tr>
+      <tr><td><code>hours_per_day</code> · <code>lunch_start</code> / <code>lunch_end</code> · <code>hourly_leave_types</code></td><td>8 · 12:00/13:00 · sick,personal,vacation</td><td>ลาเป็นชั่วโมง: กี่ชั่วโมง = 1 วัน · ช่วงพักไม่นับ · ประเภทที่ลาชั่วโมงได้</td></tr>
+      <tr><td><code>reminder_hours</code> · <code>reminder_enabled</code></td><td>4 · TRUE</td><td>เงียบกี่ชั่วโมงทำงานถึงเตือนซ้ำ · FALSE = ปิดการเตือนทั้งระบบ</td></tr>
+      <tr><td><code>emergency_reason_min</code></td><td>10</td><td>เหตุผลกรณีฉุกเฉินขั้นต่ำกี่ตัวอักษร</td></tr>
+      <tr><td><code>gps_required</code></td><td>TRUE</td><td>FALSE = ไม่บังคับเหตุผลเมื่อเปิด GPS ไม่ได้</td></tr>
+      <tr><td><code>self_claim_enabled</code></td><td>TRUE</td><td>FALSE = ปิดการผูกบัญชีด้วยรหัสพนักงาน + ชื่อ (เหลือรหัสจับคู่อย่างเดียว)</td></tr>
+      <tr><td><code>pairing_code_ttl_hours</code></td><td>24</td><td>อายุรหัสจับคู่ (ชั่วโมง)</td></tr>
+      <tr><td><code>quota_reset_month</code> / <code>quota_reset_day</code></td><td>1 / 1</td><td>วันที่ระบบสร้างโควตาปีใหม่</td></tr>
+      <tr><td><code>support_line_id</code> / <code>support_phone</code></td><td>@966nnfkr / ว่าง</td><td>ช่องทางติดต่อ HR ที่โชว์ในหน้าคู่มือ</td></tr>
+      <tr><td><code>brand_name</code> · <code>brand_logo_url</code> · <code>brand_color_primary</code> / <code>brand_color_tint</code></td><td>MENA COSMETICS</td><td>ชื่อ โลโก้ สีบนการ์ดไลน์</td></tr>
+      <tr><td><code>approval_levels</code> · <code>approval_stage1_role</code>… · <code>attachment_required_above_days</code></td><td>—</td><td><b>ไม่มีผลกับระบบปัจจุบัน</b> ไม่ต้องแก้</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s13">
+  <div class="sec-head"><span class="sec-num">13</span><h2>งานที่ต้องทำเป็นรอบ</h2></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>เมื่อไหร่</th><th>ระบบทำเอง</th><th>HR ต้องทำ</th></tr></thead>
+    <tbody>
+      <tr><td><b>ทุกต้นปี (1 ม.ค.)</b></td><td>เที่ยงคืนวันที่ 1 มกราคม (ตามค่า quota_reset_month/day) ระบบสร้างแถวโควตาปีใหม่ให้ <b>ทุกคนที่สถานะใช้งาน</b>
+        ด้วยค่าตั้งต้นใน Settings (30 / 6 / 10) · ใช้ไปและรออนุมัติเริ่มที่ 0 · <b>ไม่ยกวันลาพักร้อนที่เหลือมาปีใหม่</b> · โควตาปีเก่ายังอยู่ในชีตเป็นประวัติ</td>
+        <td>ถ้าบางคนได้โควตาไม่เท่าค่าตั้งต้น (อายุงาน ยกยอดพักร้อน) ต้องตั้งรายคนใหม่ทุกปีที่แท็บโควตา · อยากเปลี่ยนค่าตั้งต้นทั้งบริษัท ให้แก้ default_* ใน Settings <b>ก่อน</b> 1 ม.ค.
+        · ใบลาข้ามปี (ยื่นธันวาคมลามกราคม) ระบบสร้างโควตาปีหน้าให้เองตอนยื่น</td></tr>
+      <tr><td><b>ทุกเดือน</b></td><td>นับข้อความไลน์ที่ใช้ไป โชว์ที่กล่องสรุประบบ</td>
+        <td>ดูแถบโควตาไลน์ต้นเดือน/กลางเดือน · <b>ถ้าขึ้นแถบเหลืองหรือแดงบ่อย ให้ผู้ดูแลบัญชีไลน์บริษัทอัปเกรดแพ็กเกจ</b> ที่ LINE Official Account Manager
+        (เมนูตั้งค่า → การชำระเงิน/แพ็กเกจ) — แพ็กเกจฟรีส่งข้อความได้จำกัดต่อเดือน พอหมดการ์ดขออนุมัติจะไม่เด้งจนขึ้นเดือนใหม่
+        (บริษัทเคยเจอจริงช่วงปลายกันยายน 2569 ใบลาค้างหลายวัน)</td></tr>
+      <tr><td><b>ทุกวัน</b></td><td>เที่ยงคืนปิดรหัสจับคู่ที่หมดอายุ · ทุกชั่วโมงในเวลางานส่งการ์ดเตือนใบที่ค้าง</td><td>—</td></tr>
+      <tr><td><b>มีพนักงานเข้า / ออก / ย้ายแผนก</b></td><td>—</td><td>สร้างพนักงานใหม่ (หัวข้อ 4) · พ้นสภาพ (หัวข้อ 1) · แก้ผังอำนาจ (หัวข้อ 6) · เปลี่ยนหัวหน้าก่อนคนเก่าออก</td></tr>
+      <tr><td><b>พาเข้าระบบครบทั้งบริษัทแล้ว</b></td><td>—</td><td>ตั้ง <code>self_claim_enabled</code> = FALSE (หัวข้อ 5)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s14">
+  <div class="sec-head"><span class="sec-num">14</span><h2>เช็กลิสต์ตรวจรับระบบ</h2></div>
+  <p class="note">ใช้บัญชีไลน์จริงของคนในบริษัท ทดสอบด้วยใบลาวันที่ล่วงหน้า แล้วถอนทิ้งหลังทดสอบ · ติ๊กช่องขวาเมื่อได้ผลตามที่เขียน</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>ทดสอบยังไง</th><th>ต้องได้ผล</th><th>ผ่าน</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>พนักงานเพิ่มเพื่อนไลน์บริษัท แล้วผูกบัญชีด้วยรหัสพนักงาน + ชื่อ</td><td>ขึ้น "ผูกบัญชีเรียบร้อย" พร้อมชื่อ/แผนกถูกคน · HR ได้การ์ดแจ้ง</td><td>☐</td></tr>
+      <tr><td>2</td><td>พนักงานกดเมนู ส่งใบลา ดูขั้นที่ 1</td><td>โควตาคงเหลือ 3 ประเภทตรงกับที่บริษัทให้ · เงื่อนไขตรงกับกฎ</td><td>☐</td></tr>
+      <tr><td>3</td><td>ส่งลากิจทั้งวัน ล่วงหน้าเกิน 3 วัน</td><td>ได้เลขที่ใบลา + การ์ดยืนยัน · หัวหน้างานได้การ์ดขออนุมัติชั้น 1 · HR ได้สำเนา</td><td>☐</td></tr>
+      <tr><td>4</td><td>หัวหน้างานกด ✅ อนุมัติ ในการ์ด → HR อนุมัติชั้น 2 → ผู้บริหารในสายอนุมัติชั้น 3</td><td>ผู้ลาได้การ์ดทุกชั้น · สุดท้าย "ใบลาได้รับอนุมัติแล้ว" · โควตาลากิจลดลงตามจำนวนวัน</td><td>☐</td></tr>
+      <tr><td>5</td><td>ส่งอีกใบ แล้วหัวหน้างานกด ❌ ไม่อนุมัติ โดยไม่พิมพ์เหตุผล แล้วพิมพ์เหตุผลกดใหม่</td><td>ครั้งแรกระบบไม่ยอม · ครั้งที่สองใบเป็น "ปฏิเสธ" ผู้ลาเห็นเหตุผล · HR และผู้บริหารได้รายงานการปฏิเสธ</td><td>☐</td></tr>
+      <tr><td>6</td><td>ส่งลาเป็นชั่วโมง 13:00–15:00</td><td>หักโควตา 0.25 วัน · ใบลาแสดง "2 ชม. (13:00-15:00 น.)"</td><td>☐</td></tr>
+      <tr><td>7</td><td>ส่งลากิจวันพรุ่งนี้</td><td>ต้องติ๊ก "เป็นกรณีฉุกเฉิน" + เหตุผลก่อนส่งได้ · ผู้อนุมัติเห็นแถบแจ้งไม่ทันกำหนด</td><td>☐</td></tr>
+      <tr><td>8</td><td>ส่งลาป่วยวันนี้ 3 วัน ไม่แนบรูป แล้วแนบรูปทีหลังที่ใบลาของฉัน</td><td>ส่งได้ทันที ติดป้ายลากะทันหัน · ผู้อนุมัติเห็น "ยังไม่มีใบรับรองแพทย์" · แนบแล้วผู้อนุมัติได้การ์ดแจ้ง</td><td>☐</td></tr>
+      <tr><td>9</td><td>ผู้อนุมัติกด "ขอเอกสารเพิ่มจากผู้ลา" พร้อมพิมพ์สิ่งที่ต้องการ</td><td>ผู้ลาได้การ์ดขอเอกสาร · ใบยังรออนุมัติ · แนบแล้วขึ้น "ผู้ลาแนบเอกสารที่ขอแล้ว"</td><td>☐</td></tr>
+      <tr><td>10</td><td>ผู้ลาถอนใบที่ยังรออนุมัติ</td><td>สถานะ "ถอนแล้ว" · ใบหายจากหน้าอนุมัติ · โควตาที่กันไว้คืน</td><td>☐</td></tr>
+      <tr><td>11</td><td>ผู้ลากด "ขอยกเลิกวันลา" ใบที่อนุมัติแล้ว แล้วผู้อนุมัติอนุมัติครบ</td><td>ใบเดิมเป็น "ยกเลิกแล้ว" · โควตาคืน</td><td>☐</td></tr>
+      <tr><td>12</td><td>ปล่อยใบค้างที่ชั้นหนึ่งเกิน 4 ชั่วโมงทำงาน</td><td>ผู้อนุมัติชั้นนั้นได้การ์ด "เตือนครั้งที่ 1" · ถ้าค้างที่ผู้บริหาร HR ได้การ์ดเตือนคู่และตัดสินแทนได้</td><td>☐</td></tr>
+      <tr><td>13</td><td>HR สร้างพนักงานใหม่ 1 คน พร้อมหัวหน้างานและผู้บริหาร</td><td>ได้รหัสจับคู่ + ข้อความเชิญ · คนนั้นโผล่ในฐานข้อมูลพนักงานพร้อมสายอนุมัติ</td><td>☐</td></tr>
+      <tr><td>14</td><td>HR ออกรหัสจับคู่ → พนักงานใช้รหัส → HR กดอนุมัติ</td><td>พนักงานส่งใบลาได้</td><td>☐</td></tr>
+      <tr><td>15</td><td>HR แก้โควตาของพนักงาน 1 คน → ผู้บริหารอนุมัติที่แท็บรออนุมัติ</td><td>ก่อนผู้บริหารกด โควตาไม่เปลี่ยน · หลังกด พนักงานได้การ์ดโควตาใหม่และเห็นในหน้าส่งใบลา</td><td>☐</td></tr>
+      <tr><td>16</td><td>HR เปิดรายงาน รายเดือน ทั้งหมด แล้วดาวน์โหลด CSV</td><td>ยอดวันลาตรงกับใบที่อนุมัติ/รออนุมัติในเดือนนั้น · ไฟล์เปิดใน Excel อ่านภาษาไทยได้</td><td>☐</td></tr>
+      <tr><td>17</td><td>พนักงานทั่วไปกดเมนู จัดการ</td><td>ขึ้น "คุณไม่มีสิทธิ์เข้าถึงหน้านี้"</td><td>☐</td></tr>
+      <tr><td>18</td><td>HR พ้นสภาพพนักงานทดสอบ 1 คน แล้วให้คนนั้นกดส่งใบลา</td><td>ส่งไม่ได้ ขึ้นว่าบัญชีพ้นสภาพ · กดรับกลับแล้วส่งได้อีก</td><td>☐</td></tr>
+      <tr><td>19</td><td>HR เปิดหน้าจัดการดูกล่องสรุประบบ</td><td>เห็นบรรทัด "ข้อความไลน์เดือนนี้" ตรงกับตัวเลขใน LINE Official Account Manager</td><td>☐</td></tr>
+      <tr><td>20</td><td>ผู้บริหาร/HR เปิด Google Sheet และโฟลเดอร์ Drive ของระบบ</td><td>เปิดได้ด้วยบัญชีของบริษัท เห็น 11 แท็บตามหัวข้อ 12</td><td>☐</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="sign">
+    <div class="signbox">
+      <div class="sl">ผู้รับมอบ (MENA COSMETICS)</div>
+      <div class="dots">ลงชื่อ ....................................................................</div>
+      <div class="dots">( .......................................................................... )</div>
+      <div class="dots">ตำแหน่ง ................................................................</div>
+      <div class="dots">วันที่ ........ / ........ / ..............</div>
+    </div>
+    <div class="signbox">
+      <div class="sl">ผู้ส่งมอบ</div>
+      <div class="dots">ลงชื่อ ....................................................................</div>
+      <div class="dots">( .......................................................................... )</div>
+      <div class="dots">ตำแหน่ง ................................................................</div>
+      <div class="dots">วันที่ ........ / ........ / ..............</div>
+    </div>
+  </div>
+</section>
+
+<footer>คู่มือฝ่ายบุคคล — ระบบลางาน · MENA COSMETICS · ฉบับวันที่ 16 ตุลาคม 2569</footer>
+</div>

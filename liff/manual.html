@@ -17,6 +17,14 @@
   </header>
 
   <main class="app-main">
+    <div class="accordion">
+      <div class="accordion-header">คู่มือฉบับเต็ม (PDF)</div>
+      <div class="accordion-body">
+        <a class="btn secondary block" href="./docs/คู่มือพนักงาน-ระบบลางานMENA.pdf" target="_blank" rel="noopener">คู่มือพนักงาน (PDF)</a>
+        <a class="btn secondary block mt-1" href="./docs/คู่มือผูกบัญชี-ระบบลางานMENA.pdf" target="_blank" rel="noopener">คู่มือผูกบัญชี (PDF)</a>
+      </div>
+    </div>
+
     <div class="accordion open">
       <div class="accordion-header">เริ่มใช้งานครั้งแรก</div>
       <div class="accordion-body">
@@ -56,15 +64,16 @@
     <div class="accordion">
       <div class="accordion-header">ลำดับการอนุมัติ 3 ชั้น</div>
       <div class="accordion-body">
-        <p>ทุกใบลาผ่าน 3 ชั้น:</p>
+        <p>ใบลาปกติผ่าน 3 ชั้น:</p>
         <ol class="steps">
           <li><strong>ชั้น 1 หัวหน้างาน</strong> — ตรวจเหตุผลของลูกน้องตัวเอง</li>
           <li><strong>ชั้น 2 ฝ่ายบุคคล (HR)</strong> — ตรวจโควตา + กฎ</li>
           <li><strong>ชั้น 3 ผู้บริหาร</strong> — อนุมัติชั้นสุดท้าย</li>
         </ol>
         <p class="subtle mt-1">
-          กรณีพิเศษ: ถ้าคุณเป็นหัวหน้างานเอง → ระบบข้ามชั้น 1 ตรงไปชั้น 2<br>
-          ถ้าผู้ลาเป็น HR เอง → ข้ามชั้น 1+2 ตรงไปชั้น 3
+          กรณีพิเศษ: ถ้าคุณเป็นหัวหน้างานเอง หรือยังไม่มีหัวหน้างานในผัง → ระบบข้ามชั้น 1 ตรงไปชั้น 2<br>
+          ถ้าผู้ลาเป็น HR เอง → ข้ามชั้น 1+2 ตรงไปชั้น 3<br>
+          ถ้าผู้อนุมัติขั้นแรกของคุณเป็นผู้บริหาร → ผู้บริหารอนุมัติในนามหัวหน้างาน ไม่ผ่าน HR
         </p>
       </div>
     </div>
@@ -81,14 +90,14 @@
     </div>
 
     <div class="accordion">
-      <div class="accordion-header">ลาย้อนหลัง (ลาป่วยฉุกเฉิน)</div>
+      <div class="accordion-header">ลาย้อนหลัง / ลาป่วยกะทันหัน</div>
       <div class="accordion-body">
         <p>หากเจ็บป่วยฉุกเฉินจนต้องลาก่อนแจ้ง:</p>
         <ol class="steps">
-          <li>กลับมาทำงานแล้วเปิดเมนู "ส่งใบลา"</li>
-          <li>เลือกประเภท <strong>"ลาป่วย"</strong> เท่านั้น (ลากิจ/พักร้อนย้อนหลังไม่ได้)</li>
+          <li>เปิดเมนู "ส่งใบลา" ได้ตั้งแต่วันที่ป่วย หรือกลับมาทำงานแล้วค่อยส่ง</li>
+          <li>เลือกประเภท <strong>"ลาป่วย"</strong> (ลาย้อนหลังได้เฉพาะลาป่วยและลาคลอด ลากิจ/พักร้อนย้อนหลังไม่ได้)</li>
           <li>เลือกวันที่ลาตามจริง (ระบบจะ mark เป็น "ย้อนหลัง")</li>
-          <li>แนบใบรับรองแพทย์ถ้าลา 3 วันขึ้นไป</li>
+          <li>ลาตั้งแต่ 3 วันต้องมีใบรับรองแพทย์ — ยังไม่มีส่งใบลาไปก่อนได้ แล้วแนบทีหลังที่ "ใบลาของฉัน"</li>
         </ol>
       </div>
     </div>

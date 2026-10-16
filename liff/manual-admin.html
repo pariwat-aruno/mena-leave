@@ -19,6 +19,16 @@
   <main class="app-main">
     <div class="alert info">หน้านี้สำหรับ HR และผู้บริหารระบบเท่านั้น</div>
 
+    <div class="accordion">
+      <div class="accordion-header">คู่มือฉบับเต็ม (PDF)</div>
+      <div class="accordion-body">
+        <a class="btn secondary block" href="./docs/คู่มือฝ่ายบุคคล-ระบบลางานMENA.pdf" target="_blank" rel="noopener">คู่มือฝ่ายบุคคล + ส่งมอบระบบ (PDF)</a>
+        <a class="btn secondary block mt-1" href="./docs/คู่มือผู้อนุมัติ-ระบบลางานMENA.pdf" target="_blank" rel="noopener">คู่มือผู้อนุมัติ (PDF)</a>
+        <a class="btn secondary block mt-1" href="./docs/คู่มือพนักงาน-ระบบลางานMENA.pdf" target="_blank" rel="noopener">คู่มือพนักงาน (PDF)</a>
+        <a class="btn secondary block mt-1" href="./docs/คู่มือผูกบัญชี-ระบบลางานMENA.pdf" target="_blank" rel="noopener">คู่มือผูกบัญชี (PDF)</a>
+      </div>
+    </div>
+
     <div class="accordion open">
       <div class="accordion-header">เพิ่มพนักงานใหม่ (Onboard)</div>
       <div class="accordion-body">
@@ -35,7 +45,7 @@
         <p><strong>ทางสำรอง: ออกรหัสจับคู่ 6 หลัก</strong></p>
         <p class="subtle">ใช้กับคนที่ชื่อในทะเบียนสะกดไม่ตรงกับที่เขากรอก จึงผูกเองไม่ได้</p>
         <ol class="steps">
-          <li>เปิดหน้า "พนักงาน" → กรองเฉพาะ "ยังไม่ผูกไลน์" → หาชื่อคนนั้น</li>
+          <li>เปิดหน้า "ฐานข้อมูลพนักงาน" → กรองเฉพาะ "ยังไม่ผูกไลน์" → หาชื่อคนนั้น</li>
           <li>กดปุ่ม "ออกรหัส" → คัดลอกข้อความ ส่งให้เขาทางแชท</li>
           <li>เขาเปิดหน้า "ผูกบัญชีของฉัน" → กดหัวข้อ "ผูกไม่ได้ / ได้รับรหัส 6 หลัก" → กรอกรหัส</li>
           <li>รหัสมีอายุ 24 ชั่วโมง หมดอายุแล้วกดออกใหม่ได้</li>
@@ -45,7 +55,7 @@
         <p><strong>คนใหม่ที่ยังไม่มีชื่อในทะเบียน</strong></p>
         <ol class="steps">
           <li>ให้กรอกฟอร์มลงทะเบียนตามปกติ → HR ได้การ์ดแจ้ง → กด "อนุมัติ"</li>
-          <li>หรือ HR เพิ่มให้เองที่แท็บ "พนักงาน" → "+ เพิ่มพนักงานใหม่"</li>
+          <li>หรือ HR เพิ่มให้เองที่แท็บ "พนักงาน" → "+ สร้างพนักงานใหม่ (พร้อมรหัสผูกบัญชี)"</li>
         </ol>
 
         <p class="subtle mt-1">
@@ -60,7 +70,7 @@
       <div class="accordion-header">ผูกหัวหน้างาน ↔ ลูกน้อง</div>
       <div class="accordion-body">
         <ol class="steps">
-          <li>แท็บ "หัวหน้างาน" → "+ ผูกหัวหน้างาน"</li>
+          <li>แท็บ "หัวหน้างาน" → "+ ผูกหัวหน้างาน → ลูกน้อง" (หรือใช้หน้า "ผังอำนาจอนุมัติ")</li>
           <li>เลือกลูกน้อง (พนักงานที่ยังไม่มีหัวหน้า)</li>
           <li>เลือกหัวหน้างาน (ระบบจะ set is_supervisor=TRUE ให้อัตโนมัติ)</li>
           <li>กด "ผูก"</li>
@@ -114,7 +124,7 @@
       <div class="accordion-body">
         <ol class="steps">
           <li>เมื่อมีใบลาเข้าระบบ → คุณได้ Flex card ใน LINE</li>
-          <li>กดปุ่ม "อนุมัติ" หรือ "ไม่อนุมัติ" ใน flex โดยตรง</li>
+          <li>กดปุ่ม "อนุมัติ" ใน flex ได้โดยตรง · "ไม่อนุมัติ (ระบุเหตุผล)" จะเปิดหน้าอนุมัติให้พิมพ์เหตุผลก่อน</li>
           <li>หรือกดเมนู "อนุมัติ" ที่ rich menu → list ทุกใบที่รออยู่</li>
         </ol>
         <p class="subtle mt-1">
@@ -152,11 +162,11 @@
       <div class="accordion-body">
         <ol class="steps">
           <li>แท็บ "พนักงาน" → กดปุ่ม "แก้ไข" ของพนักงานคนนั้น</li>
-          <li>กด "ระงับการใช้งาน"</li>
+          <li>กด "พ้นสภาพ / ลาออก (ปิดการเข้าถึง)"</li>
           <li>ระบบ:
             <ul>
               <li>เปลี่ยน status = inactive</li>
-              <li>ถ้าเป็นหัวหน้างาน → ยกเลิก pair ของลูกน้องทั้งหมด (ต้อง pair ใหม่)</li>
+              <li>ผังอำนาจอนุมัติไม่ถูกลบ — ระหว่างปิดบัญชี ใบลาที่ต้องผ่านคนนี้จะข้ามไปชั้นถัดไปเอง (ควรตั้งหัวหน้าคนใหม่ให้ลูกน้อง)</li>
               <li>เก็บประวัติ + Audit_Log ครบ</li>
             </ul>
           </li>

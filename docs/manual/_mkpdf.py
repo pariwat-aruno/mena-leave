@@ -62,7 +62,10 @@ def frag_body(frag):
 
 if __name__ == '__main__':
     import sys
-    ALL = [('claim-manual.html', 'คู่มือผูกบัญชี-ระบบลางานMENA.pdf')]
+    ALL = [('claim-manual.html', 'คู่มือผูกบัญชี-ระบบลางานMENA.pdf'),
+           ('employee-manual.html', 'คู่มือพนักงาน-ระบบลางานMENA.pdf'),
+           ('approver-manual.html', 'คู่มือผู้อนุมัติ-ระบบลางานMENA.pdf'),
+           ('hr-manual.html', 'คู่มือฝ่ายบุคคล-ระบบลางานMENA.pdf')]
     pick = sys.argv[1:] 
     for src, out in [x for x in ALL if not pick or x[0] in pick]:
         n = build(src, out)

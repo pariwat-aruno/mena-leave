@@ -1,0 +1,424 @@
+<title>คู่มือพนักงาน — ระบบลางาน MENA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f3f5f8; --surface:#ffffff; --surface-2:#f8fafc;
+  --ink:#161d2b; --ink-2:#586374; --ink-3:#8592a3;
+  --line:#e0e5ec; --line-2:#eef1f5;
+  --brand:#a01560;
+  --ok:#0e7062; --ok-bg:#e6f4f1;
+  --warn:#a4590a; --warn-bg:#fdf1e0;
+  --crit:#bd2f28; --crit-bg:#fceceb;
+  --block:#5b4a94; --block-bg:#efecf8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+    --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+    --line:#2b313d; --line-2:#232935;
+    --brand:#b9c3e2;
+    --ok:#4ecfb4; --ok-bg:#12302c;
+    --warn:#e9a94f; --warn-bg:#33270f;
+    --crit:#f0837a; --crit-bg:#361a19;
+    --block:#a99ae0; --block-bg:#25203a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+  --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+  --line:#2b313d; --line-2:#232935;
+  --brand:#b9c3e2;
+  --ok:#4ecfb4; --ok-bg:#12302c;
+  --warn:#e9a94f; --warn-bg:#33270f;
+  --crit:#f0837a; --crit-bg:#361a19;
+  --block:#a99ae0; --block-bg:#25203a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  font-size:15.5px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px 100px}
+h1,h2,h3,.disp{font-family:"Sarabun",system-ui,sans-serif;text-wrap:balance}
+code,.mono,.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ── หัวเรื่อง ── */
+header.top{padding:56px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+h1{font-size:clamp(30px,4.4vw,44px);line-height:1.2;font-weight:700;margin:10px 0 8px;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0}
+.stamp{margin-top:18px;font-size:13px;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+/* ── แถบตัวเลข ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:28px 0 0}
+.tile{background:var(--surface);padding:16px 18px}
+.tile .k{font-size:11.5px;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+.tile .v{font-size:26px;font-weight:600;font-family:"Sarabun",sans-serif;line-height:1.25;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.crit{color:var(--crit)}
+
+/* ── สารบัญ ── */
+nav.toc{position:sticky;top:0;z-index:5;background:var(--ground);border-bottom:1px solid var(--line);margin:34px 0 0;padding:10px 0;overflow-x:auto}
+nav.toc ul{display:flex;gap:4px;list-style:none;margin:0;padding:0;white-space:nowrap}
+nav.toc a{font-size:13px;color:var(--ink-2);text-decoration:none;padding:5px 11px;border-radius:2px;display:block}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--surface);color:var(--ink);outline:none}
+nav.toc a:focus-visible{box-shadow:0 0 0 2px var(--brand)}
+
+/* ── ส่วน ── */
+section{padding-top:46px}
+.sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:0}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);letter-spacing:.08em}
+h2{font-size:23px;font-weight:600;margin:0;flex:1}
+h3{font-size:17px;font-weight:600;margin:0}
+
+/* ── การ์ดหมวด ── */
+.item{border-bottom:1px solid var(--line);padding:22px 0}
+.item-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.item-head h3{flex:1;min-width:200px}
+.where{font-size:12.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.rows{display:grid;grid-template-columns:104px 1fr;gap:6px 16px;align-items:start}
+.rows dt{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;padding-top:5px}
+.rows dd{margin:0;color:var(--ink)}
+.rows dd.q{color:var(--ink-2)}
+@media (max-width:640px){.rows{grid-template-columns:1fr;gap:2px 0}.rows dt{padding-top:10px}}
+
+/* ── ชิปสถานะ ── */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.chip::before{content:"";width:6px;height:6px;border-radius:99px;background:currentColor;flex:none}
+.chip.ok{color:var(--ok);background:var(--ok-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.chip.crit{color:var(--crit);background:var(--crit-bg)}
+.chip.block{color:var(--block);background:var(--block-bg)}
+.chip.none{color:var(--ink-3);background:var(--line-2)}
+
+/* ── กล่องเน้น ── */
+.alert{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--crit);padding:20px 22px;margin:22px 0}
+.alert.warn{border-top-color:var(--warn)}
+.alert h3{margin-bottom:6px}
+.alert p{margin:6px 0;color:var(--ink-2)}
+.alert p b{color:var(--ink)}
+.chain{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);padding:10px 12px;margin-top:12px;overflow-x:auto;white-space:nowrap}
+
+/* ── ตาราง ── */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface);margin:16px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th{text-align:left;font-weight:600;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+   font-family:"IBM Plex Mono",monospace;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r{text-align:right;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace}
+td.nw{white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+
+/* ── ขั้นตอน ── */
+ol.steps{list-style:none;counter-reset:s;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);padding:16px 20px 16px 58px;position:relative}
+ol.steps>li::before{content:counter(s,decimal-leading-zero);position:absolute;left:20px;top:16px;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-3);font-weight:500}
+ol.steps b{display:block;font-family:"Sarabun",sans-serif;font-size:16px;font-weight:600;margin-bottom:2px}
+ol.steps small{color:var(--ink-2);font-size:13.5px;line-height:1.65;display:block}
+ol.steps .who{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--ink-3);letter-spacing:.05em}
+
+ul.plain{margin:8px 0 0;padding-left:18px;color:var(--ink-2)}
+ul.plain li{margin:3px 0}
+ul.plain b{color:var(--ink)}
+p.note{color:var(--ink-2);margin:14px 0 0;font-size:14px}
+.kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;white-space:nowrap;color:var(--ink)}
+
+figure{margin:18px 0 0;background:var(--surface);border:1px solid var(--line);padding:10px}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--line-2)}
+figcaption{font-size:12.5px;color:var(--ink-2);padding:10px 4px 2px;line-height:1.6}
+figcaption b{color:var(--ink)}
+.figs{display:grid;gap:14px}
+@media (min-width:820px){.figs.two{grid-template-columns:1fr 1fr}}
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px}
+a{color:var(--ink);text-underline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── ปรับเฉพาะเล่มนี้ ── */
+/* ห้ามให้ข้อความไทยตกไปอยู่ในฟอนต์ mono — ไม่มีสระ/วรรณยุกต์ไทย จะกลายเป็น fallback ที่อ่านยาก */
+th, .rows dt, .where, .eyebrow, .tile .k, ol.steps .who { font-family:"Sarabun",sans-serif !important; letter-spacing:.02em }
+th, .rows dt, .tile .k { text-transform:none }
+.num, code, td.r { font-family:"IBM Plex Mono",monospace }
+figure img { max-width:340px; margin:0 auto }
+figure.wide img { max-width:520px }
+.sec-head { border-bottom-color:#d51f7d }
+ol.steps>li::before { color:#d51f7d; font-weight:700 }
+.alert { border-top-color:#d51f7d }
+h1 { color:#a01560 }
+
+/* ── เพิ่มสำหรับชุด 3 เล่ม (พนักงาน / ผู้อนุมัติ / ฝ่ายบุคคล) ── */
+section h3{margin:22px 0 4px}
+ol.steps small b{display:inline;font-size:inherit;margin:0;font-weight:600}
+.figs.two figure img{max-width:100%}
+.figs.two>div{min-width:0}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px;break-inside:avoid}
+.signbox{border:1px solid var(--line);background:var(--surface);padding:18px 20px}
+.signbox .sl{font-weight:600;margin-bottom:14px}
+.signbox .dots{margin:18px 0 0;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+td code{font-size:12px;background:var(--surface-2);padding:0 4px;border:1px solid var(--line-2)}
+@media (max-width:640px){.sign{grid-template-columns:1fr}}
+@media print{
+  figure img{max-width:400px !important}
+  figure.tall img{max-height:205mm !important}
+  .figs.two figure img{max-width:100% !important}
+  td code{font-size:9pt}
+  table{font-size:9.5pt}
+  .tbl-wrap{break-inside:auto !important}
+  tr{break-inside:avoid}
+}
+</style><div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">MENA COSMETICS · เล่ม 1 จาก 3</div>
+  <h1>คู่มือพนักงาน — ระบบลางาน</h1>
+  <p class="lede">สำหรับพนักงานทุกคน — ส่งใบลาผ่านไลน์ ดูสถานะ แนบใบรับรองแพทย์ทีหลัง ถอนหรือยกเลิกใบลา
+  ทุกอย่างทำในแชทไลน์ของบริษัท ไม่ต้องกรอกกระดาษ</p>
+  <div class="stamp"><b>ฉบับวันที่</b> 16 ตุลาคม 2569 <span>·</span> <b>ระบบ</b> ลางาน MENA COSMETICS <span>·</span> <b>ไลน์บริษัท</b> @966nnfkr</div>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="k">เริ่มใช้</div><div class="v">ผูกบัญชี 1 ครั้ง</div><div class="s">รหัสพนักงาน + ชื่อ-นามสกุล</div></div>
+  <div class="tile"><div class="k">ลาได้แบบ</div><div class="v">ทั้งวัน / ชั่วโมง</div><div class="s">ลาครึ่งวันใช้แบบชั่วโมง</div></div>
+  <div class="tile"><div class="k">ป่วยกะทันหัน</div><div class="v ok">ส่งได้ทันที</div><div class="s">ใบแพทย์แนบตามทีหลังได้</div></div>
+  <div class="tile"><div class="k">รู้ผลทาง</div><div class="v">ไลน์</div><div class="s">ระบบแจ้งทุกครั้งที่มีคนตัดสิน</div></div>
+</div>
+
+<nav class="toc"><ul>
+  <li><a href="#s1">1. เริ่มต้น</a></li>
+  <li><a href="#s2">2. ส่งใบลา</a></li>
+  <li><a href="#s3">3. ลาเป็นชั่วโมง</a></li>
+  <li><a href="#s4">4. แจ้งไม่ทันกำหนด</a></li>
+  <li><a href="#s5">5. ลาป่วยกะทันหัน</a></li>
+  <li><a href="#s6">6. ใบลาของฉัน</a></li>
+  <li><a href="#s7">7. ถูกขอเอกสารเพิ่ม</a></li>
+  <li><a href="#s8">8. ถอน / ยกเลิกใบลา</a></li>
+  <li><a href="#s9">9. บัญชีของคุณ</a></li>
+  <li><a href="#s10">10. ลาแทนคนอื่น</a></li>
+  <li><a href="#s11">11. อาการที่เจอบ่อย</a></li>
+</ul></nav>
+
+<section id="s1">
+  <div class="sec-head"><span class="sec-num">01</span><h2>เริ่มต้น — ผูกบัญชีแล้วใช้เมนูด้านล่างแชท</h2></div>
+  <p class="note">ครั้งแรกที่ใช้ต้อง <b>ผูกบัญชี</b> ก่อน: เพิ่มเพื่อนไลน์บริษัท <span class="kbd">@966nnfkr</span> → กดปุ่ม
+  <b>ผูกบัญชีของฉัน</b> ในข้อความต้อนรับ (หรือกดเมนู <b>ส่งใบลา</b> แล้วกด <b>ผูกบัญชีของฉัน</b>) → กรอก
+  <b>รหัสพนักงาน</b> กับ <b>ชื่อ-นามสกุล</b> → กด <b>ผูกบัญชี</b> ใช้งานได้ทันที
+  รายละเอียดทุกขั้นและกรณีผูกไม่สำเร็จอยู่ใน <b>คู่มือผูกบัญชีเข้าระบบลางาน</b> (แยกอีกเล่ม)</p>
+  <p class="note">หลังผูกบัญชีแล้ว ทุกอย่างเริ่มจากเมนูด้านล่างแชทไลน์บริษัท</p>
+  <figure class="wide">
+    <img src="img/emp-01-richmenu.jpg" alt="เมนูด้านล่างแชทไลน์">
+    <figcaption><b>เมนูด้านล่างแชท</b> — พนักงานใช้ 3 ปุ่ม: <b>ส่งใบลา</b> · <b>ใบลาของฉัน</b> · <b>คู่มือ</b>
+    (ปุ่ม <b>อนุมัติ</b> กับ <b>จัดการ</b> สำหรับหัวหน้างาน ฝ่ายบุคคล และผู้บริหาร)</figcaption>
+  </figure>
+</section>
+
+<section id="s2">
+  <div class="sec-head"><span class="sec-num">02</span><h2>ส่งใบลา — 3 ขั้น</h2></div>
+  <ol class="steps">
+    <li><b>กดเมนู "ส่งใบลา"</b><small>ขั้นที่ 1 <b>เงื่อนไข</b> แสดงโควตาคงเหลือปีนี้ (ลาป่วย · ลากิจ · ลาพักร้อน)
+      และเงื่อนไขของแต่ละประเภท เช่น ต้องแจ้งล่วงหน้ากี่วัน อ่านแล้วกด <b>เริ่มเขียนใบลา</b></small></li>
+    <li><b>ขั้นที่ 2 กรอกข้อมูล</b><small>เลือก <b>ประเภทการลา</b> → เลือก <b>ลาเป็น</b> <b>ทั้งวัน</b> หรือ <b>เป็นชั่วโมง</b>
+      → เลือก <b>วันที่เริ่มลา</b> และ <b>วันที่สิ้นสุด</b> → พิมพ์ <b>เหตุผล</b> (อย่างน้อย 3 ตัวอักษร)
+      → แนบรูปได้ที่ <b>แนบไฟล์ (รูปภาพ)</b> ถ้ามี (ไม่บังคับ) แล้วกด <b>ถัดไป</b></small></li>
+    <li><b>ขั้นที่ 3 ส่ง</b><small>ระบบขอตำแหน่ง GPS เพื่อยืนยันว่าคุณกดส่งเอง (บันทึกครั้งเดียวตอนส่ง ไม่ติดตามตลอดเวลา)
+      ตรวจ <b>สรุปก่อนส่ง</b> ให้ถูก แล้วกด <b>ส่งใบลา</b></small></li>
+    <li><b>ได้เลขที่ใบลา</b><small>หน้าจอขึ้น <b>ส่งใบลาสำเร็จ</b> พร้อมเลขที่ใบลา และไลน์จะส่งการ์ดยืนยันมาให้
+      บอกว่าใบลารอใครตรวจเป็นขั้นถัดไป</small></li>
+  </ol>
+  <figure class="tall">
+    <img src="img/emp-02-request-step1.jpg" alt="ขั้นที่ 1 โควตาและเงื่อนไข">
+    <figcaption><b>ขั้นที่ 1</b> — ตัวเลขใหญ่คือวันที่ยังลาได้ (ไม่นับวันที่รออนุมัติอยู่) · เงื่อนไขของลาอื่น ๆ ตามกฎหมายอยู่ถัดลงไปในหน้าเดียวกัน
+    ตัวเลขและชื่อในภาพทั้งเล่มเป็นข้อมูลตัวอย่าง</figcaption>
+  </figure>
+  <div class="figs two">
+    <figure><img src="img/emp-03-request-fullday.jpg" alt="กรอกลาทั้งวัน">
+      <figcaption><b>ลาทั้งวัน</b> — ใต้วันที่สิ้นสุดบอกว่ารวมกี่วัน วันหยุดบริษัทไม่นับเป็นวันลา</figcaption></figure>
+    <figure><img src="img/emp-07-request-summary.jpg" alt="สรุปก่อนส่ง">
+      <figcaption><b>ขั้นที่ 3</b> — GPS พร้อมส่ง แล้วตรวจสรุปก่อนกด <b>ส่งใบลา</b></figcaption></figure>
+  </div>
+  <div class="figs two">
+    <figure><img src="img/emp-09-request-done.jpg" alt="ส่งใบลาสำเร็จ">
+      <figcaption><b>ส่งสำเร็จ</b> — กด <b>ดูใบลาของฉัน</b> เพื่อติดตามสถานะ หรือ <b>ส่งใบลาอีกใบ</b></figcaption></figure>
+    <figure><img src="img/emp-10-card-submitted.jpg" alt="การ์ดไลน์ส่งใบลาสำเร็จ">
+      <figcaption><b>การ์ดในไลน์</b> — บอกเลขที่ใบลาและขั้นถัดไป (ภาพจำลองการ์ดจากข้อมูลที่ระบบสร้างจริง หน้าตาในแอปไลน์อาจต่างเล็กน้อย)</figcaption></figure>
+  </div>
+  <figure><img src="img/emp-08-request-gps-fallback.jpg" alt="เปิด GPS ไม่ได้">
+    <figcaption><b>ถ้าอ่านตำแหน่งไม่ได้</b> — เปิด Location ในเครื่องแล้วกด <b>ลองอีกครั้ง</b> หรือ <b>โหลดหน้าใหม่</b>
+    ถ้ายังไม่ได้ พิมพ์เหตุผลอย่างน้อย 5 ตัวอักษรในช่อง <b>เปิด GPS ไม่ได้? บอกเหตุผลแล้วส่งใบลาต่อได้</b> แล้วกดส่งได้ตามปกติ
+    ใบลาจะติดป้าย "ไม่มีพิกัดยืนยัน" ให้ผู้อนุมัติเห็นเหตุผล</figcaption></figure>
+  <div class="alert warn">
+    <h3>ประเภทการลาที่เลือกได้</h3>
+    <p><b>ลาป่วย · ลากิจ · ลาพักร้อน</b> — หักโควตาของปีที่ลา</p>
+    <p><b>ลาอื่น ๆ</b> — เลือกแล้วจะมีช่อง <b>ประเภทลาอื่น ๆ</b> ให้เลือกต่อ: ลาคลอด · ลาช่วยภรรยาดูแลบุตร · ลาเพื่อทำหมัน ·
+    ลาเพื่อรับราชการทหาร · ลาเพื่อรับการฝึกอบรม · ลาอุปสมบท — เป็นลาตามกฎหมาย <b>ไม่หักโควตา</b> แต่ต้องแจ้งล่วงหน้าตามเงื่อนไข</p>
+  </div>
+  <ul class="plain">
+    <li><b>โควตาไม่พอ</b> ระบบไม่ให้ส่งเกินวันคงเหลือ — ถ้าจำเป็นต้องลาเกินจริง ติดต่อฝ่ายบุคคล</li>
+    <li><b>ลาย้อนหลัง</b> (วันเริ่มลาก่อนวันนี้) ส่งได้เฉพาะ <b>ลาป่วย</b> และ <b>ลาคลอด</b> เท่านั้น ประเภทอื่นต้องส่งก่อนถึงวันลา</li>
+    <li><b>ช่วงเวลาซ้อนกับใบเดิม</b> ส่งไม่ได้ — ถ้าจะเปลี่ยนวัน ให้ถอนหรือขอยกเลิกใบเดิมก่อน (หัวข้อ 8)</li>
+    <li><b>ลาติดกันเกินที่กำหนด</b> หรือ <b>ลาหลายวันแต่ไม่แนบเอกสาร</b> ในประเภทที่บังคับ ระบบจะแจ้งเหตุผลให้ทันทีตอนกดส่ง</li>
+  </ul>
+</section>
+
+<section id="s3">
+  <div class="sec-head"><span class="sec-num">03</span><h2>ลาเป็นชั่วโมง (ใช้แทนลาครึ่งวัน)</h2></div>
+  <p class="note">ระบบไม่มีปุ่ม "ลาครึ่งวัน" แยก — ลาไม่เต็มวันให้กด <b>เป็นชั่วโมง</b> แล้วเลือกช่วงเวลา
+  เช่น ลาช่วงเช้า เลือก 08:30 ถึง 12:00</p>
+  <ol class="steps">
+    <li><b>เลือกประเภทการลา</b><small>ปุ่ม <b>ลาเป็น</b> จะโผล่เฉพาะประเภทที่ลาเป็นชั่วโมงได้ (ตั้งต้นคือ ลาป่วย · ลากิจ · ลาพักร้อน)</small></li>
+    <li><b>กด "เป็นชั่วโมง"</b><small>ช่องวันที่จะเหลือช่องเดียวคือ <b>วันที่ลา</b> และมีช่อง <b>ช่วงเวลาที่ลา</b> เพิ่มมา</small></li>
+    <li><b>เลือกเวลาเริ่ม และเวลาสิ้นสุด</b><small>เลือกได้ทีละครึ่งชั่วโมงภายในเวลางาน ใต้ช่องจะบอกว่ารวมกี่ชั่วโมงและหักโควตากี่วัน</small></li>
+  </ol>
+  <figure><img src="img/emp-04-request-hourly.jpg" alt="ลาเป็นชั่วโมง">
+    <figcaption><b>ลา 13:00–15:00</b> = 2 ชั่วโมง หักโควตา 0.25 วัน (8 ชั่วโมงนับเป็น 1 วัน)</figcaption></figure>
+  <ul class="plain">
+    <li>ช่วงพักเที่ยง (ตั้งต้น 12:00–13:00) <b>ไม่นับ</b> เป็นชั่วโมงลา</li>
+    <li>ลาได้ <b>อย่างน้อย 30 นาที</b> · ถ้ารวมได้เท่าเต็มวันแล้ว ระบบให้เลือก <b>ทั้งวัน</b> แทน</li>
+    <li>วันที่เลือกต้องเป็นวันทำงานของบริษัท</li>
+  </ul>
+</section>
+
+<section id="s4">
+  <div class="sec-head"><span class="sec-num">04</span><h2>แจ้งล่วงหน้าไม่ทันกำหนด — ติ๊ก "เป็นกรณีฉุกเฉิน"</h2></div>
+  <p class="note">แต่ละประเภทลามีกำหนดแจ้งล่วงหน้า (ตั้งต้น ลากิจ 3 วัน · ลาพักร้อน 7 วัน) ถ้าวันที่เลือกกระชั้นกว่านั้น
+  จะมีกล่องสีเหลืองขึ้นมา ระบบ <b>ไม่บล็อก</b> ให้ส่งไม่ได้ แต่ต้องบอกเหตุผล</p>
+  <ol class="steps">
+    <li><b>ติ๊ก "เป็นกรณีฉุกเฉิน จำเป็นต้องลาทั้งที่แจ้งไม่ทันกำหนด"</b><small>อยู่ในกล่องสีเหลืองใต้ช่องเหตุผล</small></li>
+    <li><b>พิมพ์เหตุผลที่ต้องลาเร่งด่วน</b><small>อย่างน้อย 10 ตัวอักษร (ค่าตั้งต้น) ใบลาจะติดป้าย "แจ้งไม่ทันกำหนด" ให้ผู้อนุมัติเห็น</small></li>
+  </ol>
+  <figure><img src="img/emp-05-request-emergency.jpg" alt="กล่องกรณีฉุกเฉิน">
+    <figcaption><b>ลากิจพรุ่งนี้</b> — ไม่ทันกำหนด 3 วัน จึงต้องติ๊กและเขียนเหตุผล</figcaption></figure>
+  <p class="note">ถ้าฝ่ายบุคคลตั้งประเภทนั้นให้ <b>ไม่เปิดกรณีฉุกเฉิน</b> ช่องติ๊กจะกดไม่ได้และระบบบอกให้เลือกวันที่ใหม่</p>
+</section>
+
+<section id="s5">
+  <div class="sec-head"><span class="sec-num">05</span><h2>ลาป่วยกะทันหัน + แนบใบรับรองแพทย์ทีหลัง</h2></div>
+  <ol class="steps">
+    <li><b>ลาป่วยวันนี้ หรือย้อนหลัง ส่งได้เลย</b><small>เลือก <b>ลาป่วย</b> แล้วเลือกวันที่ตามจริง ไม่ต้องติ๊กฉุกเฉิน
+      ใบลาจะติดป้าย <b>ลากะทันหัน</b> ให้ผู้อนุมัติเห็นเอง — อย่าลืมโทรแจ้งหัวหน้างานด้วย</small></li>
+    <li><b>ลาหลายวันที่ต้องมีใบรับรองแพทย์</b><small>ถ้าลาตั้งแต่จำนวนวันที่บริษัทกำหนด (ตั้งต้น 3 วัน) จะขึ้นกล่องบอกว่า
+      ต้องมีใบรับรองแพทย์ — <b>ยังไม่มีก็ส่งใบลาไปก่อนได้</b></small></li>
+    <li><b>ได้ใบรับรองแพทย์แล้ว ค่อยแนบ</b><small>เมนู <b>ใบลาของฉัน</b> → แตะใบลานั้น → กล่อง <b>แนบเอกสารเพิ่ม</b>
+      → เลือกรูป → พิมพ์คำอธิบาย (ไม่บังคับ) → กด <b>ส่งเอกสาร</b> แนบได้หลายครั้ง</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/emp-06-request-sick.jpg" alt="ลาป่วยกะทันหัน">
+      <figcaption><b>ลาป่วยวันนี้ 3 วัน</b> — กล่องบอกว่าส่งได้เลย และแนบใบแพทย์ทีหลังได้</figcaption></figure>
+    <figure class="tall"><img src="img/emp-14-detail-docpending.jpg" alt="ใบลารอแนบใบรับรองแพทย์">
+      <figcaption><b>ใบลาที่ยังไม่ได้แนบ</b> — กล่องเหลืองเตือนด้านบน กล่องชมพู <b>แนบเอกสารเพิ่ม</b> อยู่ตรงกลาง</figcaption></figure>
+  </div>
+</section>
+
+<section id="s6">
+  <div class="sec-head"><span class="sec-num">06</span><h2>ใบลาของฉัน — ดูสถานะและลำดับการอนุมัติ</h2></div>
+  <ol class="steps">
+    <li><b>กดเมนู "ใบลาของฉัน"</b><small>เห็นใบลาทุกใบเรียงจากใหม่ไปเก่า พร้อมป้ายสถานะด้านขวา</small></li>
+    <li><b>แตะใบลา</b><small>เปิด <b>รายละเอียดใบลา</b> ด้านล่างสุดคือ <b>ลำดับการอนุมัติ</b> บอกว่าแต่ละชั้นใครกดแล้ว เมื่อไหร่ และหมายเหตุ</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/emp-11-my-list.jpg" alt="รายการใบลาของฉัน">
+      <figcaption><b>รายการใบลา</b> — ตัวแดง "ผู้อนุมัติขอเอกสารเพิ่ม" แปลว่าต้องแนบเอกสาร (หัวข้อ 7)</figcaption></figure>
+    <figure class="tall"><img src="img/emp-12-detail-pending.jpg" alt="รายละเอียดใบลา">
+      <figcaption><b>รายละเอียดใบลา</b> — ลำดับการอนุมัติ 3 ชั้น จุดสีเหลือง = ยังรอ จุดสีเขียว = อนุมัติแล้ว</figcaption></figure>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ป้ายสถานะ</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip warn">รออนุมัติ</span></td><td>ยังมีผู้อนุมัติบางชั้นที่ยังไม่กด — ยังไม่หักโควตาจริง แต่กันวันไว้แล้ว</td></tr>
+      <tr><td><span class="chip ok">อนุมัติแล้ว</span></td><td>ผ่านครบทุกชั้น หักโควตาแล้ว</td></tr>
+      <tr><td><span class="chip crit">ปฏิเสธ</span></td><td>มีผู้อนุมัติไม่อนุมัติ — ดูเหตุผลในลำดับการอนุมัติ วันที่กันไว้คืนให้แล้ว</td></tr>
+      <tr><td><span class="chip none">ถอนแล้ว</span></td><td>คุณถอนใบลาเอง</td></tr>
+      <tr><td><span class="chip none">ยกเลิกแล้ว</span></td><td>ใบที่เคยอนุมัติแล้วถูกยกเลิกตามคำขอ คืนโควตาแล้ว</td></tr>
+      <tr><td><span class="chip none">ข้าม</span></td><td>(ในลำดับการอนุมัติ) ชั้นนั้นไม่ต้องผ่าน เช่น ไม่มีหัวหน้างานในสาย</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">ทุกครั้งที่มีคนตัดสินใบลาของคุณ ไลน์จะส่งการ์ดแจ้ง — อนุมัติครบจะได้การ์ด <b>ใบลาได้รับอนุมัติแล้ว</b></p>
+  <figure><img src="img/emp-17-card-approved.jpg" alt="การ์ดอนุมัติแล้ว">
+    <figcaption><b>การ์ดเมื่ออนุมัติครบทุกชั้น</b></figcaption></figure>
+</section>
+
+<section id="s7">
+  <div class="sec-head"><span class="sec-num">07</span><h2>ผู้อนุมัติขอเอกสารเพิ่ม — ส่งยังไง</h2></div>
+  <p class="note">ผู้อนุมัติอาจขอเอกสารเพิ่มก่อนตัดสิน เช่น ขอใบรับรองแพทย์ ใบลาจะ <b>ยังไม่ถูกตัดสิน</b> และค้างรอคุณอยู่</p>
+  <ol class="steps">
+    <li><b>ได้การ์ด "ผู้อนุมัติขอเอกสารเพิ่ม" ในไลน์</b><small>การ์ดบอกว่าต้องการเอกสารอะไร และใครเป็นคนขอ กดปุ่ม <b>แนบเอกสาร</b></small></li>
+    <li><b>หน้ารายละเอียดใบลาเปิดขึ้นมา</b><small>กล่องแดงด้านบนบอกสิ่งที่ขอ เลื่อนลงมาที่ <b>แนบเอกสารเพิ่ม</b></small></li>
+    <li><b>เลือกรูป → พิมพ์คำอธิบาย → กด "ส่งเอกสาร"</b><small>ถ่ายใหม่หรือเลือกจากแกลเลอรีก็ได้ ระบบจะแจ้งผู้อนุมัติให้กลับมาพิจารณาต่อ</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/emp-15-card-docrequest.jpg" alt="การ์ดขอเอกสารเพิ่ม">
+      <figcaption><b>การ์ดขอเอกสาร</b> — "ต้องการ" คือสิ่งที่ผู้อนุมัติพิมพ์มา</figcaption></figure>
+    <figure class="tall"><img src="img/emp-16-detail-docrequest.jpg" alt="แนบเอกสารที่ถูกขอ">
+      <figcaption><b>เลือกรูปแล้ว</b> — ตรวจรูปที่แสดงตัวอย่าง แล้วกด <b>ส่งเอกสาร</b> (ปุ่มเลือกไฟล์ในมือถือจะเป็นภาษาของเครื่อง)</figcaption></figure>
+  </div>
+  <p class="note">ถ้ายังไม่ได้แนบ ระบบจะส่งการ์ดเตือนคุณซ้ำในเวลางาน · แนบเอกสารได้เฉพาะใบลาที่รออนุมัติหรืออนุมัติแล้วเท่านั้น</p>
+</section>
+
+<section id="s8">
+  <div class="sec-head"><span class="sec-num">08</span><h2>ถอนใบลา / ขอยกเลิกวันลา</h2></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>สถานะใบลา</th><th>ปุ่มที่เห็น</th><th>เกิดอะไรขึ้น</th></tr></thead>
+    <tbody>
+      <tr><td>รออนุมัติ</td><td><b>ถอนใบลานี้</b></td><td>ถอนได้ทันทีไม่ต้องรอใคร วันที่กันไว้คืนให้เลย เหตุผลไม่บังคับ</td></tr>
+      <tr><td>อนุมัติแล้ว</td><td><b>ขอยกเลิกวันลา</b></td><td>ต้องเขียนเหตุผลอย่างน้อย 5 ตัวอักษร ระบบส่ง <b>ใบขอยกเลิก</b> ให้ผู้อนุมัติชุดเดิมพิจารณาตามลำดับเดิม
+        อนุมัติครบแล้วใบลาเดิมจะเป็น "ยกเลิกแล้ว" และคืนโควตา</td></tr>
+      <tr><td>ปฏิเสธ / ถอนแล้ว / ยกเลิกแล้ว</td><td>ไม่มีปุ่ม</td><td>ใบปิดแล้ว ถ้าจะลาใหม่ให้ส่งใบใหม่</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="tall"><img src="img/emp-13-detail-approved.jpg" alt="ขอยกเลิกวันลา">
+    <figcaption><b>ใบลาที่อนุมัติแล้ว</b> — พิมพ์เหตุผลในช่อง แล้วกด <b>ขอยกเลิกวันลา</b>
+    ในรายการใบลาจะเห็นใบใหม่ขึ้นต้นว่า "ขอยกเลิก ·" สถานะรออนุมัติ</figcaption></figure>
+  <p class="note">ส่งใบขอยกเลิกซ้ำไม่ได้ระหว่างที่ใบเดิมยังรออยู่ · ถ้าใบขอยกเลิกไม่ได้รับอนุมัติ ใบลาเดิมยังอนุมัติอยู่เหมือนเดิม</p>
+</section>
+
+<section id="s9">
+  <div class="sec-head"><span class="sec-num">09</span><h2>หน้า "บัญชีของคุณ"</h2></div>
+  <p class="note">เปิดได้จากปุ่ม <b>ดูสถานะของฉัน</b> (โผล่เมื่อยังไม่ได้ผูกบัญชี) ใช้เช็กว่าบัญชีผูกกับใคร สถานะอะไร
+  และมี <b>LINE User ID</b> ของคุณ ถ้าฝ่ายบุคคลขอให้ส่ง ID ให้กด <b>คัดลอก User ID</b> แล้ววางในแชท</p>
+  <figure><img src="img/emp-18-myid.jpg" alt="บัญชีของคุณ">
+    <figcaption><b>สถานะใช้งานอยู่</b> — บอกรหัสพนักงาน บทบาท และแผนก มีปุ่มลัดไปส่งใบลาและใบลาของฉัน
+    (User ID ในภาพเป็นค่าสมมติ)</figcaption></figure>
+  <ul class="plain">
+    <li><b>ส่งคำขอลงทะเบียนแล้ว รอ HR อนุมัติ</b> — ผูกด้วยรหัสจับคู่แล้ว รอฝ่ายบุคคลกดอนุมัติ</li>
+    <li><b>บัญชีถูกระงับการใช้งาน</b> — ติดต่อฝ่ายบุคคล</li>
+    <li><b>คุณยังไม่ได้ผูกบัญชีกับระบบ</b> — กด <b>ผูกบัญชีของฉัน</b></li>
+  </ul>
+</section>
+
+<section id="s10">
+  <div class="sec-head"><span class="sec-num">10</span><h2>ลาแทนคนอื่น (พนักงานพิเศษ · HR · ผู้บริหาร)</h2></div>
+  <p class="note">คนที่มีระดับ <b>พนักงานพิเศษ</b>, <b>HR</b> หรือ <b>ผู้บริหาร</b> จะเห็นช่อง <b>ส่งใบลาให้</b> บนสุดของขั้นที่ 2
+  เลือกชื่อเพื่อนร่วมงานที่ใช้แอปเองไม่สะดวก แล้วกรอกต่อตามปกติ ใบลาจะวิ่งไปตามสายอนุมัติของ <b>เจ้าของใบ</b>
+  และเจ้าของใบได้การ์ดแจ้งด้วยถ้าผูกไลน์ไว้</p>
+  <figure><img src="img/emp-19-proxy.jpg" alt="ช่องส่งใบลาให้">
+    <figcaption><b>ช่อง "ส่งใบลาให้"</b> — ค่าเริ่มต้นคือ <b>ตัวฉันเอง</b> · ลาแทนผู้บริหารไม่ได้</figcaption></figure>
+</section>
+
+<section id="s11">
+  <div class="sec-head"><span class="sec-num">11</span><h2>อาการที่เจอบ่อย</h2></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>อาการ / ข้อความ</th><th>แปลว่าอะไร</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>กดส่งใบลาแล้วขึ้นว่ายังไม่ได้ผูกบัญชี</td><td>ยังไม่เคยผูก หรือเปลี่ยนบัญชีไลน์</td><td>กด <b>ผูกบัญชีของฉัน</b> (ดูคู่มือผูกบัญชี)</td></tr>
+      <tr><td>บัญชีของคุณพ้นสภาพ / ถูกปิดการใช้งาน</td><td>ฝ่ายบุคคลปิดบัญชีไว้</td><td>ติดต่อฝ่ายบุคคล</td></tr>
+      <tr><td>โควตาคงเหลือ X วัน ลาได้ไม่เกินนี้</td><td>วันที่ขอเกินวันคงเหลือ</td><td>ลดจำนวนวัน หรือคุยกับฝ่ายบุคคล</td></tr>
+      <tr><td>ลาย้อนหลังทำได้เฉพาะลาป่วย/ลาคลอดฉุกเฉินเท่านั้น</td><td>เลือกวันที่ผ่านมาแล้วกับประเภทอื่น</td><td>เปลี่ยนวันที่ หรือคุยกับหัวหน้างาน/ฝ่ายบุคคล</td></tr>
+      <tr><td>ต้องเขียนใบลาล่วงหน้าอย่างน้อย X วัน</td><td>แจ้งไม่ทันกำหนด</td><td>ติ๊ก <b>เป็นกรณีฉุกเฉิน</b> + เหตุผล (หัวข้อ 4)</td></tr>
+      <tr><td>ช่วงนี้มีใบลาอยู่แล้ว</td><td>วันที่ซ้อนกับใบที่รอ/อนุมัติแล้ว</td><td>ถอนหรือขอยกเลิกใบเดิมก่อน (หัวข้อ 8)</td></tr>
+      <tr><td>วันที่เลือกเป็นวันหยุดของบริษัท</td><td>ทั้งช่วงเป็นวันหยุด ไม่ต้องลา</td><td>ถ้าวันหยุดในระบบไม่ตรงความจริง แจ้งฝ่ายบุคคล</td></tr>
+      <tr><td>GPS ไม่พร้อม / ยังหาตำแหน่งไม่เจอ</td><td>มือถือไม่ให้ตำแหน่ง</td><td>เปิด Location แล้วกด <b>ลองอีกครั้ง</b> หรือ <b>โหลดหน้าใหม่</b> — ไม่ได้จริง ๆ พิมพ์เหตุผลอย่างน้อย 5 ตัวอักษรในช่อง <b>เปิด GPS ไม่ได้?</b> แล้วส่งต่อได้</td></tr>
+      <tr><td>ลาเป็นชั่วโมงได้ขั้นต่ำ 30 นาที / ลาเท่ากับเต็มวันแล้ว</td><td>ช่วงเวลาสั้นหรือยาวเกินแบบชั่วโมง</td><td>ปรับเวลา หรือกด <b>ทั้งวัน</b></td></tr>
+      <tr><td>ไม่เห็นปุ่ม "ลาเป็น"</td><td>ประเภทนั้นลาเป็นชั่วโมงไม่ได้</td><td>ลาเป็นวันแทน</td></tr>
+      <tr><td>ส่งไปหลายวันแล้วยังไม่มีใครกด</td><td>ผู้อนุมัติยังไม่ได้ดู</td><td>ระบบเตือนผู้อนุมัติซ้ำเอง ถ้านานผิดปกติแจ้งหัวหน้างาน/ฝ่ายบุคคล</td></tr>
+      <tr><td>เปิดหน้าไม่ขึ้น / ค้างที่กำลังโหลด</td><td>สัญญาณอินเทอร์เน็ตไม่นิ่ง</td><td>ปิดหน้าแล้วกดเมนูเข้าใหม่</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">ติดต่อฝ่ายบุคคลได้ทางไลน์บริษัท หรือเมนู <b>คู่มือ</b> → หัวข้อ <b>ติดต่อ HR</b></p>
+</section>
+
+<footer>คู่มือพนักงาน — ระบบลางาน · MENA COSMETICS · ฉบับวันที่ 16 ตุลาคม 2569</footer>
+</div>

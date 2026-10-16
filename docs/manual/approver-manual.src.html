@@ -1,0 +1,401 @@
+<title>คู่มือผู้อนุมัติ — ระบบลางาน MENA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f3f5f8; --surface:#ffffff; --surface-2:#f8fafc;
+  --ink:#161d2b; --ink-2:#586374; --ink-3:#8592a3;
+  --line:#e0e5ec; --line-2:#eef1f5;
+  --brand:#a01560;
+  --ok:#0e7062; --ok-bg:#e6f4f1;
+  --warn:#a4590a; --warn-bg:#fdf1e0;
+  --crit:#bd2f28; --crit-bg:#fceceb;
+  --block:#5b4a94; --block-bg:#efecf8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+    --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+    --line:#2b313d; --line-2:#232935;
+    --brand:#b9c3e2;
+    --ok:#4ecfb4; --ok-bg:#12302c;
+    --warn:#e9a94f; --warn-bg:#33270f;
+    --crit:#f0837a; --crit-bg:#361a19;
+    --block:#a99ae0; --block-bg:#25203a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#10131a; --surface:#181c25; --surface-2:#1e232e;
+  --ink:#e8ecf3; --ink-2:#a0aab9; --ink-3:#7b8697;
+  --line:#2b313d; --line-2:#232935;
+  --brand:#b9c3e2;
+  --ok:#4ecfb4; --ok-bg:#12302c;
+  --warn:#e9a94f; --warn-bg:#33270f;
+  --crit:#f0837a; --crit-bg:#361a19;
+  --block:#a99ae0; --block-bg:#25203a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  font-size:15.5px; line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px 100px}
+h1,h2,h3,.disp{font-family:"Sarabun",system-ui,sans-serif;text-wrap:balance}
+code,.mono,.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ── หัวเรื่อง ── */
+header.top{padding:56px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+h1{font-size:clamp(30px,4.4vw,44px);line-height:1.2;font-weight:700;margin:10px 0 8px;letter-spacing:-.01em}
+.lede{color:var(--ink-2);max-width:62ch;margin:0}
+.stamp{margin-top:18px;font-size:13px;color:var(--ink-3);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+/* ── แถบตัวเลข ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:28px 0 0}
+.tile{background:var(--surface);padding:16px 18px}
+.tile .k{font-size:11.5px;letter-spacing:.06em;color:var(--ink-3);text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+.tile .v{font-size:26px;font-weight:600;font-family:"Sarabun",sans-serif;line-height:1.25;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.crit{color:var(--crit)}
+
+/* ── สารบัญ ── */
+nav.toc{position:sticky;top:0;z-index:5;background:var(--ground);border-bottom:1px solid var(--line);margin:34px 0 0;padding:10px 0;overflow-x:auto}
+nav.toc ul{display:flex;gap:4px;list-style:none;margin:0;padding:0;white-space:nowrap}
+nav.toc a{font-size:13px;color:var(--ink-2);text-decoration:none;padding:5px 11px;border-radius:2px;display:block}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--surface);color:var(--ink);outline:none}
+nav.toc a:focus-visible{box-shadow:0 0 0 2px var(--brand)}
+
+/* ── ส่วน ── */
+section{padding-top:46px}
+.sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:0}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-3);letter-spacing:.08em}
+h2{font-size:23px;font-weight:600;margin:0;flex:1}
+h3{font-size:17px;font-weight:600;margin:0}
+
+/* ── การ์ดหมวด ── */
+.item{border-bottom:1px solid var(--line);padding:22px 0}
+.item-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.item-head h3{flex:1;min-width:200px}
+.where{font-size:12.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.rows{display:grid;grid-template-columns:104px 1fr;gap:6px 16px;align-items:start}
+.rows dt{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;padding-top:5px}
+.rows dd{margin:0;color:var(--ink)}
+.rows dd.q{color:var(--ink-2)}
+@media (max-width:640px){.rows{grid-template-columns:1fr;gap:2px 0}.rows dt{padding-top:10px}}
+
+/* ── ชิปสถานะ ── */
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;white-space:nowrap;line-height:1.6}
+.chip::before{content:"";width:6px;height:6px;border-radius:99px;background:currentColor;flex:none}
+.chip.ok{color:var(--ok);background:var(--ok-bg)}
+.chip.warn{color:var(--warn);background:var(--warn-bg)}
+.chip.crit{color:var(--crit);background:var(--crit-bg)}
+.chip.block{color:var(--block);background:var(--block-bg)}
+.chip.none{color:var(--ink-3);background:var(--line-2)}
+
+/* ── กล่องเน้น ── */
+.alert{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--crit);padding:20px 22px;margin:22px 0}
+.alert.warn{border-top-color:var(--warn)}
+.alert h3{margin-bottom:6px}
+.alert p{margin:6px 0;color:var(--ink-2)}
+.alert p b{color:var(--ink)}
+.chain{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line-2);padding:10px 12px;margin-top:12px;overflow-x:auto;white-space:nowrap}
+
+/* ── ตาราง ── */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface);margin:16px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th{text-align:left;font-weight:600;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+   font-family:"IBM Plex Mono",monospace;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r{text-align:right;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace}
+td.nw{white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+
+/* ── ขั้นตอน ── */
+ol.steps{list-style:none;counter-reset:s;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);padding:16px 20px 16px 58px;position:relative}
+ol.steps>li::before{content:counter(s,decimal-leading-zero);position:absolute;left:20px;top:16px;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-3);font-weight:500}
+ol.steps b{display:block;font-family:"Sarabun",sans-serif;font-size:16px;font-weight:600;margin-bottom:2px}
+ol.steps small{color:var(--ink-2);font-size:13.5px;line-height:1.65;display:block}
+ol.steps .who{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--ink-3);letter-spacing:.05em}
+
+ul.plain{margin:8px 0 0;padding-left:18px;color:var(--ink-2)}
+ul.plain li{margin:3px 0}
+ul.plain b{color:var(--ink)}
+p.note{color:var(--ink-2);margin:14px 0 0;font-size:14px}
+.kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;white-space:nowrap;color:var(--ink)}
+
+figure{margin:18px 0 0;background:var(--surface);border:1px solid var(--line);padding:10px}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--line-2)}
+figcaption{font-size:12.5px;color:var(--ink-2);padding:10px 4px 2px;line-height:1.6}
+figcaption b{color:var(--ink)}
+.figs{display:grid;gap:14px}
+@media (min-width:820px){.figs.two{grid-template-columns:1fr 1fr}}
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px}
+a{color:var(--ink);text-underline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── ปรับเฉพาะเล่มนี้ ── */
+/* ห้ามให้ข้อความไทยตกไปอยู่ในฟอนต์ mono — ไม่มีสระ/วรรณยุกต์ไทย จะกลายเป็น fallback ที่อ่านยาก */
+th, .rows dt, .where, .eyebrow, .tile .k, ol.steps .who { font-family:"Sarabun",sans-serif !important; letter-spacing:.02em }
+th, .rows dt, .tile .k { text-transform:none }
+.num, code, td.r { font-family:"IBM Plex Mono",monospace }
+figure img { max-width:340px; margin:0 auto }
+figure.wide img { max-width:520px }
+.sec-head { border-bottom-color:#d51f7d }
+ol.steps>li::before { color:#d51f7d; font-weight:700 }
+.alert { border-top-color:#d51f7d }
+h1 { color:#a01560 }
+
+/* ── เพิ่มสำหรับชุด 3 เล่ม (พนักงาน / ผู้อนุมัติ / ฝ่ายบุคคล) ── */
+section h3{margin:22px 0 4px}
+ol.steps small b{display:inline;font-size:inherit;margin:0;font-weight:600}
+.figs.two figure img{max-width:100%}
+.figs.two>div{min-width:0}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px;break-inside:avoid}
+.signbox{border:1px solid var(--line);background:var(--surface);padding:18px 20px}
+.signbox .sl{font-weight:600;margin-bottom:14px}
+.signbox .dots{margin:18px 0 0;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+td code{font-size:12px;background:var(--surface-2);padding:0 4px;border:1px solid var(--line-2)}
+@media (max-width:640px){.sign{grid-template-columns:1fr}}
+@media print{
+  figure img{max-width:400px !important}
+  figure.tall img{max-height:205mm !important}
+  .figs.two figure img{max-width:100% !important}
+  td code{font-size:9pt}
+  table{font-size:9.5pt}
+  .tbl-wrap{break-inside:auto !important}
+  tr{break-inside:avoid}
+}
+</style><div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">MENA COSMETICS · เล่ม 2 จาก 3</div>
+  <h1>คู่มือผู้อนุมัติ — หัวหน้างาน · ผู้บริหาร</h1>
+  <p class="lede">สำหรับคนที่ต้องตัดสินใบลาของคนอื่น — รับการ์ดในไลน์ อนุมัติ ไม่อนุมัติ หรือขอเอกสารเพิ่ม
+  และเข้าใจว่าใบลาแต่ละใบวิ่งผ่านใครบ้างตามลำดับ</p>
+  <div class="stamp"><b>ฉบับวันที่</b> 16 ตุลาคม 2569 <span>·</span> <b>ระบบ</b> ลางาน MENA COSMETICS</div>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="k">อนุมัติ</div><div class="v ok">กดในการ์ดได้เลย</div><div class="s">ไม่ต้องเปิดหน้าอื่น</div></div>
+  <div class="tile"><div class="k">ไม่อนุมัติ</div><div class="v warn">ต้องมีเหตุผล</div><div class="s">ระบบเปิดหน้าให้พิมพ์</div></div>
+  <div class="tile"><div class="k">ขอเอกสาร</div><div class="v">ใบค้างรอผู้ลา</div><div class="s">ยังไม่ถูกตัดสิน</div></div>
+  <div class="tile"><div class="k">ไม่กดเลย</div><div class="v crit">ถูกเตือนซ้ำ</div><div class="s">ทุก 4 ชั่วโมงทำงาน (ค่าตั้งต้น)</div></div>
+</div>
+
+<nav class="toc"><ul>
+  <li><a href="#s1">1. ลำดับขั้นอนุมัติ</a></li>
+  <li><a href="#s2">2. การ์ดในไลน์</a></li>
+  <li><a href="#s3">3. หน้ารายการรออนุมัติ</a></li>
+  <li><a href="#s4">4. ตัดสินใจ</a></li>
+  <li><a href="#s5">5. ขอเอกสารเพิ่ม</a></li>
+  <li><a href="#s6">6. ในนามหัวหน้างาน</a></li>
+  <li><a href="#s7">7. ใบขอยกเลิก</a></li>
+  <li><a href="#s8">8. การเตือนซ้ำ</a></li>
+  <li><a href="#s9">9. อาการที่เจอบ่อย</a></li>
+</ul></nav>
+
+<!-- ==== ส่วนลำดับขั้นอนุมัติ: แก้ที่ section#s1 ที่เดียวเมื่อกติกาในโค้ดเปลี่ยน ==== -->
+<section id="s1">
+  <div class="sec-head"><span class="sec-num">01</span><h2>ลำดับขั้นอนุมัติ — ใบลาวิ่งไปหาใคร</h2></div>
+  <p class="note">ใบลาปกติผ่าน 3 ชั้น ใครอยู่ชั้นไหนของพนักงานแต่ละคน ฝ่ายบุคคลตั้งไว้ที่หน้า <b>ผังอำนาจอนุมัติ</b></p>
+  <div class="chain">ผู้ลาส่งใบลา  →  ชั้น 1 หัวหน้างาน (คนเดียวตามผัง)  →  ชั้น 2 HR (HR คนไหนกดก่อนก็จบชั้น)  →  ชั้น 3 ผู้บริหารในสาย (คนไหนกดก่อนก็จบ)  →  อนุมัติแล้ว + หักโควตา</div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ผู้ลาเป็นใคร / ผังตั้งไว้แบบไหน</th><th>ใบลาวิ่งไปตามลำดับ</th></tr></thead>
+    <tbody>
+      <tr><td>พนักงาน · พนักงานพิเศษ ที่มีหัวหน้างาน</td><td>หัวหน้างาน → HR → ผู้บริหาร</td></tr>
+      <tr><td>ไม่มีหัวหน้างานในผัง หรือหัวหน้างานถูกปิดบัญชี</td><td>ข้ามชั้น 1 → HR → ผู้บริหาร</td></tr>
+      <tr><td>ผู้ลาเป็นหัวหน้างานเอง</td><td>ข้ามชั้น 1 → HR → ผู้บริหาร</td></tr>
+      <tr><td>ผู้ลาเป็น HR</td><td>ข้ามชั้น 1 และ 2 → ผู้บริหาร</td></tr>
+      <tr><td>ผู้ลาเป็นผู้บริหาร</td><td>อนุมัติอัตโนมัติทันที</td></tr>
+      <tr><td><b>ผู้อนุมัติขั้นแรกในผังเป็นผู้บริหาร</b> (เช่น พนักงานที่ขึ้นตรงกับผู้บริหาร)</td><td>ผู้บริหารคนนั้นอนุมัติ <b>ในนามหัวหน้างาน</b> → ไม่ผ่าน HR → ถ้าชั้น 3 ในผังมีผู้บริหารคนอื่น ไปต่อที่คนนั้น ถ้าไม่มี จบที่ขั้นแรก (หัวข้อ 6)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>ชั้น 3 ส่งให้ผู้บริหารคนไหน</h3>
+  <ul class="plain">
+    <li>ผังติ๊กผู้บริหารไว้ และคนนั้นใช้งานอยู่ + ผูกไลน์แล้ว → ส่งเฉพาะคนที่ติ๊ก</li>
+    <li>ผังยังไม่เคยติ๊กผู้บริหารเลย → ส่งให้ <b>ผู้บริหารทุกคน</b> (กันใบค้าง)</li>
+    <li>ผังติ๊กไว้ แต่ทุกคนยังรับใบไม่ได้ (ยังไม่ผูกไลน์ / ปิดบัญชี) → <b>HR ตัดสินแทนผู้บริหาร</b></li>
+  </ul>
+  <h3>HR ตัดสินแทนผู้บริหารได้เมื่อไหร่</h3>
+  <ul class="plain">
+    <li>ผู้บริหารในสายรับใบไม่ได้ (ข้อสุดท้ายด้านบน) หรือ</li>
+    <li>ผู้บริหาร <b>ถูกเตือนซ้ำแล้วอย่างน้อย 1 ครั้ง</b> ยังไม่กด — HR จะได้การ์ดเตือนคู่กันทุกรอบ และเห็นใบนี้ในหน้าอนุมัติเป็น <b>ชั้น 3 (HR แทนผู้บริหาร)</b>
+      (ระหว่างที่ผู้บริหารขอเอกสารจากผู้ลาอยู่ HR ยังตัดสินแทนไม่ได้)</li>
+    <li>HR ตัดสินแทนแล้ว หมายเหตุจะขึ้นต้นว่า <b>[HR ตัดสินแทนผู้บริหาร]</b> และผู้บริหารในสายได้การ์ดแจ้งว่าใบปิดแล้ว</li>
+  </ul>
+  <figure><img src="img/appr-09-hr-fallback.jpg" alt="HR แทนผู้บริหาร">
+    <figcaption><b>มุมมอง HR</b> — ใบที่ผู้บริหารโดนเตือนแล้วยังไม่กด ขึ้นป้าย <b>ชั้น 3 (HR แทนผู้บริหาร)</b></figcaption></figure>
+  <div class="alert warn">
+    <h3>กติกาที่ใช้ทุกชั้น</h3>
+    <p><b>ตัดสินใบลาของตัวเองไม่ได้</b> ทุกชั้น · ต้องตัดสินทีละชั้นตามลำดับ ข้ามชั้นที่ยังค้างไม่ได้ ·
+    ชั้นที่มีหลายคน (HR / ผู้บริหาร) คนแรกที่กดคือผลของชั้นนั้น คนที่กดทีหลังจะขึ้นว่ามีผู้อื่นตัดสินไปแล้ว</p>
+    <p><b>ผู้บริหารเห็นใบที่รอ HR (ชั้น 2) ด้วย</b> และกดแทน HR ในชั้นนั้นได้</p>
+    <p>ไม่อนุมัติชั้นไหนก็ตาม = ใบลาจบเป็น <b>ปฏิเสธ</b> ทันที ไม่วิ่งต่อ และคืนวันที่กันไว้ให้ผู้ลา</p>
+  </div>
+</section>
+<!-- ==== จบส่วนลำดับขั้นอนุมัติ ==== -->
+
+<section id="s2">
+  <div class="sec-head"><span class="sec-num">02</span><h2>การ์ดขออนุมัติในไลน์</h2></div>
+  <p class="note">พอใบลาถึงชั้นของคุณ ไลน์บริษัทจะส่งการ์ด <b>ขออนุมัติชั้น N</b> มาให้ พร้อมชื่อผู้ลา แผนก ประเภท วันที่ จำนวน และเหตุผล</p>
+  <ol class="steps">
+    <li><b>กด "✅ อนุมัติ" ในการ์ด</b><small>อนุมัติได้ทันทีในแชท ระบบตอบกลับว่า <b>อนุมัติเรียบร้อย</b> แล้วส่งใบต่อชั้นถัดไปเอง</small></li>
+    <li><b>กด "❌ ไม่อนุมัติ (ระบุเหตุผล)"</b><small>ระบบเปิดหน้าอนุมัติของใบนั้นขึ้นมา ให้พิมพ์เหตุผลก่อนกด (การ์ดกดไม่อนุมัติตรง ๆ ไม่ได้ เพราะต้องมีเหตุผลเสมอ)</small></li>
+    <li><b>แตะรูปในการ์ด</b><small>ถ้าผู้ลาแนบรูป (เช่น ใบรับรองแพทย์) แตะเพื่อดูเต็ม · <b>GPS ดูแผนที่</b> เปิดตำแหน่งที่ผู้ลากดส่ง</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/appr-01-card-request.jpg" alt="การ์ดขออนุมัติชั้น 1">
+      <figcaption><b>การ์ดขออนุมัติชั้น 1 (หัวหน้างาน)</b> — ภาพจำลองการ์ดจากข้อมูลที่ระบบสร้างจริง</figcaption></figure>
+    <div>
+      <p class="note">ในการ์ดอาจมีแถบเตือนเพิ่ม:</p>
+      <ul class="plain">
+        <li><b>⚠️ แจ้งไม่ทันกำหนด — ลากะทันหัน/ฉุกเฉิน</b> พร้อมเหตุผลของผู้ลา</li>
+        <li><b>⚠️ ไม่มีพิกัดยืนยัน</b> ผู้ลาเปิด GPS ไม่ได้ และบอกเหตุผลไว้ — ผู้อนุมัติเป็นคนตัดสินเองว่าเชื่อได้ไหม</li>
+        <li><b>เอกสาร: ยังไม่แนบ — ผู้ลาจะแนบตามมาภายหลัง</b> (ลาป่วยที่ต้องมีใบแพทย์)</li>
+        <li><b>ขออนุมัติยกเลิกวันลา</b> — เป็นใบขอยกเลิก ไม่ใช่ใบลาใหม่ (หัวข้อ 7)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="s3">
+  <div class="sec-head"><span class="sec-num">03</span><h2>หน้ารายการรออนุมัติ</h2></div>
+  <p class="note">กดเมนู <b>อนุมัติ</b> ด้านล่างแชท จะเห็นทุกใบที่รอคุณอยู่ เรียง <b>รอนานที่สุดขึ้นก่อน</b>
+  ป้ายมุมขวาบอกว่าคุณตัดสินในชั้นไหน ถ้าไม่มีใบรออยู่จะขึ้นว่า <b>ไม่มีรายการรออนุมัติ</b></p>
+  <div class="figs two">
+    <figure class="tall"><img src="img/appr-02-list.jpg" alt="รายการรออนุมัติ">
+      <figcaption><b>รายการของหัวหน้างาน</b> — บนสุดบอกชื่อและบทบาทของคุณ แต่ละใบมีปุ่ม <b>ตัดสินใจ</b></figcaption></figure>
+    <figure><img src="img/appr-02b-nogps.jpg" alt="ใบที่ไม่มีพิกัด">
+      <figcaption><b>ใบที่มีแถบเตือน</b> — แจ้งไม่ทันกำหนด (สีเหลือง) และ <b>ไม่มีพิกัดยืนยัน</b> พร้อมเหตุผลที่ผู้ลาเขียน</figcaption></figure>
+  </div>
+  <ul class="plain">
+    <li><b>ดูตำแหน่ง GPS</b> เปิดแผนที่ตำแหน่งตอนกดส่ง · <b>ไฟล์แนบตอนส่ง</b> / <b>แนบเพิ่ม 1, 2…</b> เปิดดูรูปที่ผู้ลาแนบ</li>
+    <li><b>ใบนี้ถูกเตือนไปแล้ว N ครั้ง</b> (แถบแดง) — ใบค้างที่คุณนาน ควรรีบตัดสิน</li>
+    <li>ชื่อประเภทลามีคำว่า <b>(ย้อนหลัง)</b> = วันลาเริ่มก่อนวันที่ส่ง</li>
+  </ul>
+</section>
+
+<section id="s4">
+  <div class="sec-head"><span class="sec-num">04</span><h2>ตัดสินใจ — อนุมัติ / ไม่อนุมัติ</h2></div>
+  <ol class="steps">
+    <li><b>กด "ตัดสินใจ" ที่ใบนั้น</b><small>กล่อง <b>ตัดสินใจชั้น N</b> เปิดขึ้น สรุปเลขที่ ประเภท วันที่ จำนวน เหตุผล</small></li>
+    <li><b>อนุมัติ</b><small>กด <b>✅ อนุมัติ</b> — หมายเหตุไม่บังคับ ใบวิ่งต่อชั้นถัดไป หรือถ้าเป็นชั้นสุดท้าย ใบเป็น <b>อนุมัติแล้ว</b> และหักโควตาทันที</small></li>
+    <li><b>ไม่อนุมัติ</b><small>พิมพ์เหตุผลในช่อง <b>หมายเหตุ</b> อย่างน้อย 3 ตัวอักษร แล้วกด <b>❌ ไม่อนุมัติ</b> — ไม่พิมพ์ระบบจะไม่ยอมให้กด</small></li>
+  </ol>
+  <figure><img src="img/appr-03-decision.jpg" alt="กล่องตัดสินใจ">
+    <figcaption><b>กล่องตัดสินใจ</b> — 3 ทาง: <b>ขอเอกสารเพิ่มจากผู้ลา</b> · <b>❌ ไม่อนุมัติ</b> · <b>✅ อนุมัติ</b></figcaption></figure>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>ผลที่กด</th><th>ใครได้แจ้งทางไลน์</th></tr></thead>
+    <tbody>
+      <tr><td>อนุมัติ (ยังไม่ครบชั้น)</td><td>ผู้ลา (ผ่านชั้นไหนแล้ว รอใครต่อ) · ผู้อนุมัติชั้นถัดไปได้การ์ดขออนุมัติ</td></tr>
+      <tr><td>อนุมัติครบทุกชั้น</td><td>ผู้ลา · หัวหน้างานของผู้ลา · HR ทุกคน (และผู้บริหารในสายถ้า HR ตัดสินแทน)</td></tr>
+      <tr><td>ไม่อนุมัติ</td><td>ผู้ลา · หัวหน้างาน (ถ้าคนปฏิเสธไม่ใช่หัวหน้างานเอง) · HR ถ้าปฏิเสธที่ชั้นผู้บริหาร ·
+        ถ้าปฏิเสธตั้งแต่ชั้น 1 ระบบส่ง <b>รายงานการปฏิเสธ</b> ให้ HR และผู้บริหารในสายรับทราบด้วย</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">HR ได้ <b>สำเนาถึง HR</b> ตั้งแต่ตอนผู้ลาส่งใบ (ใบที่เริ่มที่หัวหน้างาน) จึงรู้ว่ามีใบรอหัวหน้าคนไหนอยู่</p>
+</section>
+
+<section id="s5">
+  <div class="sec-head"><span class="sec-num">05</span><h2>ขอเอกสารเพิ่มจากผู้ลา</h2></div>
+  <p class="note">ใช้เมื่อยังตัดสินไม่ได้เพราะขาดเอกสาร — ใบลา <b>ยังค้างที่ชั้นของคุณ</b> ไม่ได้อนุมัติหรือปฏิเสธ</p>
+  <ol class="steps">
+    <li><b>พิมพ์ในช่อง "หมายเหตุ" ว่าต้องการเอกสารอะไร</b><small>อย่างน้อย 3 ตัวอักษร เช่น "ขอใบรับรองแพทย์ เพราะลาติดกัน 3 วัน"</small></li>
+    <li><b>กด "ขอเอกสารเพิ่มจากผู้ลา"</b><small>ผู้ลาได้การ์ด <b>ผู้อนุมัติขอเอกสารเพิ่ม</b> · HR ได้แจ้งด้วยเสมอ
+      (ถ้าผู้ลายังไม่ผูกไลน์ หน้าจอจะบอกว่า HR ได้รับแจ้งให้ติดต่อผู้ลา)</small></li>
+    <li><b>รอผู้ลาแนบ</b><small>ระหว่างนี้ระบบหยุดเตือนคุณ และเตือนผู้ลาแทน พอผู้ลาแนบแล้วคุณได้การ์ด <b>ผู้ลาแนบเอกสารเพิ่มแล้ว</b>
+      ในหน้ารายการจะขึ้นแถบเขียว <b>ผู้ลาแนบเอกสารที่ขอแล้ว</b> แล้วค่อยกดตัดสิน</small></li>
+  </ol>
+  <div class="figs two">
+    <figure><img src="img/appr-04-request-doc.jpg" alt="พิมพ์ขอเอกสาร">
+      <figcaption><b>พิมพ์สิ่งที่ต้องการ</b> แล้วกด <b>ขอเอกสารเพิ่มจากผู้ลา</b></figcaption></figure>
+    <figure><img src="img/appr-05-doc-status.jpg" alt="รอผู้ลาแนบเอกสาร">
+      <figcaption><b>ระหว่างรอ</b> — แถบชมพู <b>รอผู้ลาแนบเอกสารเพิ่ม</b> บอกสิ่งที่ขอไว้</figcaption></figure>
+  </div>
+  <p class="note">ถ้าไม่อยากรอ จะกดอนุมัติหรือไม่อนุมัติระหว่างนั้นเลยก็ได้ คำขอเอกสารจะถูกปิดไปพร้อมกัน · ขอเอกสารได้เฉพาะใบลา ไม่ใช่ใบขอยกเลิก</p>
+</section>
+
+<section id="s6">
+  <div class="sec-head"><span class="sec-num">06</span><h2>ผู้บริหารอนุมัติในนามหัวหน้างาน</h2></div>
+  <p class="note">ถ้าผังตั้งผู้บริหารเป็น <b>หัวหน้างาน</b> ของพนักงานคนไหน ใบลาของคนนั้นจะไปที่ผู้บริหารคนนั้นก่อน
+  การ์ดและหน้ารายการขึ้นว่า <b>ชั้น 1 (ผู้บริหาร · อนุมัติในนามหัวหน้างาน)</b></p>
+  <ul class="plain">
+    <li>อนุมัติแล้ว <b>ไม่ผ่าน HR</b> — ถ้าชั้น 3 ในผังมีผู้บริหาร <b>คนอื่น</b> ใบไปต่อที่คนนั้น ถ้าไม่มี ใบอนุมัติครบทันที แล้วระบบค่อยแจ้ง HR</li>
+    <li>คนที่อนุมัติขั้นแรกไปแล้ว จะไม่ได้รับใบเดิมซ้ำที่ชั้น 3</li>
+    <li>ถ้าผู้บริหารคนนั้นยังรับใบไม่ได้ (ยังไม่ผูกไลน์ / ปิดบัญชี) ใบจะไปที่ HR ให้ตัดสินแทนในขั้นแรก</li>
+    <li>ใบแบบนี้ต้องให้ผู้บริหารเป็นคนกดเท่านั้น</li>
+  </ul>
+  <div class="figs two">
+    <figure><img src="img/appr-07-card-owner-first.jpg" alt="การ์ดในนามหัวหน้างาน">
+      <figcaption><b>การ์ดที่ผู้บริหารได้รับ</b></figcaption></figure>
+    <figure class="tall"><img src="img/appr-06-owner-first.jpg" alt="รายการของผู้บริหาร">
+      <figcaption><b>หน้ารายการของผู้บริหาร</b> — ใบชั้น 1 ในนามหัวหน้างาน อยู่รวมกับใบชั้น 2 ที่รอ HR (ผู้บริหารกดแทนได้)</figcaption></figure>
+  </div>
+  <p class="note">ผู้บริหารดูว่าใครอยู่ในสายของตัวเองได้ที่เมนู <b>จัดการ</b> → <b>ผังอำนาจอนุมัติ</b> ส่วนบนสุด <b>สายงานของฉัน</b></p>
+  <figure><img src="img/appr-12-my-line.jpg" alt="สายงานของฉัน">
+    <figcaption><b>สายงานของฉัน</b> (มุมมองผู้บริหาร) — รายชื่อพนักงานที่คุณเป็นผู้อนุมัติ</figcaption></figure>
+</section>
+
+<section id="s7">
+  <div class="sec-head"><span class="sec-num">07</span><h2>ใบขอยกเลิกวันลา</h2></div>
+  <p class="note">พนักงานขอยกเลิกวันลาที่ <b>อนุมัติแล้ว</b> ได้ ระบบสร้าง <b>ใบขอยกเลิก</b> วิ่งผ่านผู้อนุมัติชุดเดิมตามลำดับเดิม
+  ในรายการจะมีแถบ <b>ใบขอยกเลิกวันลาที่อนุมัติไปแล้ว</b> พร้อมเลขที่ใบเดิม และการ์ดขึ้นว่า <b>ขออนุมัติยกเลิกวันลา ชั้น N</b></p>
+  <ul class="plain">
+    <li><b>อนุมัติครบ</b> → ใบลาเดิมเปลี่ยนเป็น <b>ยกเลิกแล้ว</b> และคืนโควตาให้ผู้ลา</li>
+    <li><b>ไม่อนุมัติ</b> → ใบลาเดิมยังอนุมัติอยู่เหมือนเดิม ผู้ลาและ HR ได้แจ้ง</li>
+  </ul>
+  <figure><img src="img/appr-11-cancel.jpg" alt="ใบขอยกเลิก">
+    <figcaption><b>ใบขอยกเลิกในรายการ</b> — เหตุผลคือเหตุผลที่ผู้ลาขอยกเลิก</figcaption></figure>
+</section>
+
+<section id="s8">
+  <div class="sec-head"><span class="sec-num">08</span><h2>การเตือนซ้ำเมื่อยังไม่มีใครกด</h2></div>
+  <p class="note">ระบบตรวจทุกชั่วโมง ถ้าใบค้างที่ชั้นไหนเกิน <b>4 ชั่วโมงทำงาน</b> (ค่าตั้งต้น ฝ่ายบุคคลปรับได้)
+  จะส่งการ์ด <b>เตือนครั้งที่ N — ใบลายังรอคุณอยู่</b> นับเฉพาะเวลางาน (ตั้งต้น 08:30–17:30 ของวันทำงาน) — ส่งใบตอนกลางคืนจะไม่ถูกเตือนกลางดึก</p>
+  <div class="figs two">
+    <figure><img src="img/appr-08-card-reminder.jpg" alt="การ์ดเตือนซ้ำ">
+      <figcaption><b>การ์ดเตือน</b> — บอกว่าค้างที่ชั้นไหนมากี่ชั่วโมงทำงาน กดอนุมัติในการ์ดได้เลย</figcaption></figure>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ค้างที่</th><th>เตือนใคร</th></tr></thead>
+      <tbody>
+        <tr><td>ชั้น 1</td><td>หัวหน้างานของผู้ลา</td></tr>
+        <tr><td>ชั้น 2</td><td>HR ทุกคน</td></tr>
+        <tr><td>ชั้น 3</td><td>ผู้บริหารในสาย + แจ้ง HR ทุกรอบ (HR ตัดสินแทนได้)</td></tr>
+        <tr><td>รอผู้ลาแนบเอกสาร</td><td>ผู้ลา (ไม่เตือนผู้อนุมัติ)</td></tr>
+        <tr><td>ไม่มีใครรับใบได้เลย</td><td>HR ได้การ์ด <b>ใบลาค้างโดยไม่มีผู้อนุมัติ</b></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <p class="note">พอมีคนกดในชั้นนั้นแล้ว การนับเวลาเริ่มใหม่สำหรับชั้นถัดไป ·
+  ถ้าโควตาข้อความไลน์ของบริษัทเดือนนั้นหมด การ์ดทุกชนิดรวมถึงการเตือนจะส่งไม่ออก — ให้เปิดเมนู <b>อนุมัติ</b> ดูเอง (รายละเอียดในคู่มือฝ่ายบุคคล)</p>
+</section>
+
+<section id="s9">
+  <div class="sec-head"><span class="sec-num">09</span><h2>อาการที่เจอบ่อย</h2></div>
+  <figure><img src="img/appr-10-already-decided.jpg" alt="ใบตัดสินไปแล้ว">
+    <figcaption><b>กดจากการ์ดแล้วขึ้นว่า "ตัดสินไปแล้ว"</b> — มีคนตัดสินใบนี้ก่อนคุณ ระบบบอกสถานะและเวลาที่ตัดสิน</figcaption></figure>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>อาการ / ข้อความ</th><th>แปลว่าอะไร</th><th>ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>คุณไม่มีรายการที่ต้องอนุมัติ</td><td>บัญชีของคุณยังไม่ได้ใช้งาน หรือยังไม่ได้ผูกบัญชี</td><td>ผูกบัญชีก่อน (คู่มือผูกบัญชี) หรือติดต่อฝ่ายบุคคล</td></tr>
+      <tr><td>ไม่มีรายการรออนุมัติ</td><td>ไม่มีใบไหนรอคุณ</td><td>—</td></tr>
+      <tr><td>ใบลา … ยังรออยู่ แต่ตอนนี้อยู่ที่ผู้อนุมัติชั้นอื่น</td><td>เปิดจากการ์ดเก่า ใบเดินไปชั้นอื่นแล้ว</td><td>ไม่ต้องทำอะไร</td></tr>
+      <tr><td>มีผู้อื่นตัดสินใจไปแล้ว</td><td>HR/ผู้บริหารอีกคนกดก่อนไม่กี่วินาที</td><td>โหลดหน้าใหม่</td></tr>
+      <tr><td>คุณไม่ใช่หัวหน้างานของผู้ลานี้</td><td>ผังอำนาจเปลี่ยนแล้ว</td><td>แจ้งฝ่ายบุคคลถ้าผังไม่ถูก</td></tr>
+      <tr><td>ใบลานี้ไม่ได้อยู่ในสายงานของคุณ</td><td>ผู้บริหารที่ไม่ได้ถูกติ๊กในผังของผู้ลา</td><td>ให้ผู้บริหารในสายเป็นคนกด</td></tr>
+      <tr><td>ตัดสินใบลาของตัวเองไม่ได้</td><td>ใบนั้นเป็นของคุณเอง</td><td>รอผู้อนุมัติของคุณ</td></tr>
+      <tr><td>กรุณาระบุเหตุผลการปฏิเสธอย่างน้อย 3 ตัวอักษร</td><td>กดไม่อนุมัติโดยไม่พิมพ์หมายเหตุ</td><td>พิมพ์เหตุผลแล้วกดใหม่</td></tr>
+      <tr><td>โหลดรายการไม่สำเร็จ</td><td>เน็ตสะดุด (ระบบลองใหม่ให้แล้ว 1 รอบ)</td><td>กด <b>ลองอีกครั้ง</b></td></tr>
+      <tr><td>ไม่ได้รับการ์ดเลยทั้งที่มีคนส่งใบลา</td><td>โควตาข้อความไลน์เดือนนี้อาจหมด</td><td>เปิดเมนู <b>อนุมัติ</b> ดูเอง และแจ้งฝ่ายบุคคล</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>คู่มือผู้อนุมัติ — ระบบลางาน · MENA COSMETICS · ฉบับวันที่ 16 ตุลาคม 2569</footer>
+</div>
