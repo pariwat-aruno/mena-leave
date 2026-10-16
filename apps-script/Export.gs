@@ -167,9 +167,14 @@ function buildLeaveReport_(payload) {
       const clippedTo = leaveTo > validation.date_to ? validation.date_to : leaveTo;
       const unit = String(leave.leave_unit || 'day').toLowerCase() === 'hour' ? 'hour' : 'day';
       const hours = unit === 'hour' ? reportNonNegativeNumber_(leave.hours) : 0;
+      // ใบที่อยู่ในช่วงทั้งใบใช้จำนวนวันที่บันทึกตอนส่ง (ตามกติกาวันทำงานตอนนั้น)
+      // ใบคร่อมขอบช่วงใช้วันที่คำนวณเฉพาะส่วนในช่วง — แบ่งจากยอดบันทึกไม่ได้ว่าวันไหนนับ
+      // ⭐ ค่าเดียวนี้ใช้ทั้งตารางรายละเอียด CSV และยอดสรุป — ผลรวมรายละเอียดต้องเท่ายอดสรุปเสมอ
+      const wholeLeave = leaveFrom === clippedFrom && leaveTo === clippedTo &&
+        leave.days !== '' && leave.days !== null && !isNaN(Number(leave.days));
       const days = unit === 'hour'
         ? 0
-        : countLeaveDays(clippedFrom, clippedTo, countAllDays, workDays);
+        : wholeLeave ? Number(leave.days) : countLeaveDays(clippedFrom, clippedTo, countAllDays, workDays);
 
       rows.push({
         leave_id: String(leave.leave_id || ''),
@@ -188,10 +193,6 @@ function buildLeaveReport_(payload) {
         final_status: finalStatus,
         pay_status: payStatus,
         submitted_at: normalizeReportDateTime_(leave.submitted_at),
-        // ยอดไม่จ่าย: ใบที่อยู่ในช่วงทั้งใบใช้จำนวนวันที่บันทึกตอนส่ง (ตามกติกาวันทำงานตอนนั้น)
-        // ใบคร่อมขอบช่วงใช้วันที่คำนวณเฉพาะส่วนในช่วง — แบ่งจากยอดบันทึกไม่ได้ว่าวันไหนนับ
-        _pay_days: (leaveFrom === clippedFrom && leaveTo === clippedTo && leave.days !== '' && !isNaN(Number(leave.days)))
-          ? Number(leave.days) : days,
         _user_id: String(leave.user_id || ''),
       });
     });
@@ -241,7 +242,7 @@ function buildLeaveReport_(payload) {
     if (row.final_status === 'approved') {
       if (row.pay_status === 'unpaid') {
         if (row.unit === 'hour') item.unpaid_hours += row.hours;
-        else item.unpaid_days += row._pay_days;
+        else item.unpaid_days += row.days_in_period;
       } else if (!row.pay_status) {
         item.pay_unset_count++;
       }
@@ -255,7 +256,7 @@ function buildLeaveReport_(payload) {
       a.display_name.localeCompare(b.display_name);
   });
 
-  rows.forEach(function (row) { delete row._user_id; delete row._pay_days; });
+  rows.forEach(function (row) { delete row._user_id; });
   return {
     ok: true,
     period: { from: validation.date_from, to: validation.date_to },

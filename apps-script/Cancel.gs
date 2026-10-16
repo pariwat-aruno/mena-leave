@@ -143,6 +143,18 @@ function requestCancelLeave(payload) {
 
   ensureSheetColumns_('LeaveRequests');
   const flow = computeInitialStages_(requester);
+  // ผู้บริหารยกเลิกใบตัวเอง (ผ่านอัตโนมัติ): ได้ล็อกก่อนเขียนอะไรเลย — ล็อกไม่ได้ = ไม่เขียนอะไร
+  // ล็อกเดียวกับ setLeavePayStatus / approveLeave · ส่งไลน์หลังปล่อยล็อก
+  const autoLock = flow.firstApprovalStage === 0 ? LockService.getScriptLock() : null;
+  if (autoLock) {
+    try { autoLock.waitLock(10000); }
+    catch (e) { return { ok: false, error: 'lock_failed', message: 'ระบบกำลังประมวลผล กรุณาลองอีกครั้ง' }; }
+    const freshParent = findLeaveById_(parent.leave_id);
+    if (!freshParent || freshParent.final_status !== 'approved') {
+      autoLock.releaseLock();
+      return { ok: false, error: 'not_approved', message: 'ใบลานี้ไม่ได้อยู่ในสถานะอนุมัติแล้ว' };
+    }
+  }
   const cancelId = nextLeaveId();
   const now = nowBangkok();
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
@@ -195,12 +207,8 @@ function requestCancelLeave(payload) {
 
   // อนุมัติครบตั้งแต่ต้น (ผู้บริหารทำรายการเอง) → ปิดใบเดิมเลย
   if (flow.firstApprovalStage === 0) {
-    // ล็อกเดียวกับ setLeavePayStatus / approveLeave — กันระบุจ่าย/ไม่จ่ายแทรกกลางตอนปิดใบเดิม
-    const lock = LockService.getScriptLock();
-    try { lock.waitLock(10000); }
-    catch (e) { return { ok: false, error: 'lock_failed', message: 'ระบบกำลังประมวลผล กรุณาลองอีกครั้ง' }; }
     try { applyCancelToParent_(cancelRow); }
-    finally { lock.releaseLock(); }
+    finally { autoLock.releaseLock(); }
     try {
       pushMessage(payload.lineUserId, buildCancelResultCard(cancelRow, parent, requester, true));
     } catch (e) {}

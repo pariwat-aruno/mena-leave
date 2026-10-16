@@ -339,6 +339,21 @@ const unpaidOnly = sandbox.getLeaveReport(Object.assign({}, basePayload, { pay_s
 check('กรองเฉพาะไม่จ่าย (ตารางยังแสดงใบรออนุมัติได้)', unpaidOnly.ok && unpaidOnly.rows.map(r => r.leave_id).sort().join() === 'LV-HOUR,LV-LEGAL,LV-PENDING,LV-WEEKEND', unpaidOnly.rows);
 const unsetOnly = sandbox.getLeaveReport(Object.assign({}, basePayload, { pay_statuses: ['unset'] }));
 check('กรองเฉพาะยังไม่ระบุ', unsetOnly.ok && unsetOnly.rows.length === 2 && unsetOnly.rows.every(r => !r.pay_status), unsetOnly.rows);
+console.log('\n=== 8) Q2: ผลรวมรายละเอียด = ยอดสรุปเสมอ ===');
+check('ใบเต็มช่วงในตารางใช้วันที่บันทึก (0.5)', byId('LV-LEGAL').days_in_period === 0.5, byId('LV-LEGAL'));
+[all, withRejected].forEach((rep, k) => {
+  rep.summary.forEach(sm => {
+    const mine = rep.rows.filter(r => r.emp_code === sm.emp_code);
+    const sumDays = mine.reduce((a, r) => a + r.days_in_period, 0);
+    const unpaid = mine.filter(r => r.final_status === 'approved' && r.pay_status === 'unpaid' && r.unit !== 'hour')
+      .reduce((a, r) => a + r.days_in_period, 0);
+    check('ชุด ' + (k + 1) + ' ' + sm.emp_code + ': วันลารวม + ไม่จ่าย ตรงกับรายละเอียด',
+      Math.abs(sumDays - (sm.sick_days + sm.personal_days + sm.vacation_days + sm.other_legal_days)) < 1e-9 &&
+      Math.abs(unpaid - sm.unpaid_days) < 1e-9, { sm, sumDays, unpaid });
+  });
+});
+const csvLegal = savedBlob.content.split('\r\n').find(l => l.startsWith('"LV-LEGAL"'));
+check('CSV รายละเอียดใช้ค่าเดียวกัน (0.5)', csvLegal && csvLegal.split(',')[9] === '"0.5"', csvLegal);
 check('ไม่มี error ถูก log ระหว่างทดสอบ', errors.length === 0, errors);
 
 console.log('\n' + (fails ? 'ตก ' + fails + ' ข้อ' : 'ผ่านทุกข้อ'));

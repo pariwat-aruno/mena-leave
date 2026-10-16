@@ -184,6 +184,7 @@ function renderPayPanel(l, host) {
   const closed = ['rejected', 'withdrawn', 'cancelled'].indexOf(l.final_status) >= 0;
   if (!isAdmin || l.record_type !== 'leave' || closed) { box.remove(); return; }
   const esc = window.utils.escapeHtml;
+  box.dataset.leaveId = l.leave_id;
   const own = ME.user_id === l.user_id;
   const waitHr = l.stage2_status === 'pending';
   const canSet = !own && !waitHr;
@@ -207,6 +208,11 @@ function renderPayPanel(l, host) {
       const r = await window.api.post('setLeavePayStatus', {
         lineUserId: window.state.lineUserId, leave_id: l.leave_id, pay_status: want,
       });
+      // ผลกลับมาช้า: ระหว่างนั้นเปิดใบอื่นไปแล้ว → ไม่วาดทับกล่องของใบอื่น
+      if (!box.isConnected || box.dataset.leaveId !== l.leave_id) {
+        if (r.ok) window.utils.showToast('บันทึกแล้ว: ' + l.leave_id + ' ' + window.payStatusLabel(want));
+        return;
+      }
       box.querySelectorAll('[data-setpay]').forEach(b => { b.disabled = false; });
       if (!r.ok) {
         window.utils.showAlert('#pay-panel-alert', r.message || 'บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง', 'error');

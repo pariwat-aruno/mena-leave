@@ -601,5 +601,36 @@ const c29 = sandbox.requestCancelLeave({ lineUserId: 'Uboss', leave_id: r29.leav
 sandbox.applyCancelToParent_ = origApply;
 check('ยกเลิกได้ + ปิดใบเดิมตอนถือล็อก', c29.ok && row(r29.leave_id).final_status === 'cancelled' && appliedUnderLock === true, [c29, appliedUnderLock]);
 
+// ---------- แก้ตามที่ astra ตรวจ beefe78 (รอบ 2) ----------
+console.log('\n=== 30) B1: ข้ามขั้น 3 ได้เฉพาะเมื่อคนที่ตั้งไว้อนุมัติใบนี้จริง — ห้ามอนุมานจากผัง ===');
+setSole('');
+const r30 = submit('Umaid', { date_from: '2026-10-23', date_to: '2026-10-23' });   // ผู้บริหารขั้นแรกยังรับไม่ได้ → เริ่มที่ HR
+check('เริ่มที่ HR', row(r30.leave_id).stage1_status === 'skipped' && row(r30.leave_id).stage2_status === 'pending', row(r30.leave_id));
+sandbox.setApprovalChain({ lineUserId: 'Uboss', user_id: 'EMP-0013', supervisor_user_id: 'EMP-0002' });   // เปลี่ยนหัวหน้าเป็นคนที่จะตั้ง
+setSole('1001');
+const d30 = decide('Uhr', r30.leave_id, 2, 'approve');
+check('HR อนุมัติ → ยังต้องไปขั้น 3 (ผู้บริหารคนนั้นไม่เคยอนุมัติใบนี้)', d30.ok && d30.moved_to_stage === 3 &&
+  row(r30.leave_id).stage3_status === 'pending', [d30, row(r30.leave_id).stage3_status]);
+
+console.log('\n=== 31) B2: ตั้งรหัสเป็นคนที่ไม่ใช่ผู้บริหาร ที่กดขั้น 1 → ขั้น 3 ห้ามข้าม ===');
+setSole('5502');   // หัวหน้าไลน์ผลิต (SUPERVISOR)
+const r31 = submit('Uemp', { date_from: '2026-10-26', date_to: '2026-10-26' });
+decide('Usup', r31.leave_id, 1, 'approve');
+const d31 = decide('Uhr', r31.leave_id, 2, 'approve');
+check('HR อนุมัติ → ขั้น 3 รอ (HR รับแทน) ไม่จบใบ', d31.ok && d31.moved_to_stage === 3 && row(r31.leave_id).stage3_status === 'pending', [d31, row(r31.leave_id)]);
+check('hasOtherExecutive_: คนที่ตั้งไว้ไม่ใช่ผู้บริหาร → ถือว่าต้องรอขั้น 3', sandbox.hasOtherExecutive_('EMP-0011', 'EMP-0010') === true, '');
+setSole('');
+
+console.log('\n=== 32) Q1: ผู้บริหารยกเลิกใบตัวเอง ล็อกไม่ได้ → ไม่เขียนอะไรเลย ===');
+const r32 = submit('Uboss', { date_from: '2026-10-27', date_to: '2026-10-27' });
+const rowsBefore = leaves._objects().length;
+onWaitLock = () => { throw new Error('Lock timeout'); };
+const c32 = sandbox.requestCancelLeave({ lineUserId: 'Uboss', leave_id: r32.leave_id, reason: 'ติดประชุมด่วน' });
+onWaitLock = null;
+check('ตอบล็อกไม่ได้ · ไม่มีใบขอยกเลิกค้าง · ใบเดิมยังอนุมัติ', c32.ok === false && c32.error === 'lock_failed' &&
+  leaves._objects().length === rowsBefore && row(r32.leave_id).final_status === 'approved', [c32, leaves._objects().length - rowsBefore]);
+const c32b = sandbox.requestCancelLeave({ lineUserId: 'Uboss', leave_id: r32.leave_id, reason: 'ติดประชุมด่วน' });
+check('ลองใหม่ได้ปกติ + ปล่อยล็อกแล้ว', c32b.ok && row(r32.leave_id).final_status === 'cancelled' && lockHeld === false, [c32b, lockHeld]);
+
 console.log(fails ? '\nตก ' + fails + ' ข้อ' : '\nผ่านทุกข้อ');
 process.exit(fails ? 1 : 0);

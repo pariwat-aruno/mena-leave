@@ -287,13 +287,14 @@ function approveLeave(payload) {
       needsPay ? { pay_status: payStatus, pay_status_before: leaveAfterLock.pay_status || '' } : undefined);
 
     // ตั้งผู้บริหารขั้น 3 คนเดียวไว้ → ขั้น 3 คิดสดตอนขั้น 1/2 กด (ใบอาจส่งก่อนเปลี่ยนค่าตั้ง)
-    //   ขั้นแรกของผู้ลาคือคนที่ตั้งไว้เอง → ข้าม · กรณีอื่น → รอ (รับไม่ได้ก็ไป HR แทน ไม่จบใบเงียบ ๆ)
+    //   ข้ามได้กรณีเดียว: คนที่ตั้งไว้ (ผู้บริหาร active) อนุมัติใบนี้ไปแล้วจริงในขั้น 1/2 — ห้ามอนุมานจากผัง
+    //   กรณีอื่น → รอ (รับไม่ได้ก็ไป HR แทน ไม่จบใบเงียบ ๆ)
     // ค่าตั้งว่าง = ไม่แตะ ใช้ค่าที่คิดไว้ตอนส่งใบตามเดิม
-    if ((stage === 1 || stage === 2) && stage3SoleApprover_() &&
+    const sole3 = stage3SoleApprover_();
+    if ((stage === 1 || stage === 2) && sole3 &&
         (leaveAfterLock.stage3_status === 'pending' || leaveAfterLock.stage3_status === 'skipped')) {
-      // ขั้นแรกของสายผู้บริหารก่อน = คนที่กดขั้น 1 · ถ้าเริ่มที่ HR (ผู้บริหารขั้นแรกรับไม่ได้) = หัวหน้าที่ผูกไว้
-      const firstId = stage === 1 ? approver.user_id : (leaveAfterLock.stage1_by || getSupervisorFor(leaveAfterLock.user_id));
-      const want3 = hasOtherExecutive_(leaveAfterLock.user_id, firstId) ? 'pending' : 'skipped';
+      const actedIds = [leaveAfterLock.stage1_by, leaveAfterLock.stage2_by, approver.user_id];
+      const want3 = isActiveOwner_(sole3.user) && actedIds.indexOf(sole3.user.user_id) >= 0 ? 'skipped' : 'pending';
       if (want3 !== leaveAfterLock.stage3_status) {
         updateRowByHeader_(sh, row, { stage3_status: want3 });
         leaveAfterLock.stage3_status = want3;
@@ -423,13 +424,18 @@ function hasOtherExecutive_(userId, firstApproverId) {
   if (sole) {
     // ข้ามขั้น 3 ได้กรณีเดียว: คนที่ตั้งไว้คือคนที่อนุมัติขั้นแรกเอง
     // คนที่ตั้งไว้รับใบไม่ได้ (หาไม่เจอ/ปิด/ไม่ใช่ผู้บริหาร) → ขั้น 3 ต้องรอ แล้ว HR รับแทน ห้ามจบใบเงียบ ๆ
-    return !(sole.user && sole.user.user_id === firstApproverId);
+    // คนที่ตั้งไว้ต้องเป็นผู้บริหาร active จริง ไม่งั้นขั้น 3 รอ + HR รับแทน (B2)
+    return !(isActiveOwner_(sole.user) && sole.user.user_id === firstApproverId);
   }
   return listActiveApprovers_(userId, APPROVER_LEVEL_EXECUTIVE).some(function (id) {
     if (id === firstApproverId) return false;
     const u = findUserByUserId_(id);
     return !!u && u.status === 'active' && u.role === ROLES.OWNER;
   });
+}
+
+function isActiveOwner_(u) {
+  return !!u && u.status === 'active' && u.role === ROLES.OWNER;
 }
 
 /** ใบแบบผู้บริหารอนุมัติขั้นแรก — ห้ามคนเดิมอนุมัติซ้ำที่ขั้น 3 */
