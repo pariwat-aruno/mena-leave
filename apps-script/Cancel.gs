@@ -155,13 +155,15 @@ function requestCancelLeave(payload) {
       return { ok: false, error: 'not_approved', message: 'ใบลานี้ไม่ได้อยู่ในสถานะอนุมัติแล้ว' };
     }
   }
-  const cancelId = nextLeaveId();
+  let cancelId, cancelRow, startsInPast, applied;
+  try {
+  cancelId = nextLeaveId();
   const now = nowBangkok();
   const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const sh = SpreadsheetApp.openById(sheetId).getSheetByName('LeaveRequests');
 
   // ยกเลิกวันที่ผ่านไปแล้ว = คืนโควตาทั้งที่หยุดจริงไปแล้ว — ให้ผู้อนุมัติเห็นแล้วตัดสินเอง
-  const startsInPast = new Date(shapeDateOnly_(parent.date_from) + 'T00:00:00+07:00') <=
+  startsInPast = new Date(shapeDateOnly_(parent.date_from) + 'T00:00:00+07:00') <=
                        new Date(todayBangkok() + 'T00:00:00+07:00');
 
   appendRowByHeader_(sh, {
@@ -203,12 +205,17 @@ function requestCancelLeave(payload) {
     parent_leave_id: parent.leave_id, reason: reason,
   });
 
-  const cancelRow = findLeaveById_(cancelId);
+  cancelRow = findLeaveById_(cancelId);
+  // อนุมัติครบตั้งแต่ต้น (ผู้บริหารทำรายการเอง) → ปิดใบเดิมเลย ภายใต้ล็อกเดียวกับที่เขียนใบขอยกเลิก
+  if (autoLock) applied = applyCancelToParent_(cancelRow, true);
+  } finally {
+    // ปล่อยล็อกเสมอ แม้ระหว่างทางพัง — กันล็อกค้างและใบยกเลิกครึ่งทาง
+    if (autoLock) autoLock.releaseLock();
+  }
 
-  // อนุมัติครบตั้งแต่ต้น (ผู้บริหารทำรายการเอง) → ปิดใบเดิมเลย
   if (flow.firstApprovalStage === 0) {
-    try { applyCancelToParent_(cancelRow); }
-    finally { autoLock.releaseLock(); }
+    // ส่งไลน์หลังปล่อยล็อก — ไลน์ช้าไม่ทำให้คนอื่นรอล็อก
+    if (applied && applied.ok && !applied.already) notifyCancelApplied_(cancelRow, applied.parent);
     try {
       pushMessage(payload.lineUserId, buildCancelResultCard(cancelRow, parent, requester, true));
     } catch (e) {}
@@ -248,7 +255,7 @@ function requestCancelLeave(payload) {
  * ใบขอยกเลิกผ่านครบทุกชั้นแล้ว → ปิดใบลาต้นทาง + คืนโควตาที่หักไปจริง
  * เรียกจาก Approval.gs ตอน final approved ของเรคคอร์ด record_type = 'cancel'
  */
-function applyCancelToParent_(cancelRow) {
+function applyCancelToParent_(cancelRow, deferNotify) {
   const parent = findLeaveById_(cancelRow.parent_leave_id);
   if (!parent) {
     logError('applyCancelToParent_', 'ไม่พบใบลาต้นทาง', { cancelId: cancelRow.leave_id, parent: cancelRow.parent_leave_id });
@@ -273,6 +280,12 @@ function applyCancelToParent_(cancelRow) {
     parent: parent.leave_id, cancelId: cancelRow.leave_id, days: parent.days,
   });
 
+  if (!deferNotify) notifyCancelApplied_(cancelRow, parent);
+  return { ok: true, parent: parent };
+}
+
+/** แจ้งผู้ลา + HR ว่าใบลาถูกยกเลิกแล้ว — แยกออกมาให้ทางที่ถือล็อกส่งหลังปล่อยล็อกได้ */
+function notifyCancelApplied_(cancelRow, parent) {
   try {
     const requester = findUserByUserId_(parent.user_id) || {};
     const card = buildCancelResultCard(cancelRow, parent, requester, true);
@@ -281,8 +294,6 @@ function applyCancelToParent_(cancelRow) {
   } catch (e) {
     logWarn('applyCancelToParent_', 'push failed: ' + e.message);
   }
-
-  return { ok: true };
 }
 
 /** ใบขอยกเลิกของใบลาใบนี้ (ทุกสถานะ) */

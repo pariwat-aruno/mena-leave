@@ -210,6 +210,7 @@ function renderPayPanel(l, host) {
       });
       // ผลกลับมาช้า: ระหว่างนั้นเปิดใบอื่นไปแล้ว → ไม่วาดทับกล่องของใบอื่น
       if (!box.isConnected || box.dataset.leaveId !== l.leave_id) {
+        if (r.ok) l.pay_status = want;   // เปิดใบนี้กลับมาต้องเห็นค่าที่บันทึกแล้ว
         if (r.ok) window.utils.showToast('บันทึกแล้ว: ' + l.leave_id + ' ' + window.payStatusLabel(want));
         return;
       }
