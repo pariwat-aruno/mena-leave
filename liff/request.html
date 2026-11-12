@@ -489,7 +489,14 @@ function setUnit(unit) {
   updateDocLaterNotice();
 }
 document.getElementById('unit-day').onclick = () => setUnit('day');
-document.getElementById('unit-hour').onclick = () => setUnit('hour');
+document.getElementById('unit-hour').onclick = () => {
+  // ยังโหลดเวลางานจาก Settings ไม่เสร็จ = ห้ามสร้างตัวเลือกเวลาจากค่าสำรอง
+  // (เคยเกิด: กดเร็วแล้วได้ 08:30 ทั้งที่บริษัทตั้ง 08:00 และค้างทั้งหน้า)
+  if (!CONDITIONS || !CONDITIONS.hourly) {
+    return window.utils.showAlert('#alert-msg', 'กำลังโหลดเวลางาน รอสักครู่แล้วกดอีกครั้ง', 'info');
+  }
+  setUnit('hour');
+};
 document.getElementById('time_from').addEventListener('change', updateHoursHint);
 document.getElementById('time_to').addEventListener('change', updateHoursHint);
 
